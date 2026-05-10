@@ -23,14 +23,22 @@ namespace MonsterHunter.Network
         void Awake()
         {
             AuthSession.EnsureLoaded();
+            _config = SupabaseRuntimeConfig.ResolveFor(_config);
             if (_config != null)
                 _client = new SupabaseRestClient(_config.SupabaseUrl, _config.SupabaseAnonKey);
         }
 
-        SupabaseRestClient Client =>
-            _client ??= _config != null
-                ? new SupabaseRestClient(_config.SupabaseUrl, _config.SupabaseAnonKey)
-                : null;
+        SupabaseRestClient Client
+        {
+            get
+            {
+                if (_client != null) return _client;
+                _config = SupabaseRuntimeConfig.ResolveFor(_config);
+                if (_config == null) return null;
+                _client = new SupabaseRestClient(_config.SupabaseUrl, _config.SupabaseAnonKey);
+                return _client;
+            }
+        }
 
         /// <summary>
         /// 讀取目前登入使用者的 <c>profiles</c>，轉成與 players.json 相同的欄位語意（player_id=name uuid、zenny=zeni…）。

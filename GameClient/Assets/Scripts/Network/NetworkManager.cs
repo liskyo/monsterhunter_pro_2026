@@ -34,16 +34,24 @@ namespace MonsterHunter.Network
 
         void Start()
         {
+            _config = SupabaseRuntimeConfig.ResolveFor(_config);
             if (_config == null)
-                Debug.LogWarning("[NetworkManager] 請在 Inspector 指定 SupabaseRuntimeConfig（Resources 或欄位指派）。");
+                Debug.LogWarning("[NetworkManager] 請在 Inspector 指定 SupabaseRuntimeConfig 或放入 Resources/SupabaseRuntimeConfig。");
             else
                 _client = new SupabaseRestClient(_config.SupabaseUrl, _config.SupabaseAnonKey);
         }
 
-        SupabaseRestClient Client =>
-            _client ??= _config != null
-                ? new SupabaseRestClient(_config.SupabaseUrl, _config.SupabaseAnonKey)
-                : null;
+        SupabaseRestClient Client
+        {
+            get
+            {
+                if (_client != null) return _client;
+                _config = SupabaseRuntimeConfig.ResolveFor(_config);
+                if (_config == null) return null;
+                _client = new SupabaseRestClient(_config.SupabaseUrl, _config.SupabaseAnonKey);
+                return _client;
+            }
+        }
 
         /// <summary>Host：建立房間，回傳 6 碼 Join Code（Coroutine）。需已登入。</summary>
         public IEnumerator CreateJoinLobby(int ttlMinutes, Action<string> onError, Action<string> onJoinCode)

@@ -17,6 +17,7 @@ namespace MonsterHunter.Core
 
         void Awake()
         {
+            _config = SupabaseRuntimeConfig.ResolveFor(_config);
             if (_config != null)
                 _client = new SupabaseRestClient(_config.SupabaseUrl, _config.SupabaseAnonKey);
         }
