@@ -1,0 +1,12 @@
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "player_id": "00000000-0000-0000-0000-000000000001",
+    "entry_type": "monster",
+    "entry_id": "MON_001",
+    "research_points": 0,
+    "max_research_level_reached": 0,
+    "first_encounter_at": null,
+    "updated_at": "2026-05-10T00:00:00.000Z"
+  }
+]

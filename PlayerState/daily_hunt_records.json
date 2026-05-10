@@ -1,0 +1,13 @@
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "player_id": "00000000-0000-0000-0000-000000000001",
+    "local_date": "2026-05-10",
+    "daily_quest_id": "DQ_DAILY_001",
+    "completed": false,
+    "completion_count": 0,
+    "rewards_claimed": false,
+    "reset_at": "2026-05-11T04:00:00.000Z",
+    "updated_at": "2026-05-10T00:00:00.000Z"
+  }
+]

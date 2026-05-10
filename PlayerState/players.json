@@ -1,0 +1,23 @@
+{
+  "player_id": "P_START_001",
+  "name": "新進獵人",
+  "rank": 1,
+  "experience": 0,
+  "zenny": 1000,
+  "current_equipment": {
+    "main_weapon": "WEP_020",
+    "sub_weapon": "WEP_019",
+    "armor_set": "ARM_STARTER_01",
+    "active_skills": []
+  },
+  "active_pets": {
+    "palico_id": "PET_CAT_001",
+    "palamute_id": "PET_DOG_001"
+  },
+  "pouch": [
+    { "item_id": "ITM_001", "name": "回復藥", "quantity": 10 },
+    { "item_id": "ITM_003", "name": "初階染色球", "quantity": 3 }
+  ],
+  "current_canteen_buff": null,
+  "last_login": "2026-05-10T14:30:00Z"
+}

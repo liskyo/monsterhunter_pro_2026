@@ -1,0 +1,2 @@
+-- MonsterHunter_2026: 在此新增 Players、Warehouse 等資料表與 RLS 政策。
+-- 請使用 supabase migration new <name> 產生正式遷移檔並取代本佔位檔。
