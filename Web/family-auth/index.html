@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MonsterHunter 家人測試 — 註冊／登入</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 420px; margin: 2rem auto; padding: 0 1rem; }
+    label { display: block; margin-top: 0.75rem; font-size: 0.9rem; }
+    input { width: 100%; padding: 0.5rem; margin-top: 0.25rem; box-sizing: border-box; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; cursor: pointer; }
+    pre { background: #111; color: #eee; padding: 0.75rem; overflow: auto; font-size: 0.75rem; border-radius: 6px; }
+    .hint { font-size: 0.85rem; color: #444; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>家人測試用登入</h1>
+  <p class="hint">
+    將下方 <code>SUPABASE_URL</code>、<code>SUPABASE_ANON_KEY</code> 換成 Dashboard → Project Settings → API 的值（僅 Publishable／anon）。勿貼 service_role。
+  </p>
+
+  <label>Supabase URL<input id="url" type="text" placeholder="https://xxxx.supabase.co" autocomplete="off" /></label>
+  <label>Anon key<input id="anon" type="password" autocomplete="off" /></label>
+  <label>Email<input id="email" type="email" autocomplete="username" /></label>
+  <label>密碼<input id="password" type="password" autocomplete="current-password" /></label>
+
+  <button type="button" id="signup">註冊</button>
+  <button type="button" id="signin">登入</button>
+
+  <p class="hint">成功後會顯示 access_token（測試用）。遊戲內請使用 Unity AuthSession／EmailPasswordAuth。</p>
+  <pre id="out">尚未操作</pre>
+
+  <script type="module">
+    const out = document.getElementById("out");
+    const $ = (id) => document.getElementById(id);
+
+    function cfg() {
+      const url = $("url").value.trim().replace(/\/$/, "");
+      const anon = $("anon").value.trim();
+      if (!url || !anon) throw new Error("請填 Supabase URL 與 anon key");
+      return { url, anon };
+    }
+
+    async function auth(path, body) {
+      const { url, anon } = cfg();
+      const res = await fetch(`${url}/auth/v1/${path}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: anon,
+        },
+        body: JSON.stringify(body),
+      });
+      const text = await res.text();
+      if (!res.ok) throw new Error(text || res.statusText);
+      return JSON.parse(text);
+    }
+
+    $("signup").onclick = async () => {
+      try {
+        out.textContent = "註冊中…";
+        const email = $("email").value.trim();
+        const password = $("password").value;
+        const data = await auth("signup", { email, password });
+        out.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        out.textContent = String(e.message || e);
+      }
+    };
+
+    $("signin").onclick = async () => {
+      try {
+        out.textContent = "登入中…";
+        const email = $("email").value.trim();
+        const password = $("password").value;
+        const data = await auth("token?grant_type=password", { email, password });
+        out.textContent = JSON.stringify(data, null, 2);
+      } catch (e) {
+        out.textContent = String(e.message || e);
+      }
+    };
+  </script>
+</body>
+</html>

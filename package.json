@@ -1,0 +1,14 @@
+{
+  "name": "monsterhunter-2026-tooling",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "import-design": "node scripts/import-design-data.mjs",
+    "import-design:watch": "node scripts/watch-design-data.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
+    "chokidar": "^4.0.3",
+    "dotenv": "^16.4.7"
+  }
+}
