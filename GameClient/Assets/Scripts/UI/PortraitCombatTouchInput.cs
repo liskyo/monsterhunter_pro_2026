@@ -47,14 +47,18 @@ namespace MonsterHunter.UI
 
             var move = Vector2.zero;
 
-            if (Input.touchCount > 0)
-            {
-                move = ProcessTouches(zoneH, maxR);
-            }
-            else
-            {
 #if UNITY_EDITOR || UNITY_STANDALONE
-                move = ProcessMouse(zoneH, maxR);
+            // WASD / 方向鍵：優先於虛擬搖桿
+            move = ProcessKeyboard();
+#endif
+
+            if (move.sqrMagnitude < 0.01f)
+            {
+                if (Input.touchCount > 0)
+                    move = ProcessTouches(zoneH, maxR);
+#if UNITY_EDITOR || UNITY_STANDALONE
+                else
+                    move = ProcessMouse(zoneH, maxR);
 #endif
             }
 
@@ -134,6 +138,20 @@ namespace MonsterHunter.UI
             }
 
             return Vector2.zero;
+        }
+#endif
+
+#if UNITY_EDITOR || UNITY_STANDALONE
+        static Vector2 ProcessKeyboard()
+        {
+            var x = 0f;
+            var y = 0f;
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))  x -= 1f;
+            if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow)) x += 1f;
+            if (Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.DownArrow))  y -= 1f;
+            if (Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.UpArrow))    y += 1f;
+            var v = new Vector2(x, y);
+            return v.sqrMagnitude > 0.01f ? v.normalized : Vector2.zero;
         }
 #endif
 
