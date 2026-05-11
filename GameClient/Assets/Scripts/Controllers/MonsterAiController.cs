@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using MonsterHunter.Combat;
 using MonsterHunter.DataModels;
@@ -35,14 +36,38 @@ namespace MonsterHunter.Controllers
 
         public 魔物資料列 DataRow => _data;
         public MonsterBreakState BreakState => _breakState;
+        public float MaxHp { get; private set; }
+        public float CurrentHp => _currentHp;
+
+        /// <summary>受傷事件：(傷害量, 是否會心)</summary>
+        public event Action<float, bool> OnDamageReceived;
+        /// <summary>魔物死亡事件</summary>
+        public event Action OnDefeated;
+
+        /// <summary>BattleCombatManager 直接注入資料（不需 TextAsset）。</summary>
+        public void InjectData(魔物資料列 data, Transform player)
+        {
+            _data = data;
+            _player = player;
+            if (data != null)
+            {
+                _currentHp = data.最大血量;
+                MaxHp = data.最大血量;
+            }
+        }
 
         void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            // 若 _data 已由 InjectData 設好（執行期組裝），不再重複載入
+            if (_data != null) return;
             if (!MonsterDataLookup.TryFind(_monstersJson, _魔物編號, out _data))
                 Debug.LogError($"[MonsterAi] 找不到魔物 {_魔物編號}");
             else
+            {
                 _currentHp = _data.最大血量;
+                MaxHp = _data.最大血量;
+            }
         }
 
         void Update()
@@ -53,7 +78,7 @@ namespace MonsterHunter.Controllers
             if (_stun > 0f)
             {
                 _stun -= Time.deltaTime;
-                _rb.velocity = Vector2.zero;
+                _rb.linearVelocity = Vector2.zero;
                 return;
             }
 
@@ -67,7 +92,7 @@ namespace MonsterHunter.Controllers
             switch (_state)
             {
                 case AiState.待機:
-                    _rb.velocity = Vector2.zero;
+                    _rb.linearVelocity = Vector2.zero;
                     if (dist <= detect) _state = AiState.追擊;
                     break;
 
@@ -75,19 +100,19 @@ namespace MonsterHunter.Controllers
                     if (dist > abandon)
                     {
                         _state = AiState.待機;
-                        _rb.velocity = Vector2.zero;
+                        _rb.linearVelocity = Vector2.zero;
                         break;
                     }
 
                     if (dist <= atkDist)
                     {
                         _state = AiState.發動招式;
-                        _rb.velocity = Vector2.zero;
+                        _rb.linearVelocity = Vector2.zero;
                         break;
                     }
 
                     var dir = (pl - self).normalized;
-                    _rb.velocity = dir * (tuning.玩家移動速度 * Mathf.Max(0.1f, tuning.魔物追擊速度比例));
+                    _rb.linearVelocity = dir * (tuning.玩家移動速度 * Mathf.Max(0.1f, tuning.魔物追擊速度比例));
                     break;
 
                 case AiState.發動招式:
@@ -121,11 +146,14 @@ namespace MonsterHunter.Controllers
 
         public void ApplyDamage(float amount, bool isCrit)
         {
-            _currentHp -= amount;
+            if (_defeatHandled) return;
+            _currentHp = Mathf.Max(0f, _currentHp - amount);
+            OnDamageReceived?.Invoke(amount, isCrit);
             Debug.Log($"[Monster {_魔物編號}] HP {_currentHp:F0} (-{amount:F1} crit={isCrit})");
             if (_currentHp <= 0f && !_defeatHandled)
             {
                 _defeatHandled = true;
+                OnDefeated?.Invoke();
                 StartCoroutine(DefeatFlow());
             }
         }

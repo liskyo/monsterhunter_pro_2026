@@ -61,6 +61,9 @@ namespace MonsterHunter.UI
             ApplyMapName(quest.地圖);
         }
 
+        /// <summary>執行期指定戰鬥攝影機（可由 <see cref="BattlePreviewBootstrap"/> 呼叫）。</summary>
+        public void SetWorldCamera(Camera cam) => _camera = cam;
+
         /// <summary>直接使用地圖名（須與圖檔命名一致，例如「古代樹森林」）。</summary>
         public void ApplyMapName(string 地圖名)
         {

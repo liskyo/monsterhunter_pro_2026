@@ -19,10 +19,17 @@ namespace MonsterHunter.UI
         bool _tracking;
         int _fingerId = -1;
 
+        /// <summary>BattleCombatManager 執行期注入（不需 Inspector 拖拉）。</summary>
+        public void Inject(CombatTuningStore ts, PlayerController pc)
+        {
+            _tuningStore = ts;
+            _player = pc;
+        }
+
         void Reset()
         {
-            _tuningStore = FindObjectOfType<CombatTuningStore>();
-            _player = FindObjectOfType<PlayerController>();
+            _tuningStore = FindAnyObjectByType<CombatTuningStore>();
+            _player      = FindAnyObjectByType<PlayerController>();
         }
 
         void Update()

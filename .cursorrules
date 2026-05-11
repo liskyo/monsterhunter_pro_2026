@@ -1,13 +1,12 @@
 # 專案概述：直立式動作狩獵手遊 (Project Overview)
 - 遊戲類型：2D/3D Top-down 動作狩獵遊戲
 - 螢幕方向：直立式 (Portrait)
-- 開發引擎：[填入 Unity C# / Godot GDScript / Cocos Creator]
+- 開發引擎：Unity 2022.3 (或以上版本)
+- 程式語言：C#
 - 後端服務：Supabase (PostgreSQL, Edge Functions)
-- 多人連線：最多 2 人 (Host-Client P2P 架構)
 
-# 核心架構原則 (Architecture Guidelines)
-1. 嚴格遵守「資料驅動 (Data-Driven)」：所有靜態數值必須從 `DesignData` 資料夾下的 JSON 讀取，程式碼中不可寫死數值 (No Hardcoding)。
-2. UI 架構：遵守「60/40 戰鬥視角模型」，UI 必須支援「九宮格錨點 (9-point anchoring)」與「安全區 (Safe Area)」適應。
-3. 戰鬥架構：強制將 Hitbox (攻擊判定) 與 Hurtbox (受擊判定) 徹底分離。大型魔物必須擁有多重 Hurtbox (頭、翼、尾)。
-4. 傷害公式：最終傷害 = (武器基礎物理 * 動作值 MV * 物理肉質 HZV) + (武器屬性 * 屬性肉質 HZV)。
-5. 模組化：魔物與寵物 AI 優先使用行為樹 (Behavior Trees)，而非有限狀態機 (FSM)。
+# Unity 核心架構原則 (Unity Architecture Guidelines)
+1. 資料驅動 (Data-Driven)：嚴禁在程式碼中寫死數值 (No Hardcoding)。所有企劃數值需從 JSON 反序列化並儲存為 Unity 的 `ScriptableObjects`。
+2. UI 架構：使用 Unity UGUI (Canvas)。必須嚴格設定 `RectTransform` 的九宮格錨點 (9-point anchoring) 以適應不同手機比例，並實作 `SafeArea` 腳本避免被瀏海遮擋。
+3. 戰鬥判定：強制分離 Hitbox (攻擊) 與 Hurtbox (受擊)。使用 `Collider` (2D或3D) 並務必勾選 `isTrigger = true`，使用 `OnTriggerEnter` 偵測，絕對不可使用實體碰撞推擠。
+4. 模組化與架構：管理器使用 Singleton 模式 (如 `GameManager`, `DataManager`)。AI 邏輯優先考慮擴充性。

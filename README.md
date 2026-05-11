@@ -16,6 +16,12 @@
    - **只在 Unity 裡改**：選取 `Assets/Resources/SupabaseRuntimeConfig`，在 Inspector 填入 URL 與 Publishable（anon）key。
 4. 在 Unity 編輯器按下 **Play**。
 
+開啟 **`GameClient/Assets/Scenes/Bootstrap.unity`**（或 `1150511_1.unity`）時，場景內 **`BattlePreviewBootstrap`** 會自動：正交相機、60/40 戰鬥區、從倉庫 **`DesignData/05_Systems/quests.json`** 讀取預設任務（`QST_001`）並載入 **`Assets/UI/Backgrounds/Battle/{地圖}_背景.png`**。
+
+**直立手機預覽：** 編輯器 **Game** 視窗左上角請選比例 **9:16（或 1080×1920）**，勿用 **Free Aspect**（寬螢幕會像橫向）。專案已將 **預設螢幕方向設為直立（Portrait）** 與 **1080×1920** 作為預設解析度；真機上請在 **Player Settings → Resolution and Presentation** 確認僅允許直向（若需鎖定直立、關閉橫向自動旋轉）。
+
+若 HUD 顯示「無任務資料」，代表未讀到 `quests.json`（請確認 `DesignData` 與 `GameClient` 同層）；亦可改 **`BattlePreviewBootstrap`** 的 **`_fallbackMapName`**。若只看到灰條，請確認該地圖的 **`.../Battle/地名_背景.png`** 存在。
+
 若元件上有獨立指派的 `SupabaseRuntimeConfig` 且欄位非空，會優先使用該指派；否則會 fallback 到 Resources 裡的預設資產（見 `SupabaseRuntimeConfig.ResolveFor`）。
 
 ## 連後端：本機 Docker Supabase

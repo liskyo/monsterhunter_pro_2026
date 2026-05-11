@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 
 namespace MonsterHunter.DataModels
 {
@@ -17,6 +18,7 @@ namespace MonsterHunter.DataModels
     [Serializable]
     public class 貓飯花費
     {
+        [JsonConverter(typeof(JsonIntFromNumberConverter))]
         public int 金幣;
         public 貓飯需求素材[] 需求素材;
     }
@@ -127,7 +129,9 @@ namespace MonsterHunter.DataModels
     [Serializable]
     public class 任務報酬
     {
+        [JsonConverter(typeof(JsonIntFromNumberConverter))]
         public int 金幣;
+        [JsonConverter(typeof(JsonIntFromNumberConverter))]
         public int 獵人經驗值;
         public string[] 額外獎勵;
     }
