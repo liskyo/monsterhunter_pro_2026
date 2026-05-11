@@ -72,7 +72,8 @@ call :agent_log H4 "before_browser_launch hint=use_external_chrome_not_embedded"
 echo.
 echo [OK] Local Supabase is up. Studio: http://127.0.0.1:54323 (or http://localhost:54323)
 echo Open in a normal browser tab; avoid Cursor/VS Code Simple Browser (chrome-error frame issues).
-echo API URL and anon key: run  npx supabase status  in the Backend folder.
+echo API URL and anon key: run  npm run supabase:status  (or  npx supabase status  in the Backend folder).
+echo After copying URL + anon into .env, sync Unity asset:  npm run sync:unity-env
 echo.
 start "" "http://127.0.0.1:54323"
 pause

@@ -4,7 +4,13 @@
   "type": "module",
   "scripts": {
     "import-design": "node scripts/import-design-data.mjs",
-    "import-design:watch": "node scripts/watch-design-data.mjs"
+    "import-design:watch": "node scripts/watch-design-data.mjs",
+    "supabase": "node scripts/supabase-from-root.mjs",
+    "supabase:start": "node scripts/supabase-from-root.mjs start",
+    "supabase:status": "node scripts/supabase-from-root.mjs status",
+    "supabase:stop": "node scripts/supabase-from-root.mjs stop",
+    "sync:unity-env": "node scripts/sync-unity-supabase-from-env.mjs",
+    "serve:webgl": "npx --yes serve \"Web/webgl\" -l 4173"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

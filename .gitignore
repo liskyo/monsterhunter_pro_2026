@@ -33,3 +33,7 @@ Desktop.ini
 
 # Supabase CLI 本機狀態（若日後使用）
 .supabase/
+
+# Unity WebGL 建置輸出（保留空資料夾）
+Web/webgl/**
+!Web/webgl/.gitkeep
