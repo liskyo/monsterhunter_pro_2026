@@ -45,10 +45,11 @@ namespace MonsterHunter.Controllers
         public event Action OnDefeated;
 
         /// <summary>BattleCombatManager 直接注入資料（不需 TextAsset）。</summary>
-        public void InjectData(魔物資料列 data, Transform player)
+        public void InjectData(魔物資料列 data, Transform player, CombatTuningStore tuningStore = null)
         {
             _data = data;
             _player = player;
+            if (tuningStore != null) _tuningStore = tuningStore;
             if (data != null)
             {
                 _currentHp = data.最大血量;
@@ -59,8 +60,17 @@ namespace MonsterHunter.Controllers
         void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
-            // 若 _data 已由 InjectData 設好（執行期組裝），不再重複載入
+            if ((object)_rb == null || _rb.Equals(null))
+            {
+                _rb = gameObject.AddComponent<Rigidbody2D>();
+                _rb.gravityScale = 0f;
+                _rb.freezeRotation = true;
+            }
+            // 若已由 InjectData 注入（執行期 BattleCombatManager 模式）→ 不重複載入
             if (_data != null) return;
+            // 若沒有 TextAsset（執行期注入模式）→ 等 InjectData 呼叫，不印錯誤
+            if (_monstersJson == null) return;
+
             if (!MonsterDataLookup.TryFind(_monstersJson, _魔物編號, out _data))
                 Debug.LogError($"[MonsterAi] 找不到魔物 {_魔物編號}");
             else

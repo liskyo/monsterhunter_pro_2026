@@ -40,6 +40,13 @@ namespace MonsterHunter.Combat
         float _halfW;
         float _halfH;
 
+        // 物理前置在 Awake 完成（HunterGo/MonsterGo 由 LaunchCombat 在 BattlePreviewBootstrap.Awake 設好後立刻設定，
+        // BattleCombatManager 是在 BattlePreviewBootstrap.Awake 裡 new 出來的，
+        // 所以 BattleCombatManager.Awake 不會執行（Unity 不在 Awake 期間遞迴呼叫新物件 Awake），
+        // 改成 Start 確保所有 Awake 完成後才跑。
+        // 但 PlayerController / MonsterAiController 的 Awake 在 AddComponent 瞬間執行，
+        // 因此先在 SetupPhysics 加好 Rigidbody2D，彼等 Awake 自行確保也安全。
+
         void Start()
         {
             if (HunterGo == null || MonsterGo == null || MonsterDataRow == null)
@@ -55,8 +62,8 @@ namespace MonsterHunter.Combat
                 _halfW = _halfH * cam.aspect;
             }
 
-            SetupPhysics();
-            SetupCombatComponents();
+            SetupPhysics();        // 先給 Rigidbody2D
+            SetupCombatComponents(); // 再加 PlayerController / MonsterAiController
             BuildCombatHud();
         }
 
@@ -76,10 +83,11 @@ namespace MonsterHunter.Combat
 
         static void SetupRigidbody(GameObject go)
         {
-            var rb = go.GetComponent<Rigidbody2D>() ?? go.AddComponent<Rigidbody2D>();
+            // 不用 ?? ：Unity 的 GetComponent 回傳「假 null」，?? 無法正確偵測
+            var rb = go.GetComponent<Rigidbody2D>();
+            if (rb == null) rb = go.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
-            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
         }
 
         // ────────────────────────────────────────────────────
@@ -113,16 +121,20 @@ namespace MonsterHunter.Combat
             hbCol.enabled = false;
             var hitbox = hitboxGo.AddComponent<Hitbox>();
 
+            // 玩家 HP = 魔物最大血量 × 0.25（確保能撐住 10+ 次攻擊）
+            // 最低 500，避免過低（魔物傷害 82 → 至少能受 ~6 擊）
+            var monsterMaxHp = MonsterDataRow != null ? Mathf.Max(1f, MonsterDataRow.最大血量) : 2000f;
+            var playerMaxHp  = Mathf.Max(500f, monsterMaxHp * 0.25f);
+
             // PlayerController on hunter
             _playerCtrl = HunterGo.AddComponent<PlayerController>();
-            _playerCtrl.Inject(_tuningStore, loadout, weaponJson);
-            // 開啟攻擊 hitbox 序列化欄位無法直接設定；透過 reflection 備用
+            _playerCtrl.Inject(_tuningStore, loadout, weaponJson, playerMaxHp);
             TrySetPrivateField(_playerCtrl, "_attackHitbox", hitbox);
 
             // MonsterAiController on monster
             _monsterAi = MonsterGo.AddComponent<MonsterAiController>();
-            _monsterAi.InjectData(MonsterDataRow, HunterGo.transform);
-            // 告知 ai 結算服務為空（開發期先不結算雲端）
+            // 同時注入 tuningStore，AI 的 Update 才會執行追擊邏輯
+            _monsterAi.InjectData(MonsterDataRow, HunterGo.transform, _tuningStore);
             TrySetPrivateField(_monsterAi, "_settlement", null);
 
             // 玩家直接知道目標，不走 Physics2D 掃描

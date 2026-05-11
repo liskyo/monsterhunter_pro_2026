@@ -39,7 +39,7 @@ namespace MonsterHunter.Controllers
         public Vector2 MoveInput { set => _move = value; }
 
         /// <summary>BattleCombatManager 注入依賴（不需要 Inspector 拖拉）。</summary>
-        public void Inject(CombatTuningStore ts, PlayerCombatLoadout loadout, string weaponMovesetsJson, float maxHp = 150f)
+        public void Inject(CombatTuningStore ts, PlayerCombatLoadout loadout, string weaponMovesetsJson, float maxHp = 1000f)
         {
             _tuningStore = ts;
             _loadout = loadout;
@@ -54,6 +54,12 @@ namespace MonsterHunter.Controllers
         void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            if ((object)_rb == null || _rb.Equals(null))
+            {
+                _rb = gameObject.AddComponent<Rigidbody2D>();
+                _rb.gravityScale = 0f;
+                _rb.freezeRotation = true;
+            }
             if (_attackHitbox != null) _attackHitbox.SetEnabled(false);
         }
 
