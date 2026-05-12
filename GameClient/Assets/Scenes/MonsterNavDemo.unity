@@ -163,11 +163,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f9a2b4c8d1e4f6a9050b8c7d6e5f4a3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerPrefab: {fileID: 0}
   groundScale: {x: 3, y: 1, z: 3}
-  playerSpawn: {x: -6, y: 1, z: 0}
-  monsterSpawn: {x: 6, y: 1, z: 0}
+  playerSpawn: {x: -3.5, y: 0, z: 0}
+  monsterSpawn: {x: 3.5, y: 0, z: 0}
+  _weaponDamage: 12
+  _attackKey: 323
+  _weaponSwingSeconds: 0.14
+  _weaponHitstopOnHit: 0
+  _frameCameraOnActors: 1
   spawnDemoActors: 1
-  logHintIfAnimatorMissing: 1
   enableKillCheat: 1
 --- !u!1 &1518203654
 GameObject:

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using MonsterHunter.Core;
 using UnityEngine;
@@ -22,6 +23,14 @@ namespace MonsterHunter.Combat
         [Tooltip("單次揮刀對同一 IHurtbox（同一部位）只結算一次")]
         [SerializeField] float damage = 10f;
 
+        [Header("無動畫揮擊（MonsterNavDemo 等）")]
+        [SerializeField] bool _useSimpleAttackInput;
+        [SerializeField] KeyCode _attackKey = KeyCode.Mouse0;
+        [SerializeField] float _swingActiveDuration = 0.12f;
+        [SerializeField] bool _triggerHitstopOnHit = true;
+
+        Coroutine _simpleSwingRoutine;
+
         /// <summary>本次「攻擊開啟區間」已經打過的 Hurtbox 實例（以元件 InstanceID 去重）。</summary>
         readonly HashSet<int> _hitHurtboxIdsThisSwing = new HashSet<int>();
 
@@ -42,6 +51,40 @@ namespace MonsterHunter.Combat
                 _box.isTrigger = true;
                 _box.enabled = false;
             }
+        }
+
+        void Update()
+        {
+            if (!_useSimpleAttackInput)
+                return;
+            if (Input.GetKeyDown(_attackKey))
+            {
+                if (_simpleSwingRoutine != null)
+                    StopCoroutine(_simpleSwingRoutine);
+                _simpleSwingRoutine = StartCoroutine(CoSimpleSwing());
+            }
+        }
+
+        IEnumerator CoSimpleSwing()
+        {
+            EnableHitbox();
+            yield return new WaitForSeconds(_swingActiveDuration);
+            DisableHitbox();
+            _simpleSwingRoutine = null;
+        }
+
+        /// <summary>MonsterNavDemo：Primitive 無 Animator 時由程式開關判定幀。</summary>
+        public void ConfigureNavDemoSwing(
+            float baseDamage,
+            KeyCode attackKey,
+            float activeDurationSeconds,
+            bool triggerHitstopOnHit = false)
+        {
+            damage = baseDamage;
+            _attackKey = attackKey;
+            _swingActiveDuration = activeDurationSeconds;
+            _useSimpleAttackInput = true;
+            _triggerHitstopOnHit = triggerHitstopOnHit;
         }
 
         /// <summary>Animation Event：揮刀開始有效判定幀時呼叫；會清空本刀已命中記錄並開啟碰撞。</summary>
@@ -81,8 +124,11 @@ namespace MonsterHunter.Combat
                 return;
 
             hurt.ApplyWeaponHit(this, damage);
-            CombatFeedbackManager.Instance.TriggerHitstop(0.1f);
-            Debug.Log("擊中魔物！");
+            if (_triggerHitstopOnHit)
+                CombatFeedbackManager.Instance.TriggerHitstop(0.1f);
+
+            float dealt = damage * (hurt is MonsterHurtbox mh ? mh.damageMultiplier : 1f);
+            Debug.Log($"[WeaponHitbox] 擊中 {other.transform.root.name}（IHurtbox: {hurtMb.GetType().Name}），基礎傷害 {damage} → 結算 {dealt:0.##}");
         }
 
         static bool IsUnderMonsterTag(Transform t)

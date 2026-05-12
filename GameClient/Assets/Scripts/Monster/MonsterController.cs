@@ -19,6 +19,9 @@ namespace MonsterHunter.Monster
     [RequireComponent(typeof(NavMeshAgent))]
     public class MonsterController : MonoBehaviour, IDamageReceiver
     {
+        /// <summary>企劃「魔物血量與普通攻擊傷害」唯一來源；讀檔時以相對於 repo／專案根之路徑尋找。</summary>
+        public const string MonstersJsonRelativePath = "DesignData/01_Monsters/monsters.json";
+
         [Header("企劃識別")]
         [Tooltip("對應 monsterlist.json / monsters.json 的魔物編號，例如 MON_001")]
         [SerializeField] string monsterId = "MON_001";
@@ -225,10 +228,9 @@ namespace MonsterHunter.Monster
             return false;
         }
 
-        /// <summary>自 GameClient/Assets 往上找 repo 根或包含 DesignData 的目錄。</summary>
         static string FindMonstersJsonPath()
         {
-            return FindUpwards(Path.Combine("DesignData", "01_Monsters", "monsters.json"), 12);
+            return FindUpwards(MonstersJsonRelativePath, 12);
         }
 
         static string FindUpwards(string relativePath, int maxHops)
