@@ -29,6 +29,18 @@ namespace MonsterHunter.DataModels
 
         /// <summary>虛擬搖桿最大拖拽半徑 = min(螢寬,螢高) * 本係數。</summary>
         public float 虛擬搖桿最大半徑_螢幕短邊比;
+
+        /// <summary>魔物揮拳到傷害判定之間的前搖秒數（玩家可在此窗口閃避）。</summary>
+        public float 魔物攻擊前搖秒;
+
+        /// <summary>閃避衝刺的世界單位距離。</summary>
+        public float 閃避距離;
+
+        /// <summary>閃避中的無敵幀持續秒數。</summary>
+        public float 閃避無敵秒;
+
+        /// <summary>兩次閃避之間的冷卻秒數。</summary>
+        public float 閃避冷卻秒;
     }
 
     [Serializable]

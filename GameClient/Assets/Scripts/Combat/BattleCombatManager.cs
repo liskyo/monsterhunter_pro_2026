@@ -76,9 +76,15 @@ namespace MonsterHunter.Combat
             SetupRigidbody(HunterGo);
             SetupRigidbody(MonsterGo);
 
+            // 魔物實體碰撞體（阻擋獵人穿入）
             var monsterCol = MonsterGo.AddComponent<CircleCollider2D>();
-            monsterCol.radius = 0.6f;
+            monsterCol.radius = 0.8f;
             monsterCol.isTrigger = false;
+
+            // 獵人實體碰撞體（防止與魔物重疊）
+            var hunterCol = HunterGo.AddComponent<CircleCollider2D>();
+            hunterCol.radius = 0.4f;
+            hunterCol.isTrigger = false;
         }
 
         static void SetupRigidbody(GameObject go)

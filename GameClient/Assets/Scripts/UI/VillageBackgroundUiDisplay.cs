@@ -28,15 +28,16 @@ namespace MonsterHunter.UI
 
         Vector2 _lastBoundsSize;
 
-        void Awake()
+        protected override void Awake()
         {
+            base.Awake();
             if (_image == null) _image = GetComponent<Image>();
             _image.type = Image.Type.Simple;
             _image.preserveAspect = false;
             _image.raycastTarget = false;
         }
 
-        void Start()
+        protected override void Start()
         {
             var pending = VillageSessionContext.PendingBackgroundKey;
             if (!string.IsNullOrWhiteSpace(pending))
@@ -126,8 +127,9 @@ namespace MonsterHunter.UI
             rt.localScale = Vector3.one;
         }
 
-        void OnValidate()
+        protected override void OnValidate()
         {
+            base.OnValidate();
             if (_image == null) _image = GetComponent<Image>();
             if (_image != null) _image.raycastTarget = false;
         }

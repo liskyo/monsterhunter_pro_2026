@@ -22,6 +22,9 @@ namespace MonsterHunter.Controllers
         Rigidbody2D _rb;
         Vector2 _move;
         float _attackCd;
+        float _dodgeCd;
+        float _dodgeTimer;
+        Vector2 _dodgeVelocity;
         readonly System.Random _rng = new System.Random();
 
         // ── 執行期注入 ──
@@ -37,6 +40,36 @@ namespace MonsterHunter.Controllers
         public event Action OnDefeated;
 
         public Vector2 MoveInput { set => _move = value; }
+        /// <summary>供外部讀取上一幀的移動方向（閃避方向判斷用）。</summary>
+        public Vector2 MoveInputSnapshot => _move;
+
+        /// <summary>閃避中（無敵幀有效期）。</summary>
+        public bool IsDodging => _dodgeTimer > 0f;
+
+        /// <summary>
+        /// 觸發閃避衝刺，方向為 dir（零向量時退後離開魔物）。
+        /// 閃避冷卻期間呼叫無效。
+        /// </summary>
+        public void TryDodge(Vector2 dir)
+        {
+            var tuning = _tuningStore != null ? _tuningStore.Active : null;
+            if (tuning == null) return;
+            if (_dodgeCd > 0f) return;
+
+            var dodgeDist = tuning.閃避距離 > 0f ? tuning.閃避距離 : 4f;
+            var invincSec = tuning.閃避無敵秒 > 0f ? tuning.閃避無敵秒 : 0.4f;
+            var cooldown  = tuning.閃避冷卻秒 > 0f ? tuning.閃避冷卻秒 : 1.2f;
+
+            // 方向：優先傳入值，否則用當前移動方向，都沒有則向後
+            if (dir.sqrMagnitude < 0.01f) dir = _move;
+            if (dir.sqrMagnitude < 0.01f) dir = new Vector2(-1f, 0f);
+            dir.Normalize();
+
+            var duration = invincSec;
+            _dodgeVelocity = dir * (dodgeDist / duration);
+            _dodgeTimer    = duration;
+            _dodgeCd       = cooldown;
+        }
 
         /// <summary>BattleCombatManager 注入依賴（不需要 Inspector 拖拉）。</summary>
         public void Inject(CombatTuningStore ts, PlayerCombatLoadout loadout, string weaponMovesetsJson, float maxHp = 1000f)
@@ -69,6 +102,16 @@ namespace MonsterHunter.Controllers
             if (tuning == null) return;
 
             if (_attackCd > 0f) _attackCd -= Time.deltaTime;
+            if (_dodgeCd   > 0f) _dodgeCd  -= Time.deltaTime;
+
+            // 閃避衝刺（無敵幀期間接管移動）
+            if (_dodgeTimer > 0f)
+            {
+                _dodgeTimer -= Time.deltaTime;
+                _rb.linearVelocity = _dodgeVelocity;
+                if (_attackHitbox != null) _attackHitbox.SetEnabled(false);
+                return;
+            }
 
             var moving = _move.sqrMagnitude > tuning.移動歸零閾值 * tuning.移動歸零閾值;
             _rb.linearVelocity = moving ? _move.normalized * tuning.玩家移動速度 : Vector2.zero;
@@ -163,6 +206,7 @@ namespace MonsterHunter.Controllers
         public void ApplyDamage(float amount, bool isCrit)
         {
             if (CurrentHp <= 0f) return;
+            if (IsDodging) { Debug.Log("[Player] 閃避成功！傷害無效"); return; }
             CurrentHp = Mathf.Max(0f, CurrentHp - amount);
             OnDamageReceived?.Invoke(amount, isCrit);
             Debug.Log($"[Player] 受傷 {amount:F1} 會心={isCrit} → HP {CurrentHp:F0}/{MaxHp:F0}");

@@ -33,6 +33,7 @@ namespace MonsterHunter.Controllers
         float _stun;
         float _currentHp;
         bool _defeatHandled;
+        bool _telegraphing;
 
         public 魔物資料列 DataRow => _data;
         public MonsterBreakState BreakState => _breakState;
@@ -132,11 +133,90 @@ namespace MonsterHunter.Controllers
                         break;
                     }
 
-                    PerformAttackOnPlayer();
-                    _stun = tuning.魔物招式後僵直秒;
-                    _state = AiState.追擊;
+                    if (!_telegraphing)
+                    {
+                        _telegraphing = true;
+                        var telegraph = tuning.魔物攻擊前搖秒 > 0f ? tuning.魔物攻擊前搖秒 : 0f;
+                        var postStun  = tuning.魔物招式後僵直秒 > 0f ? tuning.魔物招式後僵直秒 : 1.5f;
+                        // 前搖 + 後搖都透過 _stun 凍結移動
+                        _stun  = telegraph + postStun;
+                        StartCoroutine(TelegraphAndAttack(telegraph, atkDist * 1.6f));
+                        _state = AiState.追擊;
+                    }
                     break;
             }
+        }
+
+        IEnumerator TelegraphAndAttack(float delay, float finalAtkDist)
+        {
+            // ── 前搖視覺：紅色閃爍 + 頭上「！」提示 ──
+            var sr = GetComponentInChildren<SpriteRenderer>();
+            var originalColor = sr != null ? sr.color : Color.white;
+            var warningGo = BuildWarningSign();
+
+            if (delay > 0f)
+            {
+                var elapsed     = 0f;
+                var halfInterval = 0.12f;
+                while (elapsed < delay)
+                {
+                    if (sr != null) sr.color = new Color(1f, 0.15f, 0.05f);
+                    yield return new WaitForSeconds(halfInterval);
+                    if (sr != null) sr.color = originalColor;
+                    yield return new WaitForSeconds(halfInterval);
+                    elapsed += halfInterval * 2f;
+                }
+                if (sr != null) sr.color = originalColor;
+            }
+
+            if (warningGo != null) UnityEngine.Object.Destroy(warningGo);
+            _telegraphing = false;
+
+            if (_player == null) yield break;
+            var dist = Vector2.Distance(transform.position, _player.position);
+            // 只在玩家仍在範圍內才造成傷害（玩家閃避離開即無效）
+            if (dist <= finalAtkDist)
+                PerformAttackOnPlayer();
+        }
+
+        /// <summary>在魔物頭上建立世界空間「！」提示物件。</summary>
+        GameObject BuildWarningSign()
+        {
+            var go = new GameObject("AttackWarning");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = new Vector3(0f, 1.2f, 0f);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            // 用純色方塊當底（黃底）
+            sr.sprite  = CreateSolidSprite(new Color(1f, 0.9f, 0f));
+            sr.sortingOrder = 10;
+            go.transform.localScale = new Vector3(0.5f, 0.6f, 1f);
+
+            // 「！」文字用 TextMesh（世界空間）
+            var txtGo = new GameObject("WarnText");
+            txtGo.transform.SetParent(go.transform, false);
+            txtGo.transform.localPosition = Vector3.zero;
+            txtGo.transform.localScale    = new Vector3(2f, 2f, 1f);
+
+            var tm = txtGo.AddComponent<TextMesh>();
+            tm.text      = "!";
+            tm.fontSize  = 24;
+            tm.fontStyle = FontStyle.Bold;
+            tm.color     = Color.red;
+            tm.anchor    = TextAnchor.MiddleCenter;
+            tm.alignment = TextAlignment.Center;
+
+            return go;
+        }
+
+        static Sprite CreateSolidSprite(Color c)
+        {
+            var tex = new Texture2D(4, 4);
+            var pixels = new Color[16];
+            for (var i = 0; i < 16; i++) pixels[i] = c;
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
         }
 
         void PerformAttackOnPlayer()

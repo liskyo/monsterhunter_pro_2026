@@ -48,6 +48,10 @@ namespace MonsterHunter.UI
             var move = Vector2.zero;
 
 #if UNITY_EDITOR || UNITY_STANDALONE
+            // Space 鍵閃避（優先處理）
+            if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.LeftShift))
+                _player.TryDodge(_player.MoveInputSnapshot);
+
             // WASD / 方向鍵：優先於虛擬搖桿
             move = ProcessKeyboard();
 #endif
