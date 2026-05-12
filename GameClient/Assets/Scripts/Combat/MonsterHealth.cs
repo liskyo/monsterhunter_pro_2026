@@ -1,18 +1,27 @@
 using System;
+using System.Collections;
 using UnityEngine;
 
 namespace MonsterHunter.Combat
 {
     /// <summary>
-    /// 魔物血量（單一真相來源）：所有對魔物的扣血最終都應經由此類別。
-    /// <see cref="MonsterAiController"/>（玩家自動攻擊）、<see cref="MonsterHurtbox"/>（武器判定）皆呼叫 <see cref="TakeDamage"/>。
+    /// 魔物血量：2D／部位受擊走 <see cref="TakeDamage(float)"/>；
+    /// 教學用方塊可改呼叫 <see cref="TakeDamage(int)"/>（會輸出「砍中了！剩餘血量」並可作受擊閃紅）。
     /// </summary>
     public sealed class MonsterHealth : MonoBehaviour
     {
         [SerializeField] float maxHp = 100f;
 
+        [Header("（選用）受擊視覺")]
+        [SerializeField] Renderer _damageFlashRenderer;
+        [SerializeField] Color _damageFlashTint = Color.red;
+        [SerializeField] float _damageFlashHoldSeconds = 0.1f;
+
         float _currentHp;
         bool _depletedInvoked;
+
+        Color? _flashBaseTint;
+        Coroutine _flashRoutine;
 
         /// <summary>目前血量。</summary>
         public float CurrentHp => _currentHp;
@@ -31,10 +40,36 @@ namespace MonsterHunter.Combat
 
         void Awake()
         {
+            EnsureCapacityInitialized();
+
+            CacheRendererDefault();
+        }
+
+        void EnsureCapacityInitialized()
+        {
             if (_currentHp <= 0f && maxHp > 0f)
             {
                 _currentHp = maxHp;
                 _depletedInvoked = false;
+            }
+        }
+
+        void CacheRendererDefault()
+        {
+            if (_damageFlashRenderer == null)
+                _damageFlashRenderer = GetComponent<Renderer>()
+                    ?? GetComponentInChildren<Renderer>();
+
+            if (_damageFlashRenderer == null || _damageFlashRenderer.material == null)
+                return;
+
+            try
+            {
+                _flashBaseTint = _damageFlashRenderer.material.color;
+            }
+            catch
+            {
+                _flashBaseTint = null;
             }
         }
 
@@ -49,11 +84,24 @@ namespace MonsterHunter.Combat
                 _currentHp = Mathf.Min(_currentHp, maxHp);
         }
 
-        /// <summary>受到傷害（最終數值；可選會心供介面顯示）。</summary>
+        /// <summary>integer 入口：適合 WeaponHitbox 教學；成功扣血會閃紅並在 Console 顯示剩餘血量。</summary>
+        public void TakeDamage(int damageAmount)
+        {
+            float amount = Mathf.Max(0f, damageAmount);
+            if (ApplyDamageCore(amount, isCrit: false) && amount > 0f)
+                OnTutorialStyleHitApplied();
+        }
+
+        /// <summary>受到傷害（一般戰鬥流程）。</summary>
         public void TakeDamage(float amount, bool isCrit = false)
         {
+            ApplyDamageCore(amount, isCrit);
+        }
+
+        bool ApplyDamageCore(float amount, bool isCrit)
+        {
             if (amount <= 0f || !IsAlive)
-                return;
+                return false;
 
             _currentHp = Mathf.Max(0f, _currentHp - amount);
             DamageApplied?.Invoke(amount, isCrit);
@@ -63,6 +111,38 @@ namespace MonsterHunter.Combat
                 _depletedInvoked = true;
                 HpDepleted?.Invoke();
             }
+
+            return true;
+        }
+
+        void OnTutorialStyleHitApplied()
+        {
+            TriggerDamageFlashRoutine();
+            Debug.Log($"砍中了！剩餘血量：{_currentHp:0}", this);
+        }
+
+        void TriggerDamageFlashRoutine()
+        {
+            if (_damageFlashRenderer == null || _damageFlashRenderer.material == null)
+                return;
+
+            if (_flashBaseTint == null)
+                CacheRendererDefault();
+
+            if (_flashRoutine != null)
+                StopCoroutine(_flashRoutine);
+
+            _flashRoutine = StartCoroutine(HitFlashRoutine());
+        }
+
+        IEnumerator HitFlashRoutine()
+        {
+            var mat = _damageFlashRenderer.material;
+            Color baseTint = _flashBaseTint ?? mat.color;
+            mat.color = _damageFlashTint;
+            yield return new WaitForSeconds(_damageFlashHoldSeconds);
+            mat.color = baseTint;
+            _flashRoutine = null;
         }
     }
 }

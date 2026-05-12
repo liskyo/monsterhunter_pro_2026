@@ -6,22 +6,28 @@ using UnityEngine;
 namespace MonsterHunter.Combat
 {
     /// <summary>
-    /// 武器攻擊盒（3D）：掛在武器子物件上，搭配 <see cref="BoxCollider"/>（Is Trigger）。
-    /// 請在 Animator 揮刀有效幀用 Animation Event 呼叫 <see cref="EnableHitbox"/> / <see cref="DisableHitbox"/>。
+    /// 武器攻擊盒（3D）：掛在 mixamorig:RightHand／WeaponHitbox 等子物件。
+    /// <list type="bullet">
+    ///   <item>需 <see cref="BoxCollider"/>（Is Trigger）＋ Kinematic <see cref="Rigidbody"/>（Trigger 偵測較穩）。</item>
+    ///   <item>撞擊階層含 Tag <b>Monster</b> 的物件時，優先找 <see cref="MonsterHealth"/> 呼叫 <c>TakeDamage(int)</c>；否則走 <see cref="IHurtbox"/>（部位倍率）。</item>
+    ///   <item><see cref="isAttacking"/>：僅在攻擊窗內結算，避免走路誤觸；<see cref="EnableHitbox"/>／<see cref="DisableHitbox"/> 會同步此旗標。</item>
+    /// </list>
     /// </summary>
-    /// <remarks>
-    /// 本專案戰鬥預覽多為 2D 碰撞（<c>Collider2D</c>）。若場上僅有 2D 魔物碰撞器，
-    /// 3D 的 <c>OnTriggerEnter</c> 不會與之互動；屆時請改為 <c>BoxCollider2D</c> + <c>OnTriggerEnter2D</c>，
-    /// 或統一將魔物改為 3D Trigger。以下維持需求指定的 3D 寫法。
-    /// </remarks>
     [RequireComponent(typeof(BoxCollider))]
     public sealed class WeaponHitbox : MonoBehaviour
     {
         const string MonsterTag = "Monster";
 
         [SerializeField] BoxCollider _box;
-        [Tooltip("單次揮刀對同一 IHurtbox（同一部位）只結算一次")]
+        [Tooltip("傳給 MonsterHealth.TakeDamage(int) 或 IHurtbox 的基礎值")]
         [SerializeField] float damage = 10f;
+
+        [Header("攻擊窗口")]
+        [Tooltip("勾選時：僅 isAttacking 為 true 才結算命中（建議 Y Bot 勾選）。")]
+        [SerializeField] bool _requireAttackFlag = true;
+
+        [Tooltip("僅在攻擊動畫／EnableHitbox 視窗內為 true；可由 PlayerController 或 Animation Event 開關。")]
+        public bool isAttacking;
 
         [Header("無動畫揮擊（MonsterNavDemo 等）")]
         [SerializeField] bool _useSimpleAttackInput;
@@ -31,8 +37,8 @@ namespace MonsterHunter.Combat
 
         Coroutine _simpleSwingRoutine;
 
-        /// <summary>本次「攻擊開啟區間」已經打過的 Hurtbox 實例（以元件 InstanceID 去重）。</summary>
-        readonly HashSet<int> _hitHurtboxIdsThisSwing = new HashSet<int>();
+        /// <summary>本次揮擊已結算過的目標（MonsterHealth 或 IHurtbox 元件 InstanceID）。</summary>
+        readonly HashSet<int> _hitTargetsThisSwing = new HashSet<int>();
 
         public BoxCollider Box => _box != null ? _box : (_box = GetComponent<BoxCollider>());
 
@@ -51,6 +57,8 @@ namespace MonsterHunter.Combat
                 _box.isTrigger = true;
                 _box.enabled = false;
             }
+
+            isAttacking = false;
         }
 
         void Update()
@@ -87,19 +95,27 @@ namespace MonsterHunter.Combat
             _triggerHitstopOnHit = triggerHitstopOnHit;
         }
 
-        /// <summary>Animation Event：揮刀開始有效判定幀時呼叫；會清空本刀已命中記錄並開啟碰撞。</summary>
+        /// <summary>動畫事件或 PlayerController：揮刀開始；清空本刀命中記錄並開啟碰撞。</summary>
         public void EnableHitbox()
         {
-            _hitHurtboxIdsThisSwing.Clear();
+            _hitTargetsThisSwing.Clear();
+            isAttacking = true;
             if (Box != null)
                 Box.enabled = true;
         }
 
-        /// <summary>Animation Event：揮刀結束有效判定幀時呼叫；關閉碰撞。</summary>
+        /// <summary>動畫事件或 PlayerController：揮刀結束；關閉碰撞。</summary>
         public void DisableHitbox()
         {
+            isAttacking = false;
             if (Box != null)
                 Box.enabled = false;
+        }
+
+        /// <summary>只做旗標／同步用（碰撞仍依 BoxCollider.enabled）。</summary>
+        public void SetAttackWindow(bool active)
+        {
+            isAttacking = active;
         }
 
         void OnTriggerEnter(Collider other)
@@ -107,25 +123,44 @@ namespace MonsterHunter.Combat
             if (Box == null || !Box.enabled)
                 return;
 
+            if (_requireAttackFlag && !isAttacking)
+                return;
+
             if (!IsUnderMonsterTag(other.transform))
                 return;
 
-            var hurt = other.GetComponent<IHurtbox>() ?? other.GetComponentInParent<IHurtbox>();
+            int dmgInt = Mathf.Max(1, Mathf.RoundToInt(damage));
+
+            var health = other.GetComponent<MonsterHealth>()
+                ?? other.GetComponentInParent<MonsterHealth>();
+            if (health != null)
+            {
+                int id = ((MonoBehaviour)health).GetInstanceID();
+                if (!_hitTargetsThisSwing.Add(id))
+                    return;
+
+                health.TakeDamage(dmgInt);
+                if (_triggerHitstopOnHit)
+                    CombatFeedbackManager.Instance?.TriggerHitstop(0.1f);
+                return;
+            }
+
+            var hurt = other.GetComponent<IHurtbox>()
+                ?? other.GetComponentInParent<IHurtbox>();
             if (hurt == null)
                 return;
 
-            // 以「實作 IHurtbox 的元件」為部位去重單位，避免同一刀多段Collider重複扣血
             var hurtMb = hurt as MonoBehaviour;
             if (hurtMb == null)
                 return;
 
-            int id = hurtMb.GetInstanceID();
-            if (!_hitHurtboxIdsThisSwing.Add(id))
+            int hid = hurtMb.GetInstanceID();
+            if (!_hitTargetsThisSwing.Add(hid))
                 return;
 
             hurt.ApplyWeaponHit(this, damage);
             if (_triggerHitstopOnHit)
-                CombatFeedbackManager.Instance.TriggerHitstop(0.1f);
+                CombatFeedbackManager.Instance?.TriggerHitstop(0.1f);
 
             float dealt = damage * (hurt is MonsterHurtbox mh ? mh.damageMultiplier : 1f);
             Debug.Log($"[WeaponHitbox] 擊中 {other.transform.root.name}（IHurtbox: {hurtMb.GetType().Name}），基礎傷害 {damage} → 結算 {dealt:0.##}");
