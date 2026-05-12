@@ -31,14 +31,22 @@ namespace MonsterHunter.Controllers
         Rigidbody2D _rb;
         AiState _state = AiState.待機;
         float _stun;
-        float _currentHp;
+        MonsterHealth _health;
         bool _defeatHandled;
         bool _telegraphing;
+        bool _healthEventsHooked;
 
         public 魔物資料列 DataRow => _data;
         public MonsterBreakState BreakState => _breakState;
-        public float MaxHp { get; private set; }
-        public float CurrentHp => _currentHp;
+
+        /// <summary>最大血量（與 <see cref="MonsterHealth"/> 同步）。</summary>
+        public float MaxHp => _health != null ? _health.MaxHp : 0f;
+
+        /// <summary>目前血量（與 <see cref="MonsterHealth"/> 同步）。</summary>
+        public float CurrentHp => _health != null ? _health.CurrentHp : 0f;
+
+        /// <summary>執行期可取得根節點血量元件（供 UI／除錯）。</summary>
+        public MonsterHealth Health => _health;
 
         /// <summary>受傷事件：(傷害量, 是否會心)</summary>
         public event Action<float, bool> OnDamageReceived;
@@ -52,10 +60,7 @@ namespace MonsterHunter.Controllers
             _player = player;
             if (tuningStore != null) _tuningStore = tuningStore;
             if (data != null)
-            {
-                _currentHp = data.最大血量;
-                MaxHp = data.最大血量;
-            }
+                InitializeMonsterHealthFromData(data.最大血量);
         }
 
         void Awake()
@@ -75,10 +80,7 @@ namespace MonsterHunter.Controllers
             if (!MonsterDataLookup.TryFind(_monstersJson, _魔物編號, out _data))
                 Debug.LogError($"[MonsterAi] 找不到魔物 {_魔物編號}");
             else
-            {
-                _currentHp = _data.最大血量;
-                MaxHp = _data.最大血量;
-            }
+                InitializeMonsterHealthFromData(_data.最大血量);
         }
 
         void Update()
@@ -237,15 +239,56 @@ namespace MonsterHunter.Controllers
         public void ApplyDamage(float amount, bool isCrit)
         {
             if (_defeatHandled) return;
-            _currentHp = Mathf.Max(0f, _currentHp - amount);
-            OnDamageReceived?.Invoke(amount, isCrit);
-            Debug.Log($"[Monster {_魔物編號}] HP {_currentHp:F0} (-{amount:F1} crit={isCrit})");
-            if (_currentHp <= 0f && !_defeatHandled)
+            EnsureMonsterHealthReady();
+            if (_health == null) return;
+            _health.TakeDamage(amount, isCrit);
+        }
+
+        /// <summary>確保根節點有 <see cref="MonsterHealth"/> 並訂閱事件（不重置血量）。</summary>
+        void EnsureMonsterHealthReady()
+        {
+            if (_health == null)
+                _health = GetComponent<MonsterHealth>();
+            if (_health == null)
+                _health = gameObject.AddComponent<MonsterHealth>();
+
+            if (!_healthEventsHooked)
             {
-                _defeatHandled = true;
-                OnDefeated?.Invoke();
-                StartCoroutine(DefeatFlow());
+                _health.DamageApplied += OnHealthDamaged;
+                _health.HpDepleted += OnHealthDepleted;
+                _healthEventsHooked = true;
             }
+        }
+
+        /// <summary>由企劃最大血量初始化（僅在載入資料／注入時呼叫，避免每次受傷補滿血）。</summary>
+        void InitializeMonsterHealthFromData(float maxHp)
+        {
+            EnsureMonsterHealthReady();
+            if (_health != null && maxHp > 0f)
+                _health.Initialize(maxHp, true);
+        }
+
+        void OnDestroy()
+        {
+            if (_health != null && _healthEventsHooked)
+            {
+                _health.DamageApplied -= OnHealthDamaged;
+                _health.HpDepleted -= OnHealthDepleted;
+            }
+        }
+
+        void OnHealthDamaged(float amount, bool isCrit)
+        {
+            OnDamageReceived?.Invoke(amount, isCrit);
+            Debug.Log($"[Monster {_魔物編號}] HP {CurrentHp:F0}/{MaxHp:F0} (-{amount:F1} crit={isCrit})");
+        }
+
+        void OnHealthDepleted()
+        {
+            if (_defeatHandled) return;
+            _defeatHandled = true;
+            OnDefeated?.Invoke();
+            StartCoroutine(DefeatFlow());
         }
 
         IEnumerator DefeatFlow()
