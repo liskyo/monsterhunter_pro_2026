@@ -16,6 +16,9 @@ Desktop.ini
 .vscode/*
 !.vscode/extensions.json
 
+# 誤產生的巢狀 Unity 專案路徑（勿再加入版控）
+GameClient/hunter/
+
 # Unity (常見)
 [Ll]ibrary/
 [Tt]emp/
