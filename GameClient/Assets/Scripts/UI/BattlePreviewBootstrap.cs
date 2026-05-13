@@ -29,6 +29,9 @@ namespace MonsterHunter.UI
         [SerializeField] bool _showHunterPlaceholder = true;
         [SerializeField] int _demoPlayerHp = 100;
         [SerializeField] int _demoPlayerHpMax = 100;
+        [Header("試玩武器（對應 weapon_movesets.json 的「武器類型」）")]
+        [SerializeField] string _demoWeaponType = "大劍";
+        [SerializeField] float _demoWeaponBasePhysical = 230f;
 
         BattleBackgroundDisplay _background;
         Camera _bgCamera;
@@ -105,6 +108,8 @@ namespace MonsterHunter.UI
             mgr.MonsterGo     = _monsterGo;
             mgr.MonsterDataRow = _currentMonsterRow;
             mgr.HudCanvas     = _hudCanvas;
+            mgr.DemoWeaponType = string.IsNullOrWhiteSpace(_demoWeaponType) ? "大劍" : _demoWeaponType.Trim();
+            mgr.DemoWeaponBasePhysical = _demoWeaponBasePhysical > 0f ? _demoWeaponBasePhysical : 230f;
         }
 
         void BuildDualCameraStack(Camera main)

@@ -99,7 +99,7 @@ namespace MonsterHunter.Controllers
             var pl = (Vector2)_player.position;
             var dist = Vector2.Distance(self, pl);
             var detect = tuning.待機偵測半徑;
-            var atkDist = _data.普通攻擊 != null ? _data.普通攻擊.攻擊距離 : 2f;
+            var atkDist = _data.魔物攻擊內容?.普通攻擊 != null ? _data.魔物攻擊內容.普通攻擊.攻擊距離 : 2f;
             var abandon = detect * Mathf.Max(1f, tuning.追擊放棄倍率);
 
             switch (_state)
@@ -223,11 +223,29 @@ namespace MonsterHunter.Controllers
 
         void PerformAttackOnPlayer()
         {
-            if (_data?.普通攻擊 == null || _player == null) return;
+            var atk = _data?.魔物攻擊內容?.普通攻擊;
+            if (atk == null || _player == null) return;
             var receiver = _player.GetComponent<IDamageReceiver>();
             if (receiver == null) return;
-            var raw = _data.普通攻擊.傷害;
-            receiver.ApplyDamage(raw, false);
+
+            receiver.ApplyDamage(atk.傷害, false);
+
+            var pc = _player.GetComponent<PlayerController>();
+            var specials = _data.魔物攻擊內容?.特殊攻擊;
+            if (pc != null && specials != null)
+                TryApplySpecialAttackProcs(pc, specials);
+        }
+
+        /// <summary>普攻結算後：魔物「特殊攻擊」列表中每一筆依自身 <c>觸發機率</c> 獨立擲骰。</summary>
+        static void TryApplySpecialAttackProcs(PlayerController pc, 魔物特殊攻擊項[] specials)
+        {
+            foreach (var s in specials)
+            {
+                if (s == null) continue;
+                if (s.觸發機率 <= 0f) continue;
+                if (UnityEngine.Random.value >= s.觸發機率) continue;
+                pc.ApplyMonsterSpecialAttack(s);
+            }
         }
 
         /// <summary>部位破壞時呼叫，供掉落「破壞部位」條件。</summary>

@@ -84,7 +84,7 @@ namespace MonsterHunter.Combat
                 _currentHp = Mathf.Min(_currentHp, maxHp);
         }
 
-        /// <summary>integer 入口：適合 WeaponHitbox 教學；成功扣血會閃紅並在 Console 顯示剩餘血量。</summary>
+        /// <summary>integer 入口；成功扣血會閃紅並在 Console 顯示剩餘血量。</summary>
         public void TakeDamage(int damageAmount)
         {
             float amount = Mathf.Max(0f, damageAmount);

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections;
 using MonsterHunter.Combat;
 using MonsterHunter.DataModels;
@@ -26,6 +27,16 @@ namespace MonsterHunter.Controllers
         float _dodgeTimer;
         Vector2 _dodgeVelocity;
         readonly System.Random _rng = new System.Random();
+
+        struct 獵人持續傷害狀態
+        {
+            public string 異常名稱;
+            public float 每秒傷害;
+            public float 結束時間;
+        }
+
+        readonly List<獵人持續傷害狀態> _ailments = new List<獵人持續傷害狀態>(4);
+        float _dotHudTick;
 
         // ── 執行期注入 ──
         string _weaponMovesetsJsonText;
@@ -100,6 +111,8 @@ namespace MonsterHunter.Controllers
         {
             var tuning = _tuningStore != null ? _tuningStore.Active : null;
             if (tuning == null) return;
+
+            TickActiveAilments();
 
             if (_attackCd > 0f) _attackCd -= Time.deltaTime;
             if (_dodgeCd   > 0f) _dodgeCd  -= Time.deltaTime;
@@ -203,14 +216,90 @@ namespace MonsterHunter.Controllers
             if (_attackHitbox != null) _attackHitbox.SetEnabled(false);
         }
 
-        public void ApplyDamage(float amount, bool isCrit)
+        /// <summary>魔物近戰直擊；閃避無敵可抵銷。</summary>
+        public void ApplyDamage(float amount, bool isCrit) => ApplyDamageInternal(amount, isCrit, respectDodgeInvuln: true);
+
+        /// <summary>異常／環境類持續傷害，不受閃避無敵保護。</summary>
+        public void ApplyDamageIgnoringDodge(float amount, bool isCrit) =>
+            ApplyDamageInternal(amount, isCrit, respectDodgeInvuln: false);
+
+        void ApplyDamageInternal(float amount, bool isCrit, bool respectDodgeInvuln)
         {
-            if (CurrentHp <= 0f) return;
-            if (IsDodging) { Debug.Log("[Player] 閃避成功！傷害無效"); return; }
+            if (CurrentHp <= 0f || amount <= 0f) return;
+            if (respectDodgeInvuln && IsDodging)
+            {
+                Debug.Log("[Player] 閃避成功！傷害無效");
+                return;
+            }
+
             CurrentHp = Mathf.Max(0f, CurrentHp - amount);
             OnDamageReceived?.Invoke(amount, isCrit);
             Debug.Log($"[Player] 受傷 {amount:F1} 會心={isCrit} → HP {CurrentHp:F0}/{MaxHp:F0}");
             if (CurrentHp <= 0f) OnDefeated?.Invoke();
+        }
+
+        /// <summary>
+        /// 魔物「特殊攻擊」命中後（已由 AI 擲過 <see cref="魔物特殊攻擊項.觸發機率"/>），
+        /// 將記載之 DoT／持續效果寫入表內（同標籤取較長剩餘時間合併）。
+        /// </summary>
+        public void ApplyMonsterSpecialAttack(魔物特殊攻擊項 row)
+        {
+            if (row == null || CurrentHp <= 0f || row.每秒傷害 <= 0 || row.持續時間秒 <= 0f) return;
+            var tag = string.IsNullOrEmpty(row.異常屬性) ? "異常" : row.異常屬性;
+            var end = Time.time + Mathf.Max(0.05f, row.持續時間秒);
+            var dps = Mathf.Max(0f, row.每秒傷害);
+
+            for (var i = 0; i < _ailments.Count; i++)
+            {
+                if (_ailments[i].異常名稱 != tag) continue;
+                var mergedEnd = Mathf.Max(_ailments[i].結束時間, end);
+                _ailments[i] = new 獵人持續傷害狀態 { 異常名稱 = tag, 每秒傷害 = dps, 結束時間 = mergedEnd };
+                return;
+            }
+
+            _ailments.Add(new 獵人持續傷害狀態 { 異常名稱 = tag, 每秒傷害 = dps, 結束時間 = end });
+            Debug.Log($"[Player] 特殊攻擊「{tag}」{row.持續時間秒:F1}s（{dps}/秒 DoT）");
+        }
+
+        void TickActiveAilments()
+        {
+            if (_ailments.Count == 0 || CurrentHp <= 0f) return;
+            var now = Time.time;
+            var dt = Time.deltaTime;
+            float totalDot = 0f;
+            var i = 0;
+            while (i < _ailments.Count)
+            {
+                var a = _ailments[i];
+                if (now >= a.結束時間)
+                {
+                    _ailments.RemoveAt(i);
+                    continue;
+                }
+
+                totalDot += a.每秒傷害 * dt;
+                i++;
+            }
+
+            if (totalDot > 0f)
+                ApplyDamageIgnoringDodge(totalDot, false);
+
+            _dotHudTick += dt;
+            if (_dotHudTick >= 2f && _ailments.Count > 0)
+            {
+                _dotHudTick = 0f;
+                Debug.Log($"[Player] 持續異常中：{string.Join("、", AilmentDebugSummary())}");
+            }
+        }
+
+        IEnumerable<string> AilmentDebugSummary()
+        {
+            var now = Time.time;
+            foreach (var a in _ailments)
+            {
+                if (now >= a.結束時間) continue;
+                yield return $"{a.異常名稱} ({a.每秒傷害}/s, {a.結束時間 - now:F1}s)";
+            }
         }
     }
 }

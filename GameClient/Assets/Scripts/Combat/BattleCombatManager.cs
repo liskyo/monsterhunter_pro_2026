@@ -23,6 +23,11 @@ namespace MonsterHunter.Combat
         public 魔物資料列 MonsterDataRow;
         public Canvas HudCanvas;
 
+        /// <summary>試玩／除錯用：對應 weapon_movesets.json 的「武器類型」欄。</summary>
+        public string DemoWeaponType = "大劍";
+
+        /// <summary>武器基礎物理（之後可由 equipment.json 注入）。</summary>
+        public float DemoWeaponBasePhysical = 230f;
         // ── 內部 ──
         PlayerController _playerCtrl;
         MonsterAiController _monsterAi;
@@ -113,16 +118,19 @@ namespace MonsterHunter.Combat
             // PlayerCombatLoadout（預設大劍）
             var loadoutGo = new GameObject("PlayerCombatLoadout");
             var loadout = loadoutGo.AddComponent<PlayerCombatLoadout>();
-            loadout.武器類型 = "大劍";
-            loadout.武器基礎物理 = 230f;
+            loadout.武器類型 = string.IsNullOrWhiteSpace(DemoWeaponType) ? "大劍" : DemoWeaponType.Trim();
+            loadout.武器基礎物理 = DemoWeaponBasePhysical > 0f ? DemoWeaponBasePhysical : 230f;
             loadout.武器屬性 = 0f;
             loadout.武器屬性標籤 = "無";
 
-            // Hitbox on hunter child
+            // Hitbox on hunter child（半徑依 weapon_movesets 攻擊距離縮放，貼近割草武器的距離手感）
             var hitboxGo = new GameObject("AttackHitbox");
             hitboxGo.transform.SetParent(HunterGo.transform, false);
             var hbCol = hitboxGo.AddComponent<CircleCollider2D>();
-            hbCol.radius = 2.8f;
+            var atkRangeGuess = GuessWeaponReach(loadout.武器類型, weaponJson);
+            hbCol.radius = atkRangeGuess > 0.05f
+                ? Mathf.Clamp(atkRangeGuess * 0.55f, 0.35f, 5.5f)
+                : 2.8f;
             hbCol.isTrigger = true;
             hbCol.enabled = false;
             var hitbox = hitboxGo.AddComponent<Hitbox>();
@@ -356,6 +364,15 @@ namespace MonsterHunter.Combat
         // ────────────────────────────────────────────────────
         //  工具
         // ────────────────────────────────────────────────────
+
+        static float GuessWeaponReach(string weaponType, string weaponJsonText)
+        {
+            if (string.IsNullOrEmpty(weaponType) ||
+                string.IsNullOrEmpty(weaponJsonText) ||
+                !WeaponMovesetRuntime.TryGetTapMoveStats(weaponType, weaponJsonText, out _, out var reach))
+                return 0f;
+            return Mathf.Max(0f, reach);
+        }
 
         static string LoadDesignDataJson(params string[] relativeUnderDesignData)
         {

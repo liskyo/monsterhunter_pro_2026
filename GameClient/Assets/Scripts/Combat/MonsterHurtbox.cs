@@ -4,8 +4,8 @@ using UnityEngine;
 namespace MonsterHunter.Combat
 {
     /// <summary>
-    /// 魔物部位受擊盒：掛在帶 Trigger 的碰撞器上。優先交給父鏈 <see cref="MonsterHealth"/>（2D 預覽戰），
-    /// 否則改交 <see cref="IDamageReceiver"/>（例如 3D <see cref="Monster.MonsterController"/>，血量來自 DesignData/01_Monsters/monsters.json）。
+    /// 魔物部位受擊盒：掛在帶 Trigger 的碰撞器上。優先交予父鏈 <see cref="MonsterHealth"/>（2D 預覽戰），
+    /// 否則交 <see cref="IDamageReceiver"/>（血量來自 DesignData/01_Monsters/monsters.json）。
     /// </summary>
     public sealed class MonsterHurtbox : MonoBehaviour, IHurtbox
     {
@@ -51,7 +51,7 @@ namespace MonsterHunter.Combat
         }
 
         /// <inheritdoc />
-        public void ApplyWeaponHit(WeaponHitbox source, float baseDamage)
+        public void ApplyWeaponHit(float baseDamage)
         {
             CacheTargets();
 
@@ -69,13 +69,11 @@ namespace MonsterHunter.Combat
             else if (_damageReceiver != null)
             {
                 _damageReceiver.ApplyDamage(finalDamage, false);
-                var mc = _damageReceiver as MonsterHunter.Monster.MonsterController;
-                if (mc != null)
-                    Debug.Log(
-                        $"[MonsterHurtbox] {mc.DisplayName}（{mc.MonsterId}）受擊 −{finalDamage:0.##} HP，剩餘 {mc.CurrentHp:0.##}/{mc.MaxHp:0.##}",
-                        this);
-                else
-                    Debug.Log($"[MonsterHurtbox] {name} 受擊（IDamageReceiver）−{finalDamage:0.##}", this);
+                var host = _damageReceiver as MonoBehaviour;
+                var rootName = host != null ? host.transform.root.name : name;
+                Debug.Log(
+                    $"[MonsterHurtbox] {rootName} 受擊（IDamageReceiver: {_damageReceiver.GetType().Name}）−{finalDamage:0.##}",
+                    this);
             }
             else
             {

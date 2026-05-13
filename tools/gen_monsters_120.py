@@ -160,11 +160,13 @@ def main():
             "弱點": [{"屬性": weak_elem, "傷害加成比例": round(bonus, 2)}],
             "身材面積": area,
             "最大血量": int(hp),
-            "普通攻擊": {
-                "傷害": int(dmg),
-                "攻擊距離": round(atk_range, 1),
+            "魔物攻擊內容": {
+                "普通攻擊": {
+                    "傷害": int(dmg),
+                    "攻擊距離": round(atk_range, 1),
+                },
+                "特殊攻擊": build_anomalies(primary, name, idx),
             },
-            "異常屬性攻擊": build_anomalies(primary, name, idx),
             "圖片路徑": f"Assets/Textures/Monsters/{mid}_全身圖.png",
             "圖示路徑": f"Assets/UI/Icons/Monsters/{mid}_圖示.png",
         }
