@@ -1,6 +1,5 @@
 using System;
 using MonsterHunter.DataModels;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace MonsterHunter.Combat
@@ -31,9 +30,16 @@ namespace MonsterHunter.Combat
                 if (root?.資料 == null) { Debug.LogError("[CombatTuningStore] InjectJson 解析失敗"); return; }
                 foreach (var r in root.資料)
                 {
-                    if (r != null && r.調校鍵 == DefaultKey) { _row = r; return; }
+                    if (r != null && r.調校鍵 == DefaultKey)
+                    {
+                        _row = r;
+                        NormalizeRowDefaults(_row);
+                        return;
+                    }
                 }
+
                 _row = root.資料.Length > 0 ? root.資料[0] : null;
+                NormalizeRowDefaults(_row);
             }
             catch (Exception e) { Debug.LogError("[CombatTuningStore] InjectJson: " + e.Message); }
         }
@@ -61,16 +67,28 @@ namespace MonsterHunter.Combat
                     if (r != null && r.調校鍵 == DefaultKey)
                     {
                         _row = r;
+                        NormalizeRowDefaults(_row);
                         return;
                     }
                 }
 
                 _row = root.資料.Length > 0 ? root.資料[0] : null;
+                NormalizeRowDefaults(_row);
             }
             catch (Exception e)
             {
                 Debug.LogError("[CombatTuningStore] " + e.Message);
             }
+        }
+
+        static void NormalizeRowDefaults(戰鬥調校列 row)
+        {
+            if (row == null) return;
+            // JsonUtility：缺鍵載入為 0；補資料驅動預設
+            if (row.連段重置秒 <= 1e-3f) row.連段重置秒 = 2.5f;
+            if (row.分段蓄力最小門檻秒 <= 1e-3f) row.分段蓄力最小門檻秒 = 0.28f;
+            if (row.專屬技預設攻擊距離 <= 1e-3f) row.專屬技預設攻擊距離 = 5.5f;
+            if (row.多段命中間隔秒 <= 1e-3f) row.多段命中間隔秒 = 0.07f;
         }
     }
 }

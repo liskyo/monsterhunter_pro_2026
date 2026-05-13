@@ -8,6 +8,7 @@ namespace MonsterHunter.Combat
 {
     /// <summary>
     /// 戰鬥結算：掉落 → 倉庫；圖鑑擊殺 + 當日 SESSION（daily_hunt_records.__SESSION__）與第 3 擊難度倍率（RPC）。
+    /// Supabase 未設定時：<see cref="LocalHunterLedger"/> 仍可累積素材。
     /// </summary>
     public sealed class HuntSettlementService : MonoBehaviour
     {
@@ -53,8 +54,9 @@ namespace MonsterHunter.Combat
                 }
 
                 string metaErr = null;
-                int kills = 0;
-                float diffMul = 1f;
+                var kills   = 0;
+                var diffMul = 1f;
+
                 yield return _supabase.PostMonsterKillSession(
                     localDate,
                     monsterId,
@@ -62,23 +64,32 @@ namespace MonsterHunter.Combat
                     e => metaErr = e,
                     (k, d) =>
                     {
-                        kills = k;
+                        kills   = k;
                         diffMul = d;
-                    }
-                );
+                    });
+
                 if (metaErr != null)
                 {
                     onError?.Invoke(metaErr);
                     yield break;
                 }
 
+                PersistLocalWarehouse(rewards);
                 onComplete?.Invoke(rewards, kills, diffMul);
+                yield break;
             }
-            else
-            {
-                Debug.LogWarning("[HuntSettlementService] 未指定 SupabaseService，僅解析掉落不清倉／雲端。");
-                onComplete?.Invoke(rewards, 0, 1f);
-            }
+
+            Debug.LogWarning(
+                "[HuntSettlementService] 未指定 SupabaseService：解析掉落並寫入本機 mh_local_hunter_ledger.json。");
+
+            PersistLocalWarehouse(rewards);
+            onComplete?.Invoke(rewards, 0, 1f);
+        }
+
+        static void PersistLocalWarehouse(IEnumerable<SettlementRewardEntry> rewards)
+        {
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            ledger.MergeSettlementRewards(rewards);
         }
     }
 }

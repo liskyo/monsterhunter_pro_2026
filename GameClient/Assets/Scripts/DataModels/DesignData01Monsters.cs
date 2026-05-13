@@ -29,6 +29,20 @@ namespace MonsterHunter.DataModels
 
         /// <summary>特殊攻擊／附加效果列表（JSON 鍵：<c>特殊攻擊</c>）。命中後依「觸發機率」判定是否施加。</summary>
         public 魔物特殊攻擊項[] 特殊攻擊;
+
+        /// <summary>可被 AI 選招的招式列（普攻以外的範圍／倍率招式；異常仍以 <see cref="特殊攻擊"/> 附加為主）。</summary>
+        public 魔物招式攻擊項[] 特殊招式;
+    }
+
+    /// <summary>對應 JSON <c>特殊招式</c>[]：數值招式（非 DoT 附加表的「特殊攻擊」）。</summary>
+    [Serializable]
+    public class 魔物招式攻擊項
+    {
+        public string 名稱;
+        public float 傷害對普攻倍率 = 1f;
+        public float 攻擊距離;
+        public float 使用權重 = 1f;
+        public float 冷卻秒;
     }
 
     [Serializable]

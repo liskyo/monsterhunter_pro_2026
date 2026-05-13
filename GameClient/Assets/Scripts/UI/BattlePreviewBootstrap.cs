@@ -33,6 +33,11 @@ namespace MonsterHunter.UI
         [SerializeField] string _demoWeaponType = "大劍";
         [SerializeField] float _demoWeaponBasePhysical = 230f;
 
+        [Header("導鎖／貓飯詞條（Inspector 優先於 LocalHunterLedger 對應欄位）")]
+        [SerializeField] string _previewPaintballItemId = "";
+        [SerializeField] string _previewTraceId = "";
+        [SerializeField] string _previewCanteenFoodId = "";
+
         BattleBackgroundDisplay _background;
         Camera _bgCamera;
 
@@ -41,6 +46,8 @@ namespace MonsterHunter.UI
         GameObject _hunterGo;
         魔物資料列 _currentMonsterRow;
         Canvas _hudCanvas;
+
+        BattleRuntimeModifiers _combatModifiers = BattleRuntimeModifiers.Neutral;
 
         void Awake()
         {
@@ -72,7 +79,10 @@ namespace MonsterHunter.UI
             foreach (Transform t in bgGo.GetComponentsInChildren<Transform>(true))
                 t.gameObject.layer = BackdropCullingLayer;
 
-            var quest = LoadPreviewQuest();
+            var quest           = LoadPreviewQuest();
+            var ledgerSnapshot = LocalHunterLedger.LoadOrCreate();
+            _combatModifiers    = BuildBattleSessionModifiers(quest, ledgerSnapshot);
+
             if (quest != null && !string.IsNullOrWhiteSpace(quest.地圖))
                 _background.ApplyFromQuest(quest);
             else if (!string.IsNullOrWhiteSpace(_fallbackMapName))
@@ -81,7 +91,7 @@ namespace MonsterHunter.UI
                 _background.ApplyMapName(_fallbackMapName);
             }
 
-            var monsterId = ResolveTargetMonsterId(quest);
+            var monsterId  = ResolveTargetMonsterId(quest, ledgerSnapshot);
             var monsterRow = LoadMonsterRow(monsterId);
             _currentMonsterRow = monsterRow;
 
@@ -110,7 +120,7 @@ namespace MonsterHunter.UI
             mgr.HudCanvas     = _hudCanvas;
             mgr.DemoWeaponType = string.IsNullOrWhiteSpace(_demoWeaponType) ? "大劍" : _demoWeaponType.Trim();
             mgr.DemoWeaponBasePhysical = _demoWeaponBasePhysical > 0f ? _demoWeaponBasePhysical : 230f;
-        }
+            mgr.SessionModifiers       = _combatModifiers.Clamp();        }
 
         void BuildDualCameraStack(Camera main)
         {
@@ -176,18 +186,191 @@ namespace MonsterHunter.UI
             return null;
         }
 
-        string ResolveTargetMonsterId(任務資料列 quest)
+        BattleRuntimeModifiers BuildBattleSessionModifiers(任務資料列 _, LocalHunterLedger ledger)
         {
-            if (quest?.目標魔物 != null)
+            var m = BattleRuntimeModifiers.Neutral;
+
+            var foodId = PreferInspectorOrLedger(_previewCanteenFoodId, ledger.PreviewCanteenFoodId);
+            var foodRow = LookupCanteenRow(foodId);
+            ApplyCanteenBuffsToModifiers(foodRow?.增益效果, ref m);
+
+            var paintId = PreferInspectorOrLedger(_previewPaintballItemId, ledger.PreviewPaintballItemId);
+            var traceId = PreferInspectorOrLedger(_previewTraceId, ledger.PreviewTraceId);
+
+            var trRow = LookupTraceRow(traceId);
+            if (trRow != null && LookupPaintballRow(paintId) == null &&
+                !string.IsNullOrEmpty(traceId))
             {
-                foreach (var t in quest.目標魔物)
-                {
-                    if (t != null && !string.IsNullOrWhiteSpace(t.魔物編號))
-                        return t.魔物編號.Trim();
-                }
+                m.PlayerOutgoingDamageMultiplier *= 1.02f;
+                Debug.Log("[BattlePreviewBootstrap] 僅痕跡導鎖：微弱獵傷詞條。");
             }
 
-            return string.IsNullOrWhiteSpace(_fallbackMonsterId) ? "MON_001" : _fallbackMonsterId.Trim();
+            if (LookupPaintballRow(paintId) != null && trRow != null)
+                m.MonsterMaxHpMultiplier *= 0.98f;
+
+            return m;
+        }
+
+        static string PreferInspectorOrLedger(string inspector, string persisted)
+        {
+            if (!string.IsNullOrWhiteSpace(inspector))
+                return inspector.Trim();
+            return string.IsNullOrWhiteSpace(persisted) ? null : persisted.Trim();
+        }
+
+        static void ApplyCanteenBuffsToModifiers(貓飯增益效果 g, ref BattleRuntimeModifiers m)
+        {
+            if (g == null)
+                return;
+
+            if (g.攻擊力加成 >= 1.01f || g.物理攻擊加成 >= 1.01f)
+                m.PlayerOutgoingDamageMultiplier *= Mathf.Max(1f, Mathf.Max(g.攻擊力加成, g.物理攻擊加成));
+
+            if (g.全能力加成 >= 1.001f)
+                m.PlayerOutgoingDamageMultiplier *= Mathf.Max(1f, g.全能力加成);
+
+            if (g.體力上限 > 0f)
+                m.PlayerMaxHpMultiplier *= Mathf.Clamp(1f + g.體力上限 / 900f, 1f, 2.5f);
+
+            Debug.Log(
+                $"[BattlePreviewBootstrap] 貓飯詞條：獵傷×{m.PlayerOutgoingDamageMultiplier:F2} 體力池×{m.PlayerMaxHpMultiplier:F2}");
+        }
+
+        貓飯資料列 LookupCanteenRow(string foodId)
+        {
+            if (string.IsNullOrEmpty(foodId))
+                return null;
+
+            try
+            {
+                var path = ResolveDesignDataFile("05_Systems", "canteen.json");
+                if (string.IsNullOrEmpty(path)) return null;
+                var txt  = File.ReadAllText(path);
+                var rows = JsonConvert.DeserializeObject<貓飯資料列[]>(txt);
+                if (rows == null) return null;
+                foreach (var r in rows)
+                {
+                    if (r != null && r.料理編號 == foodId)
+                        return r;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[BattlePreviewBootstrap] 讀取貓飯資料失敗：" + e.Message);
+            }
+
+            return null;
+        }
+
+        染色球資料列 LookupPaintballRow(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId))
+                return null;
+
+            try
+            {
+                var path = ResolveDesignDataFile("04_Items", "paintballs.json");
+                if (string.IsNullOrEmpty(path)) return null;
+                var rows = JsonConvert.DeserializeObject<染色球資料列[]>(File.ReadAllText(path));
+                if (rows == null) return null;
+                foreach (var r in rows)
+                {
+                    if (r != null && r.道具編號 == itemId)
+                        return r;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[BattlePreviewBootstrap] 染色球資料失敗：" + e.Message);
+            }
+
+            return null;
+        }
+
+        魔物痕跡資料列 LookupTraceRow(string traceRowId)
+        {
+            if (string.IsNullOrEmpty(traceRowId))
+                return null;
+
+            try
+            {
+                var path = ResolveDesignDataFile("04_Items", "monster_traces.json");
+                if (string.IsNullOrEmpty(path)) return null;
+
+                var rows = JsonConvert.DeserializeObject<魔物痕跡資料列[]>(File.ReadAllText(path));
+                if (rows == null) return null;
+
+                foreach (var r in rows)
+                {
+                    if (r != null && r.痕跡編號 == traceRowId)
+                        return r;
+                }
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning("[BattlePreviewBootstrap] 痕跡資料失敗：" + e.Message);
+            }
+
+            return null;
+        }
+
+        string ResolveTargetMonsterId(任務資料列 quest, LocalHunterLedger ledgerSnapshot)
+        {
+            var questMonster = FallbackQuestMonsterId(quest);
+
+            var paintId =
+                PreferInspectorOrLedger(_previewPaintballItemId, ledgerSnapshot.PreviewPaintballItemId);
+            var traceId =
+                PreferInspectorOrLedger(_previewTraceId, ledgerSnapshot.PreviewTraceId);
+
+            var traceRow       = LookupTraceRow(traceId);
+            var pbRow          = LookupPaintballRow(paintId);
+            var traceMonsterId = traceRow != null ? traceRow.對應魔物編號?.Trim() : null;
+
+            if (string.IsNullOrEmpty(traceMonsterId))
+                return questMonster;
+
+            if (pbRow == null)
+                return traceMonsterId;
+
+            var starGuess = traceRow != null && traceRow.魔物星級 > 0
+                ? traceRow.魔物星級
+                : MonsterStarGuess(traceMonsterId);
+
+            starGuess = Mathf.Max(1, starGuess);
+
+            var lo = Mathf.Max(1, pbRow.吸引星級_最低);
+            var hi = Mathf.Max(lo, pbRow.吸引星級_最高);
+
+            if (starGuess >= lo && starGuess <= hi)
+                return traceMonsterId;
+
+            Debug.LogWarning(
+                $"[BattlePreviewBootstrap] 染色球星級區間[{lo}-{hi}] 與痕跡目標約 {starGuess}★ 不符，沿用任務目標。");
+
+            return questMonster;
+
+            string FallbackQuestMonsterId(任務資料列 q)
+            {
+                if (q?.目標魔物 != null)
+                {
+                    foreach (var t in q.目標魔物)
+                    {
+                        if (t != null && !string.IsNullOrWhiteSpace(t.魔物編號))
+                            return t.魔物編號.Trim();
+                    }
+                }
+
+                return string.IsNullOrWhiteSpace(_fallbackMonsterId)
+                    ? "MON_001"
+                    : _fallbackMonsterId.Trim();
+            }
+
+            int MonsterStarGuess(string monsterIdToLookup)
+            {
+                var rowData = LoadMonsterRow(monsterIdToLookup);
+                return rowData != null ? Mathf.Max(1, rowData.星級) : 1;
+            }
         }
 
         魔物資料列 LoadMonsterRow(string 魔物編號)

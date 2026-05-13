@@ -26,8 +26,11 @@ namespace MonsterHunter.Combat
         /// <summary>試玩／除錯用：對應 weapon_movesets.json 的「武器類型」欄。</summary>
         public string DemoWeaponType = "大劍";
 
-        /// <summary>武器基礎物理（之後可由 equipment.json 注入）。</summary>
+        /// <summary>武器基礎物理（equipment 綁定失敗時的後備）。</summary>
         public float DemoWeaponBasePhysical = 230f;
+
+        /// <summary>Bootstrap／任務詞條等：本場戰鬥暫態倍率。</summary>
+        public BattleRuntimeModifiers SessionModifiers = BattleRuntimeModifiers.Neutral;
         // ── 內部 ──
         PlayerController _playerCtrl;
         MonsterAiController _monsterAi;
@@ -115,13 +118,37 @@ namespace MonsterHunter.Combat
             _tuningStore = tsGo.AddComponent<CombatTuningStore>();
             if (!string.IsNullOrEmpty(tuningJson)) _tuningStore.InjectJson(tuningJson);
 
-            // PlayerCombatLoadout（預設大劍）
+            var session = SessionModifiers.Clamp();
+
+            var ledger = LocalHunterLedger.LoadOrCreate();
+
+            // PlayerCombatLoadout：優先綁 equipment.json，失敗則用試玩數值。
             var loadoutGo = new GameObject("PlayerCombatLoadout");
             var loadout = loadoutGo.AddComponent<PlayerCombatLoadout>();
-            loadout.武器類型 = string.IsNullOrWhiteSpace(DemoWeaponType) ? "大劍" : DemoWeaponType.Trim();
-            loadout.武器基礎物理 = DemoWeaponBasePhysical > 0f ? DemoWeaponBasePhysical : 230f;
+
+            loadout.武器類型 =
+                string.IsNullOrWhiteSpace(DemoWeaponType) ? "大劍" : DemoWeaponType.Trim();
+            loadout.武器基礎物理 =
+                DemoWeaponBasePhysical > 0f ? DemoWeaponBasePhysical : 230f;
             loadout.武器屬性 = 0f;
             loadout.武器屬性標籤 = "無";
+
+            var equipPath =
+                ResolveDesignDataPath("02_Equipment", "equipment.json");
+            var upgradePath =
+                ResolveDesignDataPath("02_Equipment", "upgrade_rules.json");
+
+            if (!string.IsNullOrEmpty(equipPath))
+            {
+                var upgradeArg = string.IsNullOrEmpty(upgradePath) ? "" : upgradePath;
+
+                EquipmentCombatBinder.TryBindFromDisk(equipPath, upgradeArg, ledger,
+                    DemoWeaponType, loadout);
+
+                DemoWeaponType = loadout.武器類型;
+
+                DemoWeaponBasePhysical = loadout.武器基礎物理;
+            }
 
             // Hitbox on hunter child（半徑依 weapon_movesets 攻擊距離縮放，貼近割草武器的距離手感）
             var hitboxGo = new GameObject("AttackHitbox");
@@ -135,31 +162,38 @@ namespace MonsterHunter.Combat
             hbCol.enabled = false;
             var hitbox = hitboxGo.AddComponent<Hitbox>();
 
-            // 玩家 HP = 魔物最大血量 × 0.25（確保能撐住 10+ 次攻擊）
-            // 最低 500，避免過低（魔物傷害 82 → 至少能受 ~6 擊）
-            var monsterMaxHp = MonsterDataRow != null ? Mathf.Max(1f, MonsterDataRow.最大血量) : 2000f;
-            var playerMaxHp  = Mathf.Max(500f, monsterMaxHp * 0.25f);
+            // 玩家 HP = 魔物最大血量 × 魔物詞條倍率 × 0.25 × 獵人體魄詞條
+            var monsterHpScale =
+                Mathf.Max(0.05f, session.MonsterMaxHpMultiplier);
+            var monsterBaseHp =
+                MonsterDataRow != null ? Mathf.Max(1f, MonsterDataRow.最大血量) : 2000f;
+
+            var playerMaxHp =
+                Mathf.Max(500f, monsterBaseHp * monsterHpScale * 0.25f *
+                                       session.PlayerMaxHpMultiplier);
 
             // PlayerController on hunter
+            var touchGo = new GameObject("CombatTouchInput");
+            var touchInput = touchGo.AddComponent<PortraitCombatTouchInput>();
+
             _playerCtrl = HunterGo.AddComponent<PlayerController>();
-            _playerCtrl.Inject(_tuningStore, loadout, weaponJson, playerMaxHp);
+
+            touchInput.Inject(_tuningStore, _playerCtrl);
+
+            _playerCtrl.Inject(_tuningStore, loadout, weaponJson, playerMaxHp, touchInput,
+                session.PlayerOutgoingDamageMultiplier);
+
             TrySetPrivateField(_playerCtrl, "_attackHitbox", hitbox);
 
             // MonsterAiController on monster
             _monsterAi = MonsterGo.AddComponent<MonsterAiController>();
             // 同時注入 tuningStore，AI 的 Update 才會執行追擊邏輯
-            _monsterAi.InjectData(MonsterDataRow, HunterGo.transform, _tuningStore);
+            _monsterAi.InjectData(MonsterDataRow, HunterGo.transform, _tuningStore, monsterHpScale);
             TrySetPrivateField(_monsterAi, "_settlement", null);
 
             // 玩家直接知道目標，不走 Physics2D 掃描
             _playerCtrl.SetDirectTarget(_monsterAi);
 
-            // PortraitCombatTouchInput
-            var inputGo = new GameObject("CombatTouchInput");
-            var touchInput = inputGo.AddComponent<PortraitCombatTouchInput>();
-            touchInput.Inject(_tuningStore, _playerCtrl);
-
-            // 訂閱事件
             _monsterAi.OnDamageReceived += OnMonsterDamaged;
             _monsterAi.OnDefeated       += OnMonsterDefeated;
             _playerCtrl.OnDamageReceived += OnPlayerDamaged;
@@ -374,18 +408,26 @@ namespace MonsterHunter.Combat
             return Mathf.Max(0f, reach);
         }
 
-        static string LoadDesignDataJson(params string[] relativeUnderDesignData)
+        static string ResolveDesignDataPath(params string[] relativeUnderDesignData)
         {
             var rel = Path.Combine(relativeUnderDesignData);
-            var dir = new System.IO.DirectoryInfo(Application.dataPath);
+            var dir = new DirectoryInfo(Application.dataPath);
             for (var i = 0; i < 6 && dir != null; i++)
             {
                 var candidate = Path.Combine(dir.FullName, "DesignData", rel);
-                if (File.Exists(candidate)) return File.ReadAllText(candidate);
+                if (File.Exists(candidate))
+                    return candidate;
                 dir = dir.Parent;
             }
+
             Debug.LogWarning($"[BattleCombatManager] 找不到 DesignData/{rel}");
             return null;
+        }
+
+        static string LoadDesignDataJson(params string[] relativeUnderDesignData)
+        {
+            var path = ResolveDesignDataPath(relativeUnderDesignData);
+            return path != null ? File.ReadAllText(path) : null;
         }
 
         static void TrySetPrivateField(object target, string fieldName, object value)

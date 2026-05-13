@@ -36,6 +36,14 @@ namespace MonsterHunter.Controllers
         bool _telegraphing;
         bool _healthEventsHooked;
 
+        /// <summary>本次前搖結束後要結算的直傷數值。</summary>
+        int _plannedDirectDamageFlat;
+        /// <summary>本次招式判定距離。</summary>
+        float _plannedHitRadius;
+
+        readonly System.Collections.Generic.Dictionary<int, float> _specialMoveCdUntil =
+            new System.Collections.Generic.Dictionary<int, float>(8);
+
         public 魔物資料列 DataRow => _data;
         public MonsterBreakState BreakState => _breakState;
 
@@ -54,13 +62,17 @@ namespace MonsterHunter.Controllers
         public event Action OnDefeated;
 
         /// <summary>BattleCombatManager 直接注入資料（不需 TextAsset）。</summary>
-        public void InjectData(魔物資料列 data, Transform player, CombatTuningStore tuningStore = null)
+        public void InjectData(魔物資料列 data, Transform player, CombatTuningStore tuningStore = null,
+            float monsterMaxHpMultiplier = 1f)
         {
             _data = data;
             _player = player;
             if (tuningStore != null) _tuningStore = tuningStore;
             if (data != null)
-                InitializeMonsterHealthFromData(data.最大血量);
+            {
+                var m = Mathf.Max(0.1f, monsterMaxHpMultiplier);
+                InitializeMonsterHealthFromData(Mathf.Max(1f, data.最大血量 * m));
+            }
         }
 
         void Awake()
@@ -99,7 +111,7 @@ namespace MonsterHunter.Controllers
             var pl = (Vector2)_player.position;
             var dist = Vector2.Distance(self, pl);
             var detect = tuning.待機偵測半徑;
-            var atkDist = _data.魔物攻擊內容?.普通攻擊 != null ? _data.魔物攻擊內容.普通攻擊.攻擊距離 : 2f;
+            var atkDist = BuildApproachMeleeDistance(out _);
             var abandon = detect * Mathf.Max(1f, tuning.追擊放棄倍率);
 
             switch (_state)
@@ -137,19 +149,20 @@ namespace MonsterHunter.Controllers
 
                     if (!_telegraphing)
                     {
+                        PickNextMeleePlan();
                         _telegraphing = true;
                         var telegraph = tuning.魔物攻擊前搖秒 > 0f ? tuning.魔物攻擊前搖秒 : 0f;
                         var postStun  = tuning.魔物招式後僵直秒 > 0f ? tuning.魔物招式後僵直秒 : 1.5f;
                         // 前搖 + 後搖都透過 _stun 凍結移動
                         _stun  = telegraph + postStun;
-                        StartCoroutine(TelegraphAndAttack(telegraph, atkDist * 1.6f));
+                        StartCoroutine(TelegraphAndAttack(telegraph));
                         _state = AiState.追擊;
                     }
                     break;
             }
         }
 
-        IEnumerator TelegraphAndAttack(float delay, float finalAtkDist)
+        IEnumerator TelegraphAndAttack(float delay)
         {
             // ── 前搖視覺：紅色閃爍 + 頭上「！」提示 ──
             var sr = GetComponentInChildren<SpriteRenderer>();
@@ -177,7 +190,7 @@ namespace MonsterHunter.Controllers
             if (_player == null) yield break;
             var dist = Vector2.Distance(transform.position, _player.position);
             // 只在玩家仍在範圍內才造成傷害（玩家閃避離開即無效）
-            if (dist <= finalAtkDist)
+            if (dist <= _plannedHitRadius)
                 PerformAttackOnPlayer();
         }
 
@@ -221,17 +234,94 @@ namespace MonsterHunter.Controllers
             return Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
         }
 
+        void PickNextMeleePlan()
+        {
+            var norm = _data?.魔物攻擊內容?.普通攻擊;
+            if (norm == null)
+            {
+                _plannedDirectDamageFlat = 0;
+                _plannedHitRadius = 2f;
+                return;
+            }
+
+            BuildApproachMeleeDistance(out var meleeDist);
+            _plannedHitRadius = meleeDist * 1.65f;
+
+            var specs = _data.魔物攻擊內容.特殊招式;
+            var normDmg = Mathf.Max(0, norm.傷害);
+
+            float sum = 0f;
+            if (specs != null && specs.Length > 0)
+            {
+                var now = Time.time;
+                for (var i = 0; i < specs.Length; i++)
+                {
+                    var s = specs[i];
+                    if (s == null || s.使用權重 <= 0f) continue;
+                    if (_specialMoveCdUntil.TryGetValue(i, out var cd) && now < cd) continue;
+                    sum += s.使用權重;
+                }
+            }
+
+            if (sum <= 1e-3f || specs == null)
+            {
+                _plannedDirectDamageFlat = normDmg;
+                return;
+            }
+
+            var pick = Random.value * sum;
+            var acc = 0f;
+            for (var i = 0; i < specs.Length; i++)
+            {
+                var s = specs[i];
+                if (s == null || s.使用權重 <= 0f) continue;
+                if (_specialMoveCdUntil.TryGetValue(i, out var cd) && Time.time < cd) continue;
+                acc += s.使用權重;
+                if (pick <= acc)
+                {
+                    var mul = s.傷害對普攻倍率 > 0f ? s.傷害對普攻倍率 : 1f;
+                    _plannedDirectDamageFlat = Mathf.Max(1, Mathf.RoundToInt(normDmg * mul));
+                    var hitR = s.攻擊距離 > 0f ? Mathf.Max(norm.攻擊距離, s.攻擊距離) : norm.攻擊距離;
+                    _plannedHitRadius = Mathf.Max(norm.攻擊距離, hitR, meleeDist) * 1.65f;
+                    if (s.冷卻秒 > 0f)
+                        _specialMoveCdUntil[i] = Time.time + s.冷卻秒;
+                    Debug.Log($"[MonsterAi] 選招「{(string.IsNullOrEmpty(s.名稱) ? $"特殊招式#{i}" : s.名稱)}」直傷={_plannedDirectDamageFlat}");
+                    return;
+                }
+            }
+
+            _plannedDirectDamageFlat = normDmg;
+        }
+
+        /// <summary>追擊時與發動招式與普攻距離對齊的「最近接戰」距離。</summary>
+        float BuildApproachMeleeDistance(out float normalDistOnly)
+        {
+            var norm = _data?.魔物攻擊內容?.普通攻擊;
+            normalDistOnly = norm != null ? Mathf.Max(0.1f, norm.攻擊距離) : 2f;
+            var atkDist = normalDistOnly;
+            var specs = _data?.魔物攻擊內容?.特殊招式;
+            if (specs == null)
+                return atkDist;
+            for (var i = 0; i < specs.Length; i++)
+            {
+                var s = specs[i];
+                if (s == null || s.攻擊距離 <= 0f) continue;
+                atkDist = Mathf.Max(atkDist, s.攻擊距離);
+            }
+
+            return atkDist;
+        }
+
         void PerformAttackOnPlayer()
         {
-            var atk = _data?.魔物攻擊內容?.普通攻擊;
-            if (atk == null || _player == null) return;
+            if (_plannedDirectDamageFlat <= 0 || _player == null) return;
             var receiver = _player.GetComponent<IDamageReceiver>();
             if (receiver == null) return;
 
-            receiver.ApplyDamage(atk.傷害, false);
+            receiver.ApplyDamage(_plannedDirectDamageFlat, false);
 
             var pc = _player.GetComponent<PlayerController>();
-            var specials = _data.魔物攻擊內容?.特殊攻擊;
+            var specials = _data?.魔物攻擊內容?.特殊攻擊;
             if (pc != null && specials != null)
                 TryApplySpecialAttackProcs(pc, specials);
         }

@@ -13,6 +13,9 @@ namespace MonsterHunter.Combat
         [Tooltip("對應 equipment 基礎數值等")]
         public float 武器基礎物理;
 
+        /// <summary>若由 equipment.json 綁定寫入，記錄當前武器「裝備編號」（除錯／結算銜接）。</summary>
+        public string BoundWeaponEquipmentId = "";
+
         public float 武器屬性;
         public string 武器屬性標籤 = "無";
 

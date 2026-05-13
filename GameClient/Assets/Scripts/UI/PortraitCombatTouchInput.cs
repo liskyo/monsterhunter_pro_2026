@@ -19,12 +19,31 @@ namespace MonsterHunter.UI
         bool _tracking;
         int _fingerId = -1;
 
+        bool _combatSkillConsumed;
+
         /// <summary>BattleCombatManager 執行期注入（不需 Inspector 拖拉）。</summary>
         public void Inject(CombatTuningStore ts, PlayerController pc)
         {
             _tuningStore = ts;
             _player = pc;
         }
+
+        /// <summary>
+        /// 直立戰鬥：在非搖桿區（上半螢幕）的快速點擊視為觸發專屬技（單發邊緣）。
+        /// 編輯器另外可用 F 鍵（由 Player 直接吃掉）；此處仍以觸控路徑補強。
+        /// </summary>
+        public bool ConsumeCombatSkillPulse()
+        {
+            if (!_combatSkillConsumed) return false;
+            _combatSkillConsumed = false;
+            return true;
+        }
+
+        static bool FingerNotStick(int fingerIdStick, Touch t) =>
+            fingerIdStick < 0 || t.fingerId != fingerIdStick;
+
+        static bool IsCombatScreenZone(Vector2 screenPosPx, float stickZonePxBottom)
+            => screenPosPx.y >= Mathf.Max(stickZonePxBottom + 32f, Screen.height * 0.52f);
 
         void Reset()
         {
@@ -56,6 +75,8 @@ namespace MonsterHunter.UI
             move = ProcessKeyboard();
 #endif
 
+            var stickPx = Screen.height * zoneH;
+
             if (move.sqrMagnitude < 0.01f)
             {
                 if (Input.touchCount > 0)
@@ -66,8 +87,39 @@ namespace MonsterHunter.UI
 #endif
             }
 
+            ProcessCombatZoneTaps(stickPx);
+#if UNITY_EDITOR || UNITY_STANDALONE
+            ProcessCombatSkillMouseRelease(stickPx);
+#endif
+
             _player.MoveInput = move;
         }
+
+        void ProcessCombatZoneTaps(float stickPxFromBottom)
+        {
+            for (var i = 0; i < Input.touchCount; i++)
+            {
+                var t = Input.GetTouch(i);
+                if (!FingerNotStick(_fingerId, t)) continue;
+                if (!IsCombatScreenZone(t.position, stickPxFromBottom)) continue;
+                if (t.phase == TouchPhase.Ended && t.deltaPosition.sqrMagnitude < 2600f)
+                    _combatSkillConsumed = true;
+            }
+        }
+
+#if UNITY_EDITOR || UNITY_STANDALONE
+        void ProcessCombatSkillMouseRelease(float stickPxFromBottom)
+        {
+            if (!Input.GetMouseButtonUp(0)) return;
+
+            var p = (Vector2)Input.mousePosition;
+            // 由下往上操作的搖桿區鬆手不觸發專屬技
+            if (p.y <= stickPxFromBottom + 48f)
+                return;
+
+            _combatSkillConsumed = true;
+        }
+#endif
 
         Vector2 ProcessTouches(float zoneH, float maxR)
         {

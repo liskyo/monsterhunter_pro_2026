@@ -41,6 +41,18 @@ namespace MonsterHunter.DataModels
 
         /// <summary>兩次閃避之間的冷卻秒數。</summary>
         public float 閃避冷卻秒;
+
+        /// <summary>站立連段若在多久內沒再打，重置回第 1 段（資料缺省時由 CombatTuningStore 自動補預設）。</summary>
+        public float 連段重置秒;
+
+        /// <summary>長按單招（無分段表）判定用的起手最小蓄力門檻（秒）。</summary>
+        public float 分段蓄力最小門檻秒;
+
+        /// <summary>專屬技未在 JSON 寫「攻擊距離」時，與招式表首段距離合用之上限參考。</summary>
+        public float 專屬技預設攻擊距離;
+
+        /// <summary>同一次攻擊多段數命中之間的間隔。</summary>
+        public float 多段命中間隔秒;
     }
 
     [Serializable]
