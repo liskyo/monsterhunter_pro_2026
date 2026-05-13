@@ -9,7 +9,8 @@ namespace MonsterHunter.UI
 {
     /// <summary>
     /// 依 image_path 嘗試載入 Sprite；失敗時回傳 null，不拋例外。
-    /// 嘗試順序：Editor AssetDatabase → Resources → StreamingAssets 檔案 → 絕對／相對檔案路徑。
+    /// Editor Play 模式下，若為 <c>Assets/...</c> 的 png/jpg，會<strong>優先</strong>自磁碟讀取以避免 AssetDatabase／已載入貼圖快取仍是舊像素；
+    /// 其餘情境順序為：AssetDatabase → Resources → StreamingAssets → 絕對／相對檔案路徑。
     /// </summary>
     public static class SafeSpriteLoader
     {
@@ -24,6 +25,12 @@ namespace MonsterHunter.UI
             try
             {
 #if UNITY_EDITOR
+                // Play 模式下 AssetDatabase 可能仍握有已載入的 Texture2D，外覆寫 PNG 後仍像舊圖；先讀磁碟最穩。
+                if (EditorApplication.isPlaying && LooksLikeAssetsProjectImagePath(normalized))
+                {
+                    var diskSp = TryLoadUnderAssetsDataPath(normalized);
+                    if (diskSp != null) return diskSp;
+                }
                 var editorSprite = TryLoadFromAssetDatabase(normalized);
                 if (editorSprite != null) return editorSprite;
 #endif
@@ -48,6 +55,17 @@ namespace MonsterHunter.UI
         }
 
 #if UNITY_EDITOR
+        static bool LooksLikeAssetsProjectImagePath(string normalized)
+        {
+            var p = normalized.TrimStart('/').Trim();
+            if (!p.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+                return false;
+            var lower = p.ToLowerInvariant();
+            return lower.EndsWith(".png", StringComparison.Ordinal) ||
+                   lower.EndsWith(".jpg", StringComparison.Ordinal) ||
+                   lower.EndsWith(".jpeg", StringComparison.Ordinal);
+        }
+
         static Sprite TryLoadFromAssetDatabase(string path)
         {
             var p = path;

@@ -53,6 +53,9 @@ namespace MonsterHunter.Controllers
         bool _chargeHeldPrevFrame;
         bool _strikeCoroutineActive;
 
+        /// <summary>攻擊框繞身半徑（由 BattleCombatManager 注入），搜敵／距離判定的補正用。</summary>
+        float _meleeOrbitRadius;
+
         public float MaxHp { get; private set; } = 150f;
         public float CurrentHp { get; private set; } = 150f;
 
@@ -128,6 +131,24 @@ namespace MonsterHunter.Controllers
             _playerOutgoingDamageMul = Mathf.Clamp(m, 0.2f, 5f);
 
         public void SetDirectTarget(MonsterAiController monster) => _directTarget = monster;
+
+        /// <summary>割草軌道：攻擊框離獵人中心的半徑。</summary>
+        public void SetMeleeOrbitRadius(float worldRadius) => _meleeOrbitRadius = Mathf.Max(0f, worldRadius);
+
+        Vector2 MeleeStrikeOrigin() =>
+            _attackHitbox != null ? (Vector2)_attackHitbox.transform.position : (Vector2)transform.position;
+
+        float EstimateBladeContactRadius()
+        {
+            if (_attackHitbox == null) return Mathf.Max(0.12f, _meleeOrbitRadius * 0.08f);
+
+            var c = _attackHitbox.GetComponent<CircleCollider2D>();
+            if (c == null) return 0.26f;
+
+            var ls = Mathf.Max(Mathf.Abs(_attackHitbox.transform.lossyScale.x),
+                Mathf.Abs(_attackHitbox.transform.lossyScale.y));
+            return Mathf.Max(0.06f, c.radius * Mathf.Max(ls, 1f));
+        }
 
         void Awake()
         {
@@ -222,8 +243,9 @@ namespace MonsterHunter.Controllers
 
             var atkRangeGuess = FallbackReach(tuning);
 
+            var searchExtra = tuning.自動尋敵額外射程 + Mathf.Clamp(_meleeOrbitRadius * 0.4f, 0.2f, 1.1f);
             var target =
-                FindNearestMonster(transform.position, atkRangeGuess + tuning.自動尋敵額外射程);
+                FindNearestMonster(MeleeStrikeOrigin(), atkRangeGuess + searchExtra);
             if (target == null || !target.isActiveAndEnabled)
                 return;
 
@@ -268,9 +290,9 @@ namespace MonsterHunter.Controllers
         float FallbackReach(戰鬥調校列 tun)
         {
             var t = TapChainOrSynthetic(tun);
-            return t is { Length: > 0 } && t[0].攻擊距離 > 0.05f
-                ? t[0].攻擊距離
-                : tun.近戰預設攻擊距離;
+            if (t != null && t.Length > 0 && t[0].攻擊距離 > 0.05f)
+                return t[0].攻擊距離;
+            return tun.近戰預設攻擊距離;
         }
 
         bool GestureChargeHeld()
@@ -308,8 +330,8 @@ namespace MonsterHunter.Controllers
             var mv    = _moves.Charge.動作倍率[tier];
             var range = FallbackReach(tuning);
             var target =
-                FindNearestMonster(transform.position,
-                    range + tuning.自動尋敵額外射程 + 3f);
+                FindNearestMonster(MeleeStrikeOrigin(),
+                    range + tuning.自動尋敵額外射程 + 3f + Mathf.Clamp(_meleeOrbitRadius * 0.35f, 0f, 0.8f));
             if (target == null || !target.isActiveAndEnabled)
                 return;
 
@@ -333,8 +355,8 @@ namespace MonsterHunter.Controllers
                 return false;
 
             var sk  = _moves.Skill;
-            var tgt = FindNearestMonster(transform.position,
-                sk.攻擊距離 + tuning.自動尋敵額外射程 + 2f);
+            var tgt = FindNearestMonster(MeleeStrikeOrigin(),
+                sk.攻擊距離 + tuning.自動尋敵額外射程 + 2f + Mathf.Clamp(_meleeOrbitRadius * 0.35f, 0f, 1f));
             if (tgt == null || !tgt.isActiveAndEnabled)
                 return false;
 
@@ -384,11 +406,12 @@ namespace MonsterHunter.Controllers
                     break;
 
                 var dist =
-                    Vector2.Distance(transform.position, target.transform.position);
-                var limit = Mathf.Max(swing.攻擊距離, tuning.近戰預設攻擊距離 * 0.6f);
-                limit += tuning.自動尋敵額外射程;
-
-                if (dist > limit)
+                    Vector2.Distance(MeleeStrikeOrigin(), target.transform.position);
+                var bodyR = Mathf.Max(0.2f, target.BodyHitRadius);
+                var bladeR = EstimateBladeContactRadius();
+                var slack = Mathf.Max(0f, tuning.自動尋敵額外射程 * 0.22f) + 0.11f +
+                    Mathf.Clamp(_meleeOrbitRadius * 0.16f, 0f, 0.62f);
+                if (dist > bodyR + bladeR + slack)
                     break;
 
                 ApplyOneDamageTick(target, tuning, mvPer);
@@ -436,8 +459,17 @@ namespace MonsterHunter.Controllers
         {
             if (_directTarget != null && _directTarget.isActiveAndEnabled)
             {
-                var d = Vector2.Distance(from, _directTarget.transform.position);
-                return d <= maxDist ? _directTarget : null;
+                var tuningPick = _tuningStore != null ? _tuningStore.Active : null;
+                var d = Vector2.Distance(from, (Vector2)_directTarget.transform.position);
+                if (tuningPick == null)
+                    return d <= maxDist ? _directTarget : null;
+
+                var bodyR = Mathf.Max(0.22f, _directTarget.BodyHitRadius);
+                var bladeR = EstimateBladeContactRadius();
+                var slack = Mathf.Max(0f, tuningPick.自動尋敵額外射程 * 0.22f) + 0.12f +
+                    Mathf.Clamp(_meleeOrbitRadius * 0.14f, 0f, 0.52f);
+                var pickMax = Mathf.Min(maxDist, bodyR + bladeR + slack);
+                return d <= pickMax ? _directTarget : null;
             }
 
             var hits = Physics2D.OverlapCircleAll(from, maxDist, _monsterLayers);
@@ -465,6 +497,8 @@ namespace MonsterHunter.Controllers
 
         void ApplyDamageInternal(float amount, bool isCrit, bool respectDodgeInvuln)
         {
+            if (BattleCombatManager.IsBattleConcluded)
+                return;
             if (CurrentHp <= 0f || amount <= 0f) return;
             if (respectDodgeInvuln && IsDodging)
             {
@@ -507,6 +541,8 @@ namespace MonsterHunter.Controllers
 
         void TickActiveAilments()
         {
+            if (BattleCombatManager.IsBattleConcluded)
+                return;
             if (_ailments.Count == 0 || CurrentHp <= 0f)
                 return;
 

@@ -41,6 +41,9 @@ namespace MonsterHunter.Controllers
         /// <summary>本次招式判定距離。</summary>
         float _plannedHitRadius;
 
+        /// <summary>若非 null，前搖結束後改發射投射物而非近身直傷。</summary>
+        魔物招式攻擊項 _pendingProjectileMove;
+
         readonly System.Collections.Generic.Dictionary<int, float> _specialMoveCdUntil =
             new System.Collections.Generic.Dictionary<int, float>(8);
 
@@ -55,6 +58,17 @@ namespace MonsterHunter.Controllers
 
         /// <summary>執行期可取得根節點血量元件（供 UI／除錯）。</summary>
         public MonsterHealth Health => _health;
+
+        /// <summary>近戰判定用：本體碰撞近似半徑（世界空間）。</summary>
+        public float BodyHitRadius
+        {
+            get
+            {
+                var c = GetComponent<CircleCollider2D>();
+                if (c == null || !c.enabled) return 0.82f;
+                return Mathf.Max(0.18f, c.bounds.extents.x);
+            }
+        }
 
         /// <summary>受傷事件：(傷害量, 是否會心)</summary>
         public event Action<float, bool> OnDamageReceived;
@@ -117,8 +131,15 @@ namespace MonsterHunter.Controllers
             switch (_state)
             {
                 case AiState.待機:
-                    _rb.linearVelocity = Vector2.zero;
-                    if (dist <= detect) _state = AiState.追擊;
+                    if (dist <= detect)
+                    {
+                        _state = AiState.追擊;
+                        break;
+                    }
+
+                    var stalkSpd = tuning.魔物踱步速度 > 1e-3f ? tuning.魔物踱步速度 : 1.25f;
+                    var toPl = dist > 0.05f ? (pl - self).normalized : Vector2.zero;
+                    _rb.linearVelocity = toPl * stalkSpd;
                     break;
 
                 case AiState.追擊:
@@ -136,8 +157,13 @@ namespace MonsterHunter.Controllers
                         break;
                     }
 
-                    var dir = (pl - self).normalized;
-                    _rb.linearVelocity = dir * (tuning.玩家移動速度 * Mathf.Max(0.1f, tuning.魔物追擊速度比例));
+                    var dir = dist > 0.05f ? (pl - self).normalized : Vector2.zero;
+                    var baseChase = tuning.玩家移動速度 *
+                                    Mathf.Max(0.1f, tuning.魔物追擊速度比例);
+                    var chaseMag = baseChase;
+                    if (tuning.魔物追擊低速底線 > 1e-3f)
+                        chaseMag = Mathf.Max(tuning.魔物追擊低速底線, baseChase);
+                    _rb.linearVelocity = dir * chaseMag;
                     break;
 
                 case AiState.發動招式:
@@ -164,23 +190,27 @@ namespace MonsterHunter.Controllers
 
         IEnumerator TelegraphAndAttack(float delay)
         {
-            // ── 前搖視覺：紅色閃爍 + 頭上「！」提示 ──
+            // 前搖視覺：柔和紅橙脈動＝「即將出手」，不是受傷；受傷看血條／浮字。
             var sr = GetComponentInChildren<SpriteRenderer>();
             var originalColor = sr != null ? sr.color : Color.white;
             var warningGo = BuildWarningSign();
 
             if (delay > 0f)
             {
-                var elapsed     = 0f;
-                var halfInterval = 0.12f;
+                var elapsed = 0f;
+                var warn = new Color(1f, 0.42f, 0.32f);
                 while (elapsed < delay)
                 {
-                    if (sr != null) sr.color = new Color(1f, 0.15f, 0.05f);
-                    yield return new WaitForSeconds(halfInterval);
-                    if (sr != null) sr.color = originalColor;
-                    yield return new WaitForSeconds(halfInterval);
-                    elapsed += halfInterval * 2f;
+                    if (sr != null)
+                    {
+                        var t = 0.5f + 0.5f * Mathf.Sin(elapsed * 12f);
+                        sr.color = Color.Lerp(originalColor, warn, t * 0.42f);
+                    }
+
+                    elapsed += Time.deltaTime;
+                    yield return null;
                 }
+
                 if (sr != null) sr.color = originalColor;
             }
 
@@ -188,10 +218,24 @@ namespace MonsterHunter.Controllers
             _telegraphing = false;
 
             if (_player == null) yield break;
+
+            if (BattleCombatManager.IsBattleConcluded)
+                yield break;
+
+            if (_pendingProjectileMove != null &&
+                !string.IsNullOrWhiteSpace(_pendingProjectileMove.投射物型別))
+            {
+                MonsterProjectile2D.Fire(transform, _player, _pendingProjectileMove,
+                    _plannedDirectDamageFlat);
+                _pendingProjectileMove = null;
+                yield break;
+            }
+
             var dist = Vector2.Distance(transform.position, _player.position);
             // 只在玩家仍在範圍內才造成傷害（玩家閃避離開即無效）
             if (dist <= _plannedHitRadius)
                 PerformAttackOnPlayer();
+            _pendingProjectileMove = null;
         }
 
         /// <summary>在魔物頭上建立世界空間「！」提示物件。</summary>
@@ -236,6 +280,8 @@ namespace MonsterHunter.Controllers
 
         void PickNextMeleePlan()
         {
+            _pendingProjectileMove = null;
+
             var norm = _data?.魔物攻擊內容?.普通攻擊;
             if (norm == null)
             {
@@ -245,7 +291,8 @@ namespace MonsterHunter.Controllers
             }
 
             BuildApproachMeleeDistance(out var meleeDist);
-            _plannedHitRadius = meleeDist * 1.65f;
+            var slack = ComputeMonsterMeleeHitSlack(norm.攻擊距離);
+            _plannedHitRadius = meleeDist + slack;
 
             var specs = _data.魔物攻擊內容.特殊招式;
             var normDmg = Mathf.Max(0, norm.傷害);
@@ -269,7 +316,7 @@ namespace MonsterHunter.Controllers
                 return;
             }
 
-            var pick = Random.value * sum;
+            var pick = UnityEngine.Random.value * sum;
             var acc = 0f;
             for (var i = 0; i < specs.Length; i++)
             {
@@ -282,7 +329,9 @@ namespace MonsterHunter.Controllers
                     var mul = s.傷害對普攻倍率 > 0f ? s.傷害對普攻倍率 : 1f;
                     _plannedDirectDamageFlat = Mathf.Max(1, Mathf.RoundToInt(normDmg * mul));
                     var hitR = s.攻擊距離 > 0f ? Mathf.Max(norm.攻擊距離, s.攻擊距離) : norm.攻擊距離;
-                    _plannedHitRadius = Mathf.Max(norm.攻擊距離, hitR, meleeDist) * 1.65f;
+                    _plannedHitRadius = meleeDist + Mathf.Max(slack, ComputeMonsterMeleeHitSlack(hitR));
+                    if (!string.IsNullOrWhiteSpace(s.投射物型別))
+                        _pendingProjectileMove = s;
                     if (s.冷卻秒 > 0f)
                         _specialMoveCdUntil[i] = Time.time + s.冷卻秒;
                     Debug.Log($"[MonsterAi] 選招「{(string.IsNullOrEmpty(s.名稱) ? $"特殊招式#{i}" : s.名稱)}」直傷={_plannedDirectDamageFlat}");
@@ -293,27 +342,40 @@ namespace MonsterHunter.Controllers
             _plannedDirectDamageFlat = normDmg;
         }
 
-        /// <summary>追擊時與發動招式與普攻距離對齊的「最近接戰」距離。</summary>
+        /// <summary>追擊／站樁分界：只吃「近戰型」招式距離，不含投射物遠射程，並封頂避免遠距離站樁不動。</summary>
         float BuildApproachMeleeDistance(out float normalDistOnly)
         {
             var norm = _data?.魔物攻擊內容?.普通攻擊;
             normalDistOnly = norm != null ? Mathf.Max(0.1f, norm.攻擊距離) : 2f;
             var atkDist = normalDistOnly;
             var specs = _data?.魔物攻擊內容?.特殊招式;
-            if (specs == null)
-                return atkDist;
-            for (var i = 0; i < specs.Length; i++)
+            if (specs != null)
             {
-                var s = specs[i];
-                if (s == null || s.攻擊距離 <= 0f) continue;
-                atkDist = Mathf.Max(atkDist, s.攻擊距離);
+                for (var i = 0; i < specs.Length; i++)
+                {
+                    var s = specs[i];
+                    if (s == null || s.攻擊距離 <= 0f) continue;
+                    // 投射物「攻擊距離」常在 8～10：若混入接戰距離，AI 會在畫邊就判定已到位而不再逼近。
+                    if (!string.IsNullOrWhiteSpace(s.投射物型別)) continue;
+                    atkDist = Mathf.Max(atkDist, s.攻擊距離);
+                }
             }
 
-            return atkDist;
+            const float moveCap = 4.85f;
+            return Mathf.Min(atkDist, moveCap);
+        }
+
+        /// <summary>中心距離判定的容差：僅略大於雙方碰撞體，避免舊版 ×1.65 導致隔空受擊。</summary>
+        static float ComputeMonsterMeleeHitSlack(float attackRangeWorld)
+        {
+            attackRangeWorld = Mathf.Max(0.1f, attackRangeWorld);
+            return Mathf.Clamp(attackRangeWorld * 0.1f + 0.22f, 0.22f, 0.5f);
         }
 
         void PerformAttackOnPlayer()
         {
+            if (BattleCombatManager.IsBattleConcluded)
+                return;
             if (_plannedDirectDamageFlat <= 0 || _player == null) return;
             var receiver = _player.GetComponent<IDamageReceiver>();
             if (receiver == null) return;

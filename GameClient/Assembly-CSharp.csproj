@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Core\PlayerStateCloudRepository.cs" />
+    <Compile Include="Assets\Scripts\Combat\MonsterProjectile2D.cs" />
     <Compile Include="Assets\Scripts\DataModels\DesignData01Monsters.cs" />
     <Compile Include="Assets\Scripts\UI\BattleBackgroundDisplay.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePortraitLayout.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="Assets\Scripts\DataModels\PlayerStateSampleModels.cs" />
     <Compile Include="Assets\Scripts\Combat\MonsterBreakState.cs" />
     <Compile Include="Assets\Scripts\UI\SafeSpriteLoader.cs" />
+    <Compile Include="Assets\Scripts\Combat\EquipmentCombatBinder.cs" />
     <Compile Include="Assets\Scripts\Network\SupabaseService.cs" />
     <Compile Include="Assets\Scripts\Combat\DamageCalculator.cs" />
     <Compile Include="Assets\Scripts\Network\SupabaseJsonMini.cs" />
@@ -80,6 +82,7 @@
     <Compile Include="Assets\Scripts\DataModels\DesignData04Items.cs" />
     <Compile Include="Assets\Scripts\DataModels\DesignData05Systems.cs" />
     <Compile Include="Assets\Scripts\UI\SafeImageDisplay.cs" />
+    <Compile Include="Assets\Scripts\Combat\LocalHunterLedgerStore.cs" />
     <Compile Include="Assets\Scripts\DataModels\DesignData02Equipment.cs" />
     <Compile Include="Assets\Scripts\Network\SupabaseRestClient.cs" />
     <Compile Include="Assets\Scripts\Combat\IDamageReceiver.cs" />
@@ -87,7 +90,9 @@
     <Compile Include="Assets\Scripts\UI\PlaceholderSpriteFactory.cs" />
     <Compile Include="Assets\Scripts\Network\NetworkManager.cs" />
     <Compile Include="Assets\Scripts\Combat\MonsterStatResolver.cs" />
+    <Compile Include="Assets\Scripts\Combat\BattleRuntimeModifiers.cs" />
     <Compile Include="Assets\Scripts\Combat\HuntSettlementService.cs" />
+    <Compile Include="Assets\Scripts\Combat\MeleeOrbitPivot.cs" />
     <Compile Include="Assets\Scripts\Combat\Hurtbox.cs" />
     <Compile Include="Assets\Scripts\Combat\IHurtbox.cs" />
     <Compile Include="Assets\Scripts\UI\VillageBackgroundUiDisplay.cs" />

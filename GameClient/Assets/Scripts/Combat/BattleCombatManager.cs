@@ -17,6 +17,9 @@ namespace MonsterHunter.Combat
     [DefaultExecutionOrder(-100)]
     public sealed class BattleCombatManager : MonoBehaviour
     {
+        /// <summary>分出勝負並顯示結算後為 true，全戰鬥行為須停用。</summary>
+        public static bool IsBattleConcluded { get; private set; }
+
         // ── 由 BattlePreviewBootstrap 設定 ──
         public GameObject HunterGo;
         public GameObject MonsterGo;
@@ -44,9 +47,20 @@ namespace MonsterHunter.Combat
         float _floatingDmgTimer;
         bool _battleOver;
 
+        Camera _backdropCamera;
+        Vector3 _battleCameraSmoothVel;
+
+        [Header("遠景：世界座標固定全景時，係數愈接近 1，遠景鏡頭愈跟主鏡頭，走位時『滑過』全景愈明顯")]
+        [SerializeField] [Range(0f, 1f)] float _backdropParallaxX = 1f;
+        [SerializeField] [Range(0f, 1f)] float _backdropParallaxY = 1f;
+        [Tooltip("主戰鬥鏡頭 SmoothDamp 平滑秒數；略小則跟獵人更貼、遠景滑行更即時。")]
+        [SerializeField] [Range(0.035f, 0.22f)] float _cameraFollowSmoothTime = 0.045f;
+
         // ── 地圖限制（防止衝出鏡頭）──
         float _halfW;
         float _halfH;
+        float _arenaHalfWMultiplier = 1.38f;
+        float _arenaHalfHMultiplier = 1.28f;
 
         // 物理前置在 Awake 完成（HunterGo/MonsterGo 由 LaunchCombat 在 BattlePreviewBootstrap.Awake 設好後立刻設定，
         // BattleCombatManager 是在 BattlePreviewBootstrap.Awake 裡 new 出來的，
@@ -57,6 +71,8 @@ namespace MonsterHunter.Combat
 
         void Start()
         {
+            IsBattleConcluded = false;
+
             if (HunterGo == null || MonsterGo == null || MonsterDataRow == null)
             {
                 Debug.LogError("[BattleCombatManager] 缺少必要參考，戰鬥未啟動。");
@@ -70,9 +86,42 @@ namespace MonsterHunter.Combat
                 _halfW = _halfH * cam.aspect;
             }
 
+            EnsureBackdropParallaxSerializedDefaults();
+
             SetupPhysics();        // 先給 Rigidbody2D
             SetupCombatComponents(); // 再加 PlayerController / MonsterAiController
+            RefreshArenaBoundsFromTuning();
+            ApplyBattlefieldBoundsToBackground();
+
+            var bdGo = GameObject.Find("BattleBackdropCamera");
+            if (bdGo != null)
+                _backdropCamera = bdGo.GetComponent<Camera>();
+            else
+                Debug.LogWarning("[BattleCombatManager] 找不到 BattleBackdropCamera：遠景相機將無法跟隨／視差。");
+
             BuildCombatHud();
+        }
+
+        /// <summary>
+        /// 執行期 <c>AddComponent</c> 時，Inspector 序列化會把部份欄位寫成 0，導致遠景相機乘上 0 永遠杵在原點。
+        /// </summary>
+        void EnsureBackdropParallaxSerializedDefaults()
+        {
+            // 僅在「皆為 0」時補值；避免 Unity 對執行期 AddComponent 把欄位序列成 0 導致遠景杵死。
+            if (_backdropParallaxX > 1e-4f || _backdropParallaxY > 1e-4f)
+                return;
+            _backdropParallaxX = 1f;
+            _backdropParallaxY = 1f;
+        }
+
+        /// <summary>
+        /// 直行超寬全景預覽：遠景鏡頭與主鏡頭 XY 對齊、加快跟獵人（由 Bootstrap 呼叫）。
+        /// </summary>
+        public void ApplyStrongPanoramaBackdropFeel()
+        {
+            _backdropParallaxX = 1f;
+            _backdropParallaxY = 1f;
+            _cameraFollowSmoothTime = 0.045f;
         }
 
         // ────────────────────────────────────────────────────
@@ -102,6 +151,21 @@ namespace MonsterHunter.Combat
             if (rb == null) rb = go.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
+        }
+
+        void RefreshArenaBoundsFromTuning()
+        {
+            var row = _tuningStore != null ? _tuningStore.Active : null;
+            if (row == null) return;
+            _arenaHalfWMultiplier = Mathf.Max(1f, row.戰場水平可行走倍率);
+            _arenaHalfHMultiplier = Mathf.Max(1f, row.戰場垂直可行走倍率);
+        }
+
+        void ApplyBattlefieldBoundsToBackground()
+        {
+            var bg = FindAnyObjectByType<BattleBackgroundDisplay>();
+            if (bg == null) return;
+            bg.SetPlayfieldCoverage(_arenaHalfWMultiplier, _arenaHalfHMultiplier);
         }
 
         // ────────────────────────────────────────────────────
@@ -150,17 +214,37 @@ namespace MonsterHunter.Combat
                 DemoWeaponBasePhysical = loadout.武器基礎物理;
             }
 
-            // Hitbox on hunter child（半徑依 weapon_movesets 攻擊距離縮放，貼近割草武器的距離手感）
-            var hitboxGo = new GameObject("AttackHitbox");
-            hitboxGo.transform.SetParent(HunterGo.transform, false);
-            var hbCol = hitboxGo.AddComponent<CircleCollider2D>();
+            // 割草軌道：軌道半徑略大以利刃口靠近魔物本體；碰撞半徑隨資料放大
             var atkRangeGuess = GuessWeaponReach(loadout.武器類型, weaponJson);
+            var orbitRadius   = atkRangeGuess > 0.05f
+                ? Mathf.Clamp(atkRangeGuess * 0.52f, 0.88f, 2.75f)
+                : 1.12f;
+
+            var orbitPivotGo = new GameObject("MeleeOrbitPivot");
+            orbitPivotGo.transform.SetParent(HunterGo.transform, false);
+            orbitPivotGo.transform.localPosition = Vector3.zero;
+            orbitPivotGo.AddComponent<MeleeOrbitPivot>();
+
+            var hitboxGo = new GameObject("AttackHitbox");
+            hitboxGo.transform.SetParent(orbitPivotGo.transform, false);
+            hitboxGo.transform.localPosition = new Vector3(orbitRadius, 0f, 0f);
+
+            var hbCol = hitboxGo.AddComponent<CircleCollider2D>();
             hbCol.radius = atkRangeGuess > 0.05f
-                ? Mathf.Clamp(atkRangeGuess * 0.55f, 0.35f, 5.5f)
-                : 2.8f;
+                ? Mathf.Clamp(atkRangeGuess * 0.28f, 0.38f, 1.45f)
+                : 0.52f;
             hbCol.isTrigger = true;
             hbCol.enabled = false;
             var hitbox = hitboxGo.AddComponent<Hitbox>();
+
+            // 占位視覺：實心圓球繞獵人轉（美術就位前可先辨識攻擊端位置）
+            var orbSr = hitboxGo.AddComponent<SpriteRenderer>();
+            orbSr.sprite       = PlaceholderSpriteFactory.GetSharedOrbSprite();
+            orbSr.sortingLayerName = "Default";
+            orbSr.sortingOrder     = 50;
+            orbSr.transform.localRotation = Quaternion.identity;
+            orbSr.transform.localScale =
+                Vector3.one * Mathf.Clamp(hbCol.radius * 0.92f + 0.045f, 0.17f, 0.62f);
 
             // 玩家 HP = 魔物最大血量 × 魔物詞條倍率 × 0.25 × 獵人體魄詞條
             var monsterHpScale =
@@ -184,6 +268,8 @@ namespace MonsterHunter.Combat
                 session.PlayerOutgoingDamageMultiplier);
 
             TrySetPrivateField(_playerCtrl, "_attackHitbox", hitbox);
+
+            _playerCtrl.SetMeleeOrbitRadius(orbitRadius);
 
             // MonsterAiController on monster
             _monsterAi = MonsterGo.AddComponent<MonsterAiController>();
@@ -322,6 +408,52 @@ namespace MonsterHunter.Combat
             }
         }
 
+        void LateUpdate()
+        {
+            if (_battleOver || HunterGo == null || _halfW <= 0f) return;
+            UpdateBattleCameraFollow();
+        }
+
+        void UpdateBattleCameraFollow()
+        {
+            var cam = Camera.main;
+            if (cam == null) return;
+
+            var Ax = _halfW * Mathf.Max(1f, _arenaHalfWMultiplier);
+            var Ay = _halfH * Mathf.Max(1f, _arenaHalfHMultiplier);
+            var p = HunterGo.transform.position;
+
+            float cx;
+            if (Ax <= _halfW + 1e-4f)
+                cx = 0f;
+            else
+                cx = Mathf.Clamp(p.x, -Ax + _halfW, Ax - _halfW);
+
+            float cy;
+            if (Ay <= _halfH + 1e-4f)
+                cy = 0f;
+            else
+                cy = Mathf.Clamp(p.y, -Ay + _halfH, Ay - _halfH);
+
+            var current = cam.transform.position;
+            var target = new Vector3(cx, cy, current.z);
+            var smoothSec = Mathf.Clamp(_cameraFollowSmoothTime, 0.035f, 0.22f);
+            var smoothed =
+                Vector3.SmoothDamp(current, target, ref _battleCameraSmoothVel,
+                    Mathf.Max(0.03f, smoothSec));
+
+            smoothed.z = current.z;
+            cam.transform.position = smoothed;
+
+            if (_backdropCamera != null)
+            {
+                var bc = _backdropCamera.transform.position;
+                var bx = smoothed.x * Mathf.Clamp01(_backdropParallaxX);
+                var by = smoothed.y * Mathf.Clamp01(_backdropParallaxY);
+                _backdropCamera.transform.position = new Vector3(bx, by, bc.z);
+            }
+        }
+
         static void UpdateHpBar(Image fill, Text label, float cur, float max)
         {
             if (fill == null) return;
@@ -335,9 +467,11 @@ namespace MonsterHunter.Combat
         void ClampToCamera(GameObject go)
         {
             if (go == null || _halfW <= 0f) return;
+            var limX = _halfW * _arenaHalfWMultiplier;
+            var limY = _halfH * _arenaHalfHMultiplier;
             var p = go.transform.position;
-            p.x = Mathf.Clamp(p.x, -_halfW * 0.9f, _halfW * 0.9f);
-            p.y = Mathf.Clamp(p.y, -_halfH * 0.85f, _halfH * 0.85f);
+            p.x = Mathf.Clamp(p.x, -limX, limX);
+            p.y = Mathf.Clamp(p.y, -limY, limY);
             go.transform.position = p;
         }
 
@@ -362,7 +496,13 @@ namespace MonsterHunter.Combat
 
         void ShowResult(bool won)
         {
+            if (IsBattleConcluded)
+                return;
+
             _battleOver = true;
+            IsBattleConcluded = true;
+            HaltAllCombatActors();
+
             if (HudCanvas == null) return;
 
             var overlay = new GameObject("ResultOverlay", typeof(RectTransform));
@@ -393,6 +533,49 @@ namespace MonsterHunter.Combat
             t.text = won
                 ? "<color=#FFEE44>任務成功！</color>\n<size=28>魔物已被討伐</size>"
                 : "<color=#FF4444>任務失敗</color>\n<size=28>獵人倒下了……</size>";
+        }
+
+        /// <summary>勝負已分：停用輸入與 AI、清投射物、停軌道刃口。</summary>
+        void HaltAllCombatActors()
+        {
+            if (_playerCtrl != null)
+                _playerCtrl.MoveInput = Vector2.zero;
+
+            if (HunterGo != null)
+            {
+                var hrb = HunterGo.GetComponent<Rigidbody2D>();
+                if (hrb != null) hrb.linearVelocity = Vector2.zero;
+
+                foreach (var piv in HunterGo.GetComponentsInChildren<MeleeOrbitPivot>(true))
+                    if (piv != null) piv.enabled = false;
+
+                var hb = HunterGo.GetComponentInChildren<Hitbox>(true);
+                if (hb != null) hb.SetEnabled(false);
+
+                if (_playerCtrl != null)
+                    _playerCtrl.enabled = false;
+            }
+
+            if (MonsterGo != null)
+            {
+                var mrb = MonsterGo.GetComponent<Rigidbody2D>();
+                if (mrb != null) mrb.linearVelocity = Vector2.zero;
+
+                if (_monsterAi != null)
+                    _monsterAi.enabled = false;
+            }
+
+            var touch = UnityEngine.Object.FindAnyObjectByType<PortraitCombatTouchInput>();
+            if (touch != null)
+                touch.enabled = false;
+
+            var projs =
+                UnityEngine.Object.FindObjectsByType<MonsterProjectile2D>(
+                    FindObjectsInactive.Exclude);
+
+            foreach (var p in projs)
+                if (p != null)
+                    Destroy(p.gameObject);
         }
 
         // ────────────────────────────────────────────────────

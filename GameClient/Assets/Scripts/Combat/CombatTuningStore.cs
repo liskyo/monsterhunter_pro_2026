@@ -89,6 +89,9 @@ namespace MonsterHunter.Combat
             if (row.分段蓄力最小門檻秒 <= 1e-3f) row.分段蓄力最小門檻秒 = 0.28f;
             if (row.專屬技預設攻擊距離 <= 1e-3f) row.專屬技預設攻擊距離 = 5.5f;
             if (row.多段命中間隔秒 <= 1e-3f) row.多段命中間隔秒 = 0.07f;
+            if (row.魔物踱步速度 <= 1e-3f) row.魔物踱步速度 = 1.25f;
+            if (row.戰場水平可行走倍率 <= 1e-3f) row.戰場水平可行走倍率 = 1.38f;
+            if (row.戰場垂直可行走倍率 <= 1e-3f) row.戰場垂直可行走倍率 = 1.28f;
         }
     }
 }

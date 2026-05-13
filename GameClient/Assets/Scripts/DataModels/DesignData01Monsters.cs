@@ -43,6 +43,10 @@ namespace MonsterHunter.DataModels
         public float 攻擊距離;
         public float 使用權重 = 1f;
         public float 冷卻秒;
+        /// <summary>非空時改為發射投射物（例：球、方塊、閃電）。</summary>
+        public string 投射物型別;
+        public float 投射物速度;
+        public float 投射物半徑;
     }
 
     [Serializable]

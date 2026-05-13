@@ -20,7 +20,16 @@ namespace MonsterHunter.DataModels
         public float 動態難度_星級傷害衰減係數;
         public float 待機偵測半徑;
         public float 追擊放棄倍率;
+        /// <summary>待機時仍會以本速度朝向獵人踱步（0＝資料缺省時由 Store 自動補）。</summary>
+        public float 魔物踱步速度;
+        /// <summary>追擊速度 = max(本值, 玩家移動速度×魔物追擊速度比例)；0＝不使用底線。</summary>
+        public float 魔物追擊低速底線;
         public float 魔物招式後僵直秒;
+
+        /// <summary>對戰可行走半寬 = 鏡頭可視 ortho 半寬 × 本倍率（大於 1 可超出畫面邊緣）；0＝由 Store 補預設。</summary>
+        public float 戰場水平可行走倍率;
+        /// <summary>對戰可行走半高 = ortho halfH × 本倍率。</summary>
+        public float 戰場垂直可行走倍率;
         /// <summary>當日第 3 次擊殺完成時，SESSION 難度倍率累加量（須與 DB <c>post_monster_kill_session</c> 邏輯同步）。</summary>
         public float 每日第三擊殺難度倍率增量;
 

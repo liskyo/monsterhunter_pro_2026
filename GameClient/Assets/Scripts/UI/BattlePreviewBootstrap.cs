@@ -18,8 +18,11 @@ namespace MonsterHunter.UI
         const int BackdropCullingLayer = 9;
 
         [SerializeField] string _previewQuestId = "QST_001";
+        [Tooltip("留空＝依任務「地圖」載入遠景；若填寫則僅覆寫背景圖（不影響任務內容），方便 Bootstrap 試跑指定圖檔。")]
+        [SerializeField] string _previewBattleMapOverride = "";
         [SerializeField] string _fallbackMapName = "古代樹森林";
-        [SerializeField] float _orthographicSize = 5f;
+        [Tooltip("直向＋超寬全景時略大（約 7～9）可一次看到較多空景；與戰場可走範圍連動。")]
+        [SerializeField] float _orthographicSize = 8.25f;
         [SerializeField] [Range(0.5f, 0.95f)] float _battlefieldViewportHeight = 0.9f;
         [SerializeField] bool _showHudLabel = true;
         [SerializeField] bool _showMonsterWorldPortrait = true;
@@ -75,6 +78,7 @@ namespace MonsterHunter.UI
             bgGo.transform.SetParent(null);
             bgGo.layer = BackdropCullingLayer;
             _background = bgGo.AddComponent<BattleBackgroundDisplay>();
+            _background.ApplyPortraitPanoramaBootstrapDefaults();
             _background.SetWorldCamera(_bgCamera);
             foreach (Transform t in bgGo.GetComponentsInChildren<Transform>(true))
                 t.gameObject.layer = BackdropCullingLayer;
@@ -83,7 +87,9 @@ namespace MonsterHunter.UI
             var ledgerSnapshot = LocalHunterLedger.LoadOrCreate();
             _combatModifiers    = BuildBattleSessionModifiers(quest, ledgerSnapshot);
 
-            if (quest != null && !string.IsNullOrWhiteSpace(quest.地圖))
+            if (!string.IsNullOrWhiteSpace(_previewBattleMapOverride))
+                _background.ApplyMapName(_previewBattleMapOverride.Trim());
+            else if (quest != null && !string.IsNullOrWhiteSpace(quest.地圖))
                 _background.ApplyFromQuest(quest);
             else if (!string.IsNullOrWhiteSpace(_fallbackMapName))
             {
@@ -102,7 +108,7 @@ namespace MonsterHunter.UI
                 CreateHunterPlaceholder(main);
 
             if (_showHudLabel)
-                CreateHudAndBars(quest, monsterRow);
+                CreateHudAndBars(quest, monsterRow, ledgerSnapshot);
 
             // ── 啟動正式戰鬥 ──
             LaunchCombat();
@@ -120,7 +126,9 @@ namespace MonsterHunter.UI
             mgr.HudCanvas     = _hudCanvas;
             mgr.DemoWeaponType = string.IsNullOrWhiteSpace(_demoWeaponType) ? "大劍" : _demoWeaponType.Trim();
             mgr.DemoWeaponBasePhysical = _demoWeaponBasePhysical > 0f ? _demoWeaponBasePhysical : 230f;
-            mgr.SessionModifiers       = _combatModifiers.Clamp();        }
+            mgr.SessionModifiers       = _combatModifiers.Clamp();
+            mgr.ApplyStrongPanoramaBackdropFeel();
+        }
 
         void BuildDualCameraStack(Camera main)
         {
@@ -515,7 +523,7 @@ namespace MonsterHunter.UI
                 0f);
         }
 
-        void CreateHudAndBars(任務資料列 quest, 魔物資料列 monster)
+        void CreateHudAndBars(任務資料列 quest, 魔物資料列 monster, LocalHunterLedger ledgerSnapshot)
         {
             if (!TryEnsureEventSystem())
                 return;
@@ -572,7 +580,9 @@ namespace MonsterHunter.UI
             var title = quest != null ? quest.標題 : "（無任務資料）";
             var map = quest != null ? quest.地圖 : _fallbackMapName;
             var mName = monster != null ? monster.名稱 : "（無魔物資料）";
-            var mid = monster != null ? monster.魔物編號 : ResolveTargetMonsterId(quest);
+            var mid = monster != null
+                ? monster.魔物編號
+                : ResolveTargetMonsterId(quest, ledgerSnapshot ?? LocalHunterLedger.LoadOrCreate());
             var mMaxHp = monster != null ? Mathf.Max(1, monster.最大血量) : 100;
 
             CreateHudSection(panel.transform, font, monster, quest, textRightPad, mMaxHp, mid, title, map, mName);
