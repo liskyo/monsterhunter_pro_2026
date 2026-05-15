@@ -8,6 +8,8 @@ namespace MonsterHunter.DataModels
     {
         public string 素材編號;
         public string 名稱;
+        /// <summary>背包／列表圖示；預設 <c>Assets/Textures/Items/{素材編號}.png</c>。</summary>
+        public string 圖片路徑;
         public int 稀有度;
         public string 分類;
         public string 描述;
@@ -21,6 +23,8 @@ namespace MonsterHunter.DataModels
     {
         public string 道具編號;
         public string 名稱;
+        /// <summary>染色球圖示；預設 <c>Assets/Textures/Items/{道具編號}.png</c>。</summary>
+        public string 圖片路徑;
         public int 稀有度;
         public string 分類;
         public int 吸引星級_最低;
@@ -37,6 +41,8 @@ namespace MonsterHunter.DataModels
     {
         public string 痕跡編號;
         public string 名稱;
+        /// <summary>痕跡圖示；預設 <c>Assets/Textures/Traces/{痕跡編號}.png</c>。</summary>
+        public string 圖片路徑;
         public string 對應魔物編號;
         public int 魔物星級;
         public string 描述;

@@ -322,6 +322,29 @@ namespace MonsterHunter.Combat
             _floatingDmgText.alignment = TextAnchor.MiddleCenter;
             _floatingDmgText.supportRichText = true;
             _floatingDmgText.color = new Color(1f, 1f, 0f, 0f);
+
+            var backdrop = UnityEngine.Object.FindAnyObjectByType<BattleBackgroundDisplay>();
+            var cap = backdrop != null ? backdrop.LastHudCaption.Trim() : "";
+            if (!string.IsNullOrEmpty(cap))
+            {
+                var capGo = new GameObject("BackdropCaption", typeof(RectTransform));
+                capGo.transform.SetParent(HudCanvas.transform, false);
+                var crt = capGo.GetComponent<RectTransform>();
+                crt.anchorMin = new Vector2(0f, 0f);
+                crt.anchorMax = new Vector2(0f, 0f);
+                crt.pivot = new Vector2(0f, 0f);
+                crt.anchoredPosition = new Vector2(14f, 10f);
+                crt.sizeDelta = new Vector2(880f, 36f);
+
+                var t = capGo.AddComponent<Text>();
+                t.font = font;
+                t.fontSize = 12;
+                t.color = new Color(0.92f, 0.95f, 1f, 0.82f);
+                t.alignment = TextAnchor.MiddleLeft;
+                t.horizontalOverflow = HorizontalWrapMode.Wrap;
+                t.verticalOverflow = VerticalWrapMode.Overflow;
+                t.text = $"遠景　{cap}";
+            }
         }
 
         static Image BuildTopBar(Transform parent, Font font, Color fillColor,

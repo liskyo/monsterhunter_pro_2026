@@ -80,6 +80,8 @@ namespace MonsterHunter.DataModels
         public string 魔物編號;
         public string 素材編號;
         public string 素材名稱;
+        /// <summary>素材圖示；預設 <c>Assets/Textures/Items/{素材編號}.png</c>。</summary>
+        public string 圖片路徑;
         public float 掉落機率;
         public string 掉落條件;
     }

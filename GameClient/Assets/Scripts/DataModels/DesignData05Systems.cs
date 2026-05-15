@@ -9,6 +9,8 @@ namespace MonsterHunter.DataModels
     {
         public string 料理編號;
         public string 名稱;
+        /// <summary>料理／貓飯圖示；預設 <c>Assets/Textures/Canteen/{料理編號}.png</c>。</summary>
+        public string 圖片路徑;
         public string 類型;
         public 貓飯花費 花費;
         public 貓飯增益效果 增益效果;
@@ -80,6 +82,8 @@ namespace MonsterHunter.DataModels
     {
         public string 寵物編號;
         public string 名稱;
+        /// <summary>寵物頭像或小圖；預設 <c>Assets/Textures/Pets/{寵物編號}.png</c>。</summary>
+        public string 圖片路徑;
         public string 種類;
         public string 定位;
         public string 對應魔物編號;

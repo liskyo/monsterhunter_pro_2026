@@ -2,7 +2,7 @@ using System;
 
 namespace MonsterHunter.DataModels
 {
-    /// <summary>對應 DesignData/02_Equipment/equipment.json（根為陣列）。</summary>
+    /// <summary>對應 DesignData/02_Equipment/equipment.json（武器，根為陣列）；護甲請見 armor.json。</summary>
     [Serializable]
     public class 裝備資料列
     {
@@ -22,6 +22,10 @@ namespace MonsterHunter.DataModels
     {
         public int 物理傷害;
         public int 屬性傷害;
+        /// <summary>護甲用；武器列若缺此鍵 deserialization 為 0。</summary>
+        public int 物理防御;
+        /// <summary>護甲用；武器列若缺此鍵 deserialization 為 0。</summary>
+        public int 屬性防御;
     }
 
     [Serializable]
@@ -45,6 +49,8 @@ namespace MonsterHunter.DataModels
     public class 裝備升級規則列
     {
         public string 裝備編號;
+        /// <summary>強化／升級界面用立繪或小圖；預設與 weapon 同源 <c>Assets/Textures/Equipment/{裝備編號}.png</c>。</summary>
+        public string 圖片路徑;
         public int 最高等級;
         public 裝備升級路徑項[] 升級路徑;
     }

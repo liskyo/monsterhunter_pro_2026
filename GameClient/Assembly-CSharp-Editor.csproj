@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Editor\MonsterHunterWebGlBuildMenu.cs" />
+    <Compile Include="Assets\Editor\VillageIntroSceneSetup.cs" />
     <Compile Include="Assets\Editor\WebGlSafariPostprocessor.cs" />
     <Compile Include="Assets\Editor\BootstrapSceneSetup.cs" />
   </ItemGroup>

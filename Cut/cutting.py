@@ -1,193 +1,250 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-將一張「精靈圖表 / 網格圖」依行列均分裁切，並依 JSON 清單依序命名輸出。
-僅處理本機檔案；請確保你對輸入圖片有使用權。
+將大圖依固定格數裁切成小 PNG，不需 JSON。
 
-若你只有「每隻魔物一張全身圖」、沒有拼好的大表，請改用同資料夾的
-organize_full_images.py（批次命名並可選做圖示）。
+**MAT 類預設（格子、檔名列／行、裁切區間、前綴、預設輸入圖）請只改下方的**
+``MAT = MatCropSettings(...)`` **一次改齊。** 命令列 `-r/-c/-p` 會覆寫格子與前綴；區間／列號起算仍以 `MAT` 為準（除非日後再加參數）。
 
-依賴：pip install pillow
-
-JSON 格式：陣列，每筆至少要有 "id"（例如 MON_001），順序須對應
-  由左而右、由上而下的格子。
-
-輸出：預設 id_全身圖.png；加 --make-icons 時另存 id_圖示.png（置中裁方塊再縮放）。
-預設網格 4x4；全身／圖示預設寫入 GameClient 對應資料夾。
-
-範例 tiles.json:
-  [ {"id": "MON_001"}, {"id": "MON_002"}, ... ]
+用法範例：
+  python Cut/cutting.py 素材總覽.png -r 5 -c 5 -p MAT
+  python Cut/cutting.py *.png -r 8 -c 8 -p MAT -o Assets/UI/Materials/icons
+  python Cut/cutting.py --folder ./原始圖 -r 5 -c 5 -p ICON
 """
 
 from __future__ import annotations
 
 import argparse
-import json
-import sys
+from dataclasses import dataclass
 from pathlib import Path
 
-try:
-    from PIL import Image, ImageOps
-except ImportError:
-    print("請先安裝 Pillow：pip install pillow", file=sys.stderr)
-    sys.exit(1)
+from PIL import Image
 
 
-def make_icon_from_crop(crop: Image.Image, size: int) -> Image.Image:
-    """由裁切後的全身格圖做方形圖示（置中裁切 + 等比塞滿）。"""
-    w, h = crop.size
-    side = min(w, h)
-    left = (w - side) // 2
-    top = (h - side) // 2
-    square = crop.crop((left, top, left + side, top + side))
-    return ImageOps.fit(square, (size, size), method=Image.Resampling.LANCZOS)
+# ═══════════════════════════════════════════════════════════════
+# 【MAT 整合區】★ 只改這一段：``MatCropSettings(...)`` ★
+#
+# rows／cols　：大圖切成幾橫列 × 幾直行（與視覺格線一致）。
+# asset_prefix ：檔名前綴，例如 MAT → MAT_001_01.png（命令列 -p 可覆寫）。
+# name_row_first_1／name_col_first_1
+#              ：左上角「第一格」在企劃上的列號／行號（例 6、1 → MAT_006_01）。
+# crop_*_0     ：要「跳過」的格子時，設 0-based 半開區間 [start, end)；
+#               全輸出就通通 None。（例只想 _01〜_04：crop_col_end_excl_0 = 4）
+# input_if_no_cli：未傳圖、未用 --folder 時自動裁這張（"" = 一定要先命令列給檔）。
+#
+# 例：MAT_006_01〜MAT_010_04（大圖 5×5、不要第 5 直行）
+#     name_row_first_1=6, crop_col_end_excl_0=4，crop 其餘 None。
+# ═══════════════════════════════════════════════════════════════
 
 
-def main() -> None:
-    base = Path(__file__).resolve().parent
-    repo_root = base.parent
-    default_textures = repo_root / "GameClient" / "Assets" / "Textures" / "Monsters"
-    default_icons = repo_root / "GameClient" / "Assets" / "UI" / "Icons" / "Monsters"
+@dataclass(frozen=True)
+class MatCropSettings:
+    rows: int = 5
+    cols: int = 5
+    asset_prefix: str = "MAT"
+    name_row_first_1: int = 1
+    name_col_first_1: int = 1
+    crop_row_start_0: int | None = None
+    crop_row_end_excl_0: int | None = None
+    crop_col_start_0: int | None = None
+    crop_col_end_excl_0: int | None = None
+    input_if_no_cli: str = ""
 
-    parser = argparse.ArgumentParser(description="網格裁切圖片並依 JSON id 命名輸出")
-    parser.add_argument(
-        "--image",
-        type=Path,
-        default=base / "source.png",
-        help="原始大圖路徑（預設：Cut/source.png）",
-    )
-    parser.add_argument(
-        "--json",
-        type=Path,
-        default=base / "tiles.json",
-        help="含 id 清單的 JSON（預設：Cut/tiles.json）",
-    )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=default_textures,
-        help="全身圖輸出資料夾（預設：GameClient/.../Textures/Monsters）",
-    )
-    parser.add_argument(
-        "--suffix-full",
-        type=str,
-        default="_全身圖",
-        help="接在 id 後的全身圖檔名後綴（預設 _全身圖；不需時傳空字串 \"\"）",
-    )
-    parser.add_argument("--cols", type=int, default=4, help="橫向格數（預設 4）")
-    parser.add_argument("--rows", type=int, default=4, help="縱向格數（預設 4）")
-    parser.add_argument(
-        "--inset",
-        type=int,
-        default=0,
-        help="每格向內縮像素（去邊／分隔線），0 表示不切掉邊",
-    )
-    parser.add_argument(
-        "--make-icons",
-        action="store_true",
-        help="每格裁切後另存方形縮小圖示（檔名 id_圖示.png）",
-    )
-    parser.add_argument(
-        "--icons-out",
-        type=Path,
-        default=default_icons,
-        help="圖示輸出資料夾（預設：GameClient/.../UI/Icons/Monsters）",
-    )
-    parser.add_argument(
-        "--icon-size",
-        type=int,
-        default=256,
-        help="圖示邊長像素（預設 256）",
-    )
-    args = parser.parse_args()
 
-    image_path = args.image.resolve()
-    json_path = args.json.resolve()
-    out_dir = args.out.resolve()
-    icons_dir = args.icons_out.resolve()
+MAT = MatCropSettings(
+    rows=5,
+    cols=5,
+    asset_prefix="MAT",
+    name_row_first_1=6,
+    name_col_first_1=1,
+    crop_row_start_0=None,
+    crop_row_end_excl_0=None,
+    crop_col_start_0=None,
+    crop_col_end_excl_0=None,
+    input_if_no_cli=(
+        r"C:\Users\gc\Desktop\MonsterHunter_PRO_2026\monsterhunter_pro_2026\Cut\掉落物6-10.png"
+    ),
+)
 
-    if not image_path.is_file():
-        print(f"找不到圖片：{image_path}", file=sys.stderr)
-        sys.exit(1)
-    if not json_path.is_file():
-        print(f"找不到 JSON：{json_path}", file=sys.stderr)
-        sys.exit(1)
 
-    with open(json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+def build_output_filename(
+    prefix: str,
+    *,
+    mat_row_num_1: int,
+    mat_col_num_1: int,
+) -> str:
+    pfx = prefix.strip("_") or MAT.asset_prefix.strip("_") or "MAT"
+    return f"{pfx}_{mat_row_num_1:03d}_{mat_col_num_1:02d}.png"
 
-    if not isinstance(data, list):
-        print("JSON 頂層必須是陣列 [...]", file=sys.stderr)
-        sys.exit(1)
+
+def _range_or_full(start: int | None, end_excl: int | None, max_n: int) -> range:
+    """start=None 當 0；end_excl=None 當 max_n（用滿這一向度）。"""
+    s = 0 if start is None else max(0, start)
+    e = max_n if end_excl is None else min(max_n, end_excl)
+    if e <= s:
+        raise ValueError(f"裁切區間無效：start={start!r} end_excl={end_excl!r} max={max_n}")
+    return range(s, e)
+
+
+def slice_one(
+    image_path: Path,
+    *,
+    cols: int,
+    rows: int,
+    prefix: str,
+    output_dir: Path | None,
+    profile: MatCropSettings = MAT,
+) -> Path:
+    """裁切單張圖，回傳實際輸出資料夾路徑。"""
+    cols = max(1, cols)
+    rows = max(1, rows)
 
     img = Image.open(image_path).convert("RGBA")
     w, h = img.size
-    cols, rows = max(1, args.cols), max(1, args.rows)
-    cell_w, cell_h = w // cols, h // rows
+    cell_w = w // cols
+    cell_h = h // rows
+    if cell_w <= 0 or cell_h <= 0:
+        raise ValueError(f"圖片太小或格子數過多：{w}x{h} / {cols}x{rows}")
 
-    if cell_w < 1 or cell_h < 1:
-        print("圖片太小或行列數太大，無法裁切。", file=sys.stderr)
-        sys.exit(1)
+    out = output_dir if output_dir is not None else Path("Cut") / image_path.stem
+    out.mkdir(parents=True, exist_ok=True)
+    prefix = prefix.strip("_") or profile.asset_prefix.strip("_") or "MAT"
 
-    inset = max(0, args.inset)
-    if 2 * inset >= min(cell_w, cell_h):
-        print("--inset 過大，會讓單格沒有剩餘像素。", file=sys.stderr)
-        sys.exit(1)
-
-    out_dir.mkdir(parents=True, exist_ok=True)
-    if args.make_icons:
-        icons_dir.mkdir(parents=True, exist_ok=True)
-
-    suffix_full = args.suffix_full or ""
-    icon_px = max(32, args.icon_size)
-    print(
-        f"圖片 {w}x{h}，每格約 {cell_w}x{cell_h}，網格 {cols}x{rows}，inset={inset}，"
-        f"共 {len(data)} 筆 id；全身後綴「{suffix_full or '(無)'}」"
-        + (f"；圖示 {icon_px}px -> {icons_dir}" if args.make_icons else "")
+    row_iter = _range_or_full(
+        profile.crop_row_start_0,
+        profile.crop_row_end_excl_0,
+        rows,
+    )
+    col_iter = _range_or_full(
+        profile.crop_col_start_0,
+        profile.crop_col_end_excl_0,
+        cols,
     )
 
-    index = 0
-    for row in range(rows):
-        for col in range(cols):
-            if index >= len(data):
-                break
+    n = 0
+    for row in row_iter:
+        for col in col_iter:
+            left = col * cell_w
+            upper = row * cell_h
+            sprite = img.crop((left, upper, left + cell_w, upper + cell_h))
+            fname = build_output_filename(
+                prefix,
+                mat_row_num_1=profile.name_row_first_1 + row,
+                mat_col_num_1=profile.name_col_first_1 + col,
+            )
+            dest = out / fname
+            sprite.save(dest)
+            n += 1
+            print(f"  [{n:3}] {dest}")
 
-            item = data[index]
-            if not isinstance(item, dict) or "id" not in item:
-                print(f"第 {index} 筆缺少 \"id\" 欄位", file=sys.stderr)
-                sys.exit(1)
+    print(f"完成：{image_path.name} → {n} 張，資料夾 {out.resolve()}")
+    return out
 
-            left = col * cell_w + inset
-            upper = row * cell_h + inset
-            right = (col + 1) * cell_w - inset
-            lower = (row + 1) * cell_h - inset
 
-            sprite = img.crop((left, upper, right, lower))
-            sprite_id = str(item["id"]).strip()
-            if not sprite_id:
-                print(f"第 {index} 筆 id 為空", file=sys.stderr)
-                sys.exit(1)
+def collect_inputs(paths: list[str], folder: str | None) -> list[Path]:
+    ps: list[Path] = []
+    for p in paths:
+        pi = Path(p)
+        if not pi.exists():
+            print(f"[略過] 找不到檔案：{p}")
+            continue
+        ps.append(pi)
 
-            full_name = f"{sprite_id}{suffix_full}.png"
-            out_path = out_dir / full_name
-            sprite.save(out_path)
-            line = f"[{index + 1}/{len(data)}] {out_path.name}"
-            if args.make_icons:
-                icon_img = make_icon_from_crop(sprite, icon_px)
-                icon_path = icons_dir / f"{sprite_id}_圖示.png"
-                icon_img.save(icon_path, "PNG")
-                line += f" + {icon_path.name}"
-            print(line)
+    if folder:
+        fd = Path(folder)
+        if not fd.is_dir():
+            raise SystemExit(f"不是資料夾：{folder}")
+        for ext in ("*.png", "*.PNG", "*.jpg", "*.jpeg", "*.webp"):
+            ps.extend(sorted(fd.glob(ext)))
 
-            index += 1
-        if index >= len(data):
-            break
+    seen = set()
+    uniq: list[Path] = []
+    for p in ps:
+        if p.is_file() and p.resolve() not in seen:
+            seen.add(p.resolve())
+            uniq.append(p)
+    return uniq
 
-    if index < len(data):
-        print(
-            f"\n注意：JSON 尚有 {len(data) - index} 筆未裁切（網格僅 {cols}x{rows}={cols * rows} 格）",
-            file=sys.stderr,
+
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description="格狀裁圖並自動命名（不需 JSON）。區間／列號起算見程式內 MAT。",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=__doc__,
+    )
+    ap.add_argument(
+        "images",
+        nargs="*",
+        help=f"要裁切的圖；皆空則試用程式內 MAT.input_if_no_cli 或搭配 --folder",
+    )
+    ap.add_argument(
+        "-folder",
+        "--folder",
+        metavar="DIR",
+        dest="folder",
+        help="此資料夾內所有 png/jpg/webp 各別裁一份",
+    )
+    ap.add_argument(
+        "-r",
+        "--rows",
+        type=int,
+        default=MAT.rows,
+        help=f"縱向格數（default: MAT.rows=%(default)s）",
+    )
+    ap.add_argument(
+        "-c",
+        "--cols",
+        type=int,
+        default=MAT.cols,
+        help=f"橫向格數（default: MAT.cols=%(default)s）",
+    )
+    ap.add_argument(
+        "-p",
+        "--prefix",
+        default=MAT.asset_prefix,
+        help=f"檔名前綴（default: MAT.asset_prefix=%(default)s）",
+    )
+    ap.add_argument(
+        "-o",
+        "--output",
+        metavar="DIR",
+        dest="output",
+        help="輸出根目錄（單檔時可省略，預設 Cut/<檔名不含副檔>）",
+    )
+
+    args = ap.parse_args()
+
+    imgs: list[str] = list(args.images)
+    if not imgs and not args.folder:
+        d = (MAT.input_if_no_cli or "").strip()
+        if d:
+            imgs.append(d)
+
+    targets = collect_inputs(imgs, args.folder)
+    if not targets:
+        ap.print_help()
+        raise SystemExit(
+            "請指定至少一張圖片、或 --folder，或在 MAT.input_if_no_cli 填入預設圖。"
         )
 
-    print("裁切完成。")
+    root_out = Path(args.output) if args.output else None
+
+    for tp in targets:
+        if root_out is None:
+            od = None
+        elif len(targets) == 1:
+            od = root_out
+        else:
+            od = root_out / tp.stem
+
+        slice_one(
+            tp,
+            cols=args.cols,
+            rows=args.rows,
+            prefix=args.prefix,
+            output_dir=od,
+            profile=MAT,
+        )
 
 
 if __name__ == "__main__":

@@ -21,6 +21,8 @@ namespace MonsterHunter.UI
         [Tooltip("留空＝依任務「地圖」載入遠景；若填寫則僅覆寫背景圖（不影響任務內容），方便 Bootstrap 試跑指定圖檔。")]
         [SerializeField] string _previewBattleMapOverride = "";
         [SerializeField] string _fallbackMapName = "古代樹森林";
+        [Tooltip("試玩優先載入 Assets/UI/Backgrounds/Battle/CS01R01~CS10R04；若對應檔不存在則用任務「地圖」單張。")]
+        [SerializeField] bool _prioritizeCombatStarBackdrop = true;
         [Tooltip("直向＋超寬全景時略大（約 7～9）可一次看到較多空景；與戰場可走範圍連動。")]
         [SerializeField] float _orthographicSize = 8.25f;
         [SerializeField] [Range(0.5f, 0.95f)] float _battlefieldViewportHeight = 0.9f;
@@ -87,19 +89,11 @@ namespace MonsterHunter.UI
             var ledgerSnapshot = LocalHunterLedger.LoadOrCreate();
             _combatModifiers    = BuildBattleSessionModifiers(quest, ledgerSnapshot);
 
-            if (!string.IsNullOrWhiteSpace(_previewBattleMapOverride))
-                _background.ApplyMapName(_previewBattleMapOverride.Trim());
-            else if (quest != null && !string.IsNullOrWhiteSpace(quest.地圖))
-                _background.ApplyFromQuest(quest);
-            else if (!string.IsNullOrWhiteSpace(_fallbackMapName))
-            {
-                Debug.LogWarning("[BattlePreviewBootstrap] 使用 fallback 地圖：" + _fallbackMapName);
-                _background.ApplyMapName(_fallbackMapName);
-            }
-
             var monsterId  = ResolveTargetMonsterId(quest, ledgerSnapshot);
             var monsterRow = LoadMonsterRow(monsterId);
             _currentMonsterRow = monsterRow;
+
+            ResolveBattleFarBackground(quest, monsterRow, monsterId);
 
             if (_showMonsterWorldPortrait && monsterRow != null)
                 CreateMonsterWorldPortrait(main, monsterRow);
@@ -112,6 +106,62 @@ namespace MonsterHunter.UI
 
             // ── 啟動正式戰鬥 ──
             LaunchCombat();
+        }
+
+        /// <summary>
+        /// 星級構圖 <c>CS01R01～CS10R04</c> 優先，失敗則回 quests「地圖」單張；旋轉序由任務＋魔物編號決定在同一場固定。
+        /// </summary>
+        void ResolveBattleFarBackground(任務資料列 quest, 魔物資料列 monsterRow, string monsterIdResolved)
+        {
+            if (_background == null) return;
+
+            if (!string.IsNullOrWhiteSpace(_previewBattleMapOverride))
+            {
+                _background.ApplyMapName(_previewBattleMapOverride.Trim());
+                return;
+            }
+
+            var star = monsterRow != null ? monsterRow.星級 :
+                quest != null ? quest.星級 :
+                1;
+            star = Mathf.Clamp(star, 1, 10);
+
+            var mapLabel =
+                quest != null && !string.IsNullOrWhiteSpace(quest.地圖)
+                    ? quest.地圖.Trim()
+                    : _fallbackMapName;
+
+            var qid = quest != null ? quest.任務編號 : "";
+            var mid = monsterRow != null ? monsterRow.魔物編號 : monsterIdResolved ?? "";
+            var rot = StableBackdropRotation4(qid, mid);
+
+            if (_prioritizeCombatStarBackdrop &&
+                _background.TryApplyCombatStarBackdrop(star, rot, mapLabel))
+                return;
+
+            if (quest != null && !string.IsNullOrWhiteSpace(quest.地圖))
+            {
+                _background.ApplyFromQuest(quest);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_fallbackMapName))
+            {
+                Debug.LogWarning("[BattlePreviewBootstrap] 使用 fallback 地圖：" + _fallbackMapName);
+                _background.ApplyMapName(_fallbackMapName);
+            }
+        }
+
+        static int StableBackdropRotation4(string questId, string monsterId)
+        {
+            unchecked
+            {
+                var seed = $"{questId}\n{monsterId}";
+                var h = 17;
+                foreach (var ch in seed)
+                    h = h * 31 + ch;
+                return (h & 0x7fffffff) % 4;
+            }
         }
 
         void LaunchCombat()
@@ -585,13 +635,16 @@ namespace MonsterHunter.UI
                 : ResolveTargetMonsterId(quest, ledgerSnapshot ?? LocalHunterLedger.LoadOrCreate());
             var mMaxHp = monster != null ? Mathf.Max(1, monster.最大血量) : 100;
 
-            CreateHudSection(panel.transform, font, monster, quest, textRightPad, mMaxHp, mid, title, map, mName);
+            var bdCaption =
+                _background != null ? _background.LastHudCaption.Trim() : "";
+            CreateHudSection(panel.transform, font, monster, quest, textRightPad, mMaxHp, mid, title, map, mName,
+                bdCaption);
 
             BuildHintText(canvasGo.transform, font);
         }
 
         void CreateHudSection(Transform panelRoot, Font font, 魔物資料列 monster, 任務資料列 quest, float textRightPad,
-            int mMaxHp, string mid, string title, string map, string mName)
+            int mMaxHp, string mid, string title, string map, string mName, string battleBackdropCaption)
         {
             BuildCompactDualHpRow(panelRoot, font,
                 _demoPlayerHp / (float)Mathf.Max(1, _demoPlayerHpMax), 1f);
@@ -613,8 +666,13 @@ namespace MonsterHunter.UI
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Truncate;
             label.lineSpacing = 0.9f;
+            var bgLine =
+                string.IsNullOrWhiteSpace(battleBackdropCaption)
+                    ? ""
+                    : $"\n<b>遠景</b>：{battleBackdropCaption.Trim()}";
+
             label.text =
-                $"<b>戰鬥預覽</b> · {title}\n{map} · <b>{mName}</b> ({mid})　HP上限 {mMaxHp}　獵人 {_demoPlayerHp}/{_demoPlayerHpMax}";
+                $"<b>戰鬥預覽</b> · {title}\n{map} · <b>{mName}</b> ({mid})　HP上限 {mMaxHp}　獵人 {_demoPlayerHp}/{_demoPlayerHpMax}{bgLine}";
         }
 
         static void BuildCompactDualHpRow(Transform parent, Font font, float playerFill, float monsterFill)

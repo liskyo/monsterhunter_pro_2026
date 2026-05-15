@@ -9,6 +9,8 @@ namespace MonsterHunter.DataModels
         public string 技能編號;
         public string 名稱;
         public string 描述;
+        /// <summary>技能圖示；預設 <c>Assets/Textures/Skills/{技能編號}.png</c>。</summary>
+        public string 圖片路徑;
         public int 最高等級;
         public 技能等級效果項[] 各等級效果;
         public string[] 關聯魔物套裝;
