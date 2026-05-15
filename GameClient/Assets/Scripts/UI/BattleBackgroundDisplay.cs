@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using MonsterHunter.Combat;
+using MonsterHunter.Data;
 using MonsterHunter.DataModels;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -10,8 +12,8 @@ using UnityEditor;
 namespace MonsterHunter.UI
 {
     /// <summary>
-    /// 依任務 <see cref="任務資料列.地圖"/> 載入戰鬥遠景圖（預設 <c>Assets/UI/Backgrounds/Battle/{地圖}_背景.png</c>），
-    /// 或可選依「星級＋構圖序」載入：<c>CS{01~10}R{01~04}_背景.png</c>（詳見 TryApplyCombatStarBackdrop）。
+    /// 依任務地圖名載入遠景（含 <see cref="QuestEffectiveMap"/> 依星級隨機）；星級遠景可優先載入
+    /// <c>CS{星級兩位}_{地圖名}.png</c>（對照 <c>DesignData/03_Combat/combat_star_backdrops_by_tier.json</c>）。
     /// 與 <see cref="BattlePortraitLayout"/> 並用：攝影機僅佔螢幕下方時，背景仍填滿該視錐對應的世界範圍。
     /// </summary>
     [DefaultExecutionOrder(100)]
@@ -40,8 +42,8 @@ namespace MonsterHunter.UI
         [Tooltip("相對於 Assets/ 的路徑，需含副檔名；{0} 為地圖名（與 quests.json「地圖」一致）。")]
         [SerializeField] string _pathFormat = "UI/Backgrounds/Battle/{0}_背景.png";
 
-        [Tooltip("{0}=星級1~10（兩位數）；{1}=構圖1~4（兩位數），預設：CS08R03_背景.png")]
-        [SerializeField] string _combatStarPathFormat = "UI/Backgrounds/Battle/CS{0:00}R{1:00}_背景.png";
+        [Tooltip("{0}=星級1~10（兩位數）；{1}=地圖短名（見 combat_star_backdrops_by_tier.json），例：CS01_古代樹森林.png")]
+        [SerializeField] string _combatStarPathFormat = "UI/Backgrounds/Battle/CS{0:00}_{1}.png";
 
         [Tooltip("戰鬥總管未注入時，仍至少覆蓋可視範圍；大於 1 時多留邊（與 combat_tuning 戰場倍率對齊）。")]
         [SerializeField] Vector2 _playfieldCoverageXY = new Vector2(1f, 1f);
@@ -199,23 +201,34 @@ namespace MonsterHunter.UI
                 Mathf.Max(1f, verticalMul));
         }
 
-        /// <summary>由任務列載入背景。</summary>
-        public void ApplyFromQuest(任務資料列 quest)
+        /// <summary>由任務列載入背景（若 <see cref="任務資料列.地圖抽取"/> 為依星級隨機，會用 <paramref name="monsterIdForStableMapDice"/> 與種子穩定挑出地圖）。</summary>
+        public void ApplyFromQuest(任務資料列 quest, string monsterIdForStableMapDice = null)
         {
-            if (quest == null || string.IsNullOrWhiteSpace(quest.地圖)) return;
-            ApplyMapName(quest.地圖);
+            if (quest == null) return;
+            var map = QuestEffectiveMap.GetBattleMapForQuest(quest, monsterIdForStableMapDice ?? "", null);
+            if (string.IsNullOrWhiteSpace(map)) return;
+            ApplyMapName(map);
         }
 
         /// <summary>
-        /// 星級 1～10 × 構圖 01～04 共 40 張；載入後 <see cref="LastHudCaption"/> 會設定。
-        /// 若對應檔案不存在則不改 sprite 並回傳 false。由 Bootstrap 決定是否在回退前先呼叫。
+        /// 依星級載入 <c>CS{tier两位}_{地圖名}.png</c>；地圖名由 <c>combat_star_backdrops_by_tier.json</c> 並以任務／魔物種子擇一。
+        /// 檔案不存在則回傳 false。由 Bootstrap 決定是否在回退前先呼叫。
         /// </summary>
-        public bool TryApplyCombatStarBackdrop(int starLevel1To10, int rotationZeroToThree, string areaLabelForHud)
+        public bool TryApplyCombatStarBackdrop(
+            int starLevel1To10,
+            string questIdForBackdropPick,
+            string monsterIdForBackdropPick,
+            string areaLabelForHud)
         {
             var tier = Mathf.Clamp(starLevel1To10, 1, 10);
-            var rot = Mathf.Clamp(rotationZeroToThree, 0, 3);
-            var r = rot + 1;
-            var relative = string.Format(_combatStarPathFormat, tier, r).Replace('\\', '/').TrimStart('/');
+            var slug = CombatStarBackdropTable.PickMapSlugForTier(
+                tier, questIdForBackdropPick ?? "", monsterIdForBackdropPick ?? "");
+
+            if (string.IsNullOrEmpty(slug))
+                return false;
+
+            var relative = string.Format(_combatStarPathFormat, tier, slug)
+                .Replace('\\', '/').TrimStart('/');
             var path = relative.StartsWith("Assets/", System.StringComparison.OrdinalIgnoreCase)
                 ? relative
                 : "Assets/" + relative;
@@ -224,15 +237,17 @@ namespace MonsterHunter.UI
             TryEditorRefreshImport(path);
 #endif
             var sp = SafeSpriteLoader.TryLoadSprite(path);
-            if (sp == null) return false;
+            if (sp == null)
+                return false;
 
             ApplyLoadedSprite(sp, path);
             var stem = System.IO.Path.GetFileNameWithoutExtension(path);
-            var shortCode = $"CS{tier:00}R{r:00}";
+            var shortTag = $"CS{tier:00}_{slug}";
+            var area = areaLabelForHud ?? "";
             var fallback = string.IsNullOrEmpty(area)
-                ? $"星級遠景 {tier}★ 構圖{r}/4 ({stem})"
-                : $"{area} · 星級遠景 {tier}★ 構圖{r}/4";
-            ApplyLastHudCaption(area, fallback, shortCode, stem);
+                ? $"星級遠景 {tier}★ {slug} ({stem})"
+                : $"{area} · 星級遠景 {tier}★ · {slug}";
+            ApplyLastHudCaption(areaLabelForHud, fallback, shortTag, stem, slug.Trim());
 
             ResetUvOverrides();
             FitSpriteToOrthographicCamera();
@@ -340,6 +355,17 @@ namespace MonsterHunter.UI
         {
             if (_spriteRenderer == null) _spriteRenderer = GetComponent<SpriteRenderer>();
             if (_spriteRenderer != null) _spriteRenderer.sortingOrder = _sortingOrder;
+#if UNITY_EDITOR
+            var fm = (_combatStarPathFormat ?? "").Trim().Replace('\\', '/');
+            if (string.Equals(fm,
+                "UI/Backgrounds/Battle/CS{0:00}R{1:00}_背景.png",
+                StringComparison.OrdinalIgnoreCase))
+                _combatStarPathFormat = "UI/Backgrounds/Battle/CS{0:00}_{1}.png";
+            else if (string.Equals(fm,
+                "UI/Backgrounds/Battle/CS{0:00}_{1}_背景.png",
+                StringComparison.OrdinalIgnoreCase))
+                _combatStarPathFormat = "UI/Backgrounds/Battle/CS{0:00}_{1}.png";
+#endif
         }
 
         任務資料列 FindQuestInAsset(string questId)

@@ -23,13 +23,15 @@
 | `02_Equipment/armor.json` | ✅ `圖片路徑`、`圖示路徑` | **護甲**：見 §4；合成走較易得 **MAT_xx_01、02**；圖 **`ARM_{三位}.png`** |
 | `02_Equipment/skills.json` | ✅ `圖片路徑` | 見 §5：`Assets/Textures/Skills/{技能編號}.png` |
 | `02_Equipment/upgrade_rules.json` | ✅ `圖片路徑` | 見 §5：預設與裝備同檔 **`Assets/Textures/Equipment/{裝備編號}.png`** |
-| `03_Combat/battle_background_labels.json` | ❌（僅 HUD 文案對照） | **不決定檔名**；`labels` 的 **key** 須與地圖名或 `CS□□R□□` 等一致才可替換抬頭顯示，見「戰鬥遠景標籤」 |
+| `03_Combat/combat_star_backdrops_by_tier.json` | ❌ | **`byStar`** 列各星級可選地名；對應檔 **`CS{星級兩位}_{地名}.png`**（無 **`_背景`**） |
+| `03_Combat/battle_background_labels.json` | ❌（僅 HUD 文案對照） | **不決定檔名**；`labels` key 請用地圖名或 **`CS{兩位星級}_{地名}`**（星級遠景檔為 **`CS□□_{地名}.png`**），見§7 |
 | `03_Combat/combat_tuning.json` | ❌ | 無 |
 | `03_Combat/weapon_movesets.json` | ❌ | 無 |
 | `04_Items/materials.json` | ✅ `圖片路徑` | 見 §5.1：`Assets/Textures/Items/{素材編號}.png`（與掉落表同名素材可走同檔） |
 | `04_Items/paintballs.json` | ✅ `圖片路徑` | 見 §5.1：`Assets/Textures/Items/{道具編號}.png` |
 | `04_Items/monster_traces.json` | ✅ `圖片路徑` | 見 §5.1：`Assets/Textures/Traces/{痕跡編號}.png` |
-| `05_Systems/quests.json` | ❌ | **`地圖` 字串** 對應戰鬥遠景檔名，見「任務 × 戰鬥背景」 |
+| `05_Systems/quests.json` | ❌ | **`地圖`**；選用 **`地圖抽取`＝「依星級隨機」** 時一併讀 **`quest_map_pools_by_star.json`** ，見§6 |
+| `05_Systems/quest_map_pools_by_star.json` | ✅ 地名列表 | **`pools`** 內對應星級之地名須備好 **`Assets/UI/Backgrounds/Battle/{地名}_背景.png`** |
 | `05_Systems/pets.json` | ✅ `圖片路徑` | 見 §5.1：`Assets/Textures/Pets/{寵物編號}.png` |
 | `05_Systems/canteen.json` | ✅ `圖片路徑` | 見 §5.1：`Assets/Textures/Canteen/{料理編號}.png` |
 
@@ -39,13 +41,13 @@
 
 每筆魔物可取兩張圖：
 
-| 欄位 | 目前資料中的慣例 | 建議實際放置（在 `GameClient/Assets/` 下） |
-|------|------------------|--------------------------------------------|
-| `圖片路徑` | `Assets/Textures/Monsters/MON_{三位}_全身圖.png` | `Textures/Monsters/MON_001_全身圖.png`（例） |
-| `圖示路徑` | `Assets/UI/Icons/Monsters/MON_{三位}_圖示.png` | `UI/Icons/Monsters/MON_001_圖示.png`（例） |
+| 欄位 | 目前慣例 | 建議實際放置（在 `GameClient/Assets/` 下） |
+|------|----------|--------------------------------------------|
+| `圖片路徑` | `Assets/Textures/Monsters/MON_{三位}.png` | `Textures/Monsters/MON_001.png`（例） |
+| `圖示路徑` | 同上路徑即可（與全身圖同一張時） | 可與 `圖片路徑` 填相同字串，差異靠 UI 縮放 |
 
-- **`魔物編號`**（如 `MON_001`）應與檔名中的編號一致。  
-- 部分預覽程式在 `圖片路徑` 載入失敗時，會再嘗試 **`Assets/Textures/Monsters/{魔物編號}.png`**（例如 `MON_001.png`）。若要依賴此 fallback，可額外放一張與編號同名的 PNG；正式美術仍以 JSON 內 **`圖片路徑`** 為準較清楚。
+- **`魔物編號`**（如 `MON_001`）應與檔名 **`MON_001.png`** 之編號一致。  
+- 部分預覽程式在 `圖片路徑` 載入失敗時，會再嘗試 **`Assets/Textures/Monsters/{魔物編號}.png`**；與上述正式路徑相同時即為同一檔。
 
 ---
 
@@ -103,26 +105,27 @@
 ---
 
 
-## 6. 任務 × 戰鬥遠景（`quests.json` 的 `地圖`）
+## 6. 任務 × 戰鬥遠景（`quests.json` 的 `地圖`、`地圖抽取`）
 
-`quests.json` 沒有圖片欄位，但 **`地圖`** 會用來組出戰鬥遠景檔名。
+`quests.json` **沒有圖片欄位**。一般情況下 **`地圖`** = 這場要載入的 **`{地名}_背景.png`**。若 **`地圖抽取`** 設為 **`依星級隨機`**，則會依 **`星級`** 從 **`05_Systems/quest_map_pools_by_star.json`**（鍵 **`"1"`～`"10"`**）的地名陣列中擇一；同一任務＋同一魔物的場次內挑到的地名一致（種子哈希）。原先的 **`地圖`** 可保留作紀錄，或在池資料缺失時作備援。**未設 `地圖抽取` 或為空時視為固定地圖**，完全依 `地圖`。
 
 - **預設規則**（`BattleBackgroundDisplay`）：  
   - 相對路徑格式：`UI/Backgrounds/Battle/{0}_背景.png`  
   - 實際載入會補上 `Assets/` →  
     **`Assets/UI/Backgrounds/Battle/{地圖}_背景.png`**
-- **範例**：`"地圖": "古代樹森林"` → 檔案 **`GameClient/Assets/UI/Backgrounds/Battle/古代樹森林_背景.png`**
-- **星級構圖遠景**（與任務輪播搭配時）：檔名 **`CS{星級兩位}R{構圖兩位}_背景.png`**，例如星級 1、第 3 張構圖 → **`CS01R03_背景.png`**，完整路徑：  
-  **`Assets/UI/Backgrounds/Battle/CS01R03_背景.png`**
+- **範例**：`"地圖": "古代樹森林"`（固定模式）→ 檔案 **`GameClient/Assets/UI/Backgrounds/Battle/古代樹森林_背景.png`**
+- **星級地名遠景**（Bootstrap 優先載入）：檔名 **`CS{星級兩位}_{地圖名}.png`**（**不加 `_背景`**），地名須出在 **`DesignData/03_Combat/combat_star_backdrops_by_tier.json`** 該星級陣列內（例：**`CS01_古代樹森林.png`**）。同一任務＋同一魔物以種子在該星級的清單中擇一。
 
-新增地區時：**`quests.json` 的 `地圖` 字串** 必須與 **`{地圖}_背景.png`** 的主檔名（不含副檔名）完全一致。
+新增地區時：**固定模式下** **`quests.json` 的 `地圖`** 須與 **`{地圖}_背景.png`** 完全一致；若使用 **`依星級隨機`**，請一併在 **`quest_map_pools_by_star.json`** 的對應星級中加入該地名。
+
+批量為任務設隨機：倉庫根執行 **`python tools/set_quest_maps_random_draw.py`**。
 
 ---
 
 ## 7. 戰鬥遠景 HUD 標籤（`battle_background_labels.json`）
 
 - 檔案內 `labels` 為 **對照表**：key → 畫面上顯示的名稱。  
-- **key** 請使用與載入邏輯相同的識別，例如：`古代樹森林`、`CS01R01`（與上節檔名／星級構圖碼對應）。  
+- **key** 請使用與載入邏輯相同的識別，例如：`古代樹森林`、 **`CS03_瘴氣之谷`**（星級遠景檔 **`CS03_瘴氣之谷.png`** 之 stem 即為該短碼；一般 **`{地名}_背景.png`** 仍會自動剝 **`_背景`** 再查）。
 - **不負責**指定 PNG 放在哪裡；圖檔仍依 **§6（任務 × 戰鬥遠景）**命名與放置。
 
 ---
@@ -160,6 +163,6 @@
 - [ ] 貓飯：`Textures/Canteen/{料理編號}.png` ↔ `canteen.json`  
 - [ ] 魔物：`MON_XXX_全身圖.png`、`MON_XXX_圖示.png` 與 **`魔物編號`** 一致  
 - [ ] 任務戰場：任務的 **`地圖`** ↔ `Battle/{地圖}_背景.png`  
-- [ ] 星級遠景：`Battle/CS{S星兩位}R{R構圖兩位}_背景.png`
+- [ ] 星級遠景：`Battle/CS{S星兩位}_{地名}.png` 並與 **`combat_star_backdrops_by_tier.json`** 一致
 
 若需對照載入程式，可參考 `GameClient/Assets/Scripts/UI/SafeSpriteLoader.cs`、`BattleBackgroundDisplay.cs`、`VillageBackgroundUiDisplay.cs`。

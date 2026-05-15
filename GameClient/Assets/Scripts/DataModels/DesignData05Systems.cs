@@ -114,6 +114,8 @@ namespace MonsterHunter.DataModels
         public string 標題;
         public string 任務分類;
         public int 星級;
+        /// <summary>為空或未定義時視為固定地圖 → 使用 <see cref="地圖"/>。填「依星級隨機」則依本任務 <see cref="星級"/> 從 quest_map_pools_by_star.json 擇一。</summary>
+        public string 地圖抽取;
         public string 地圖;
         public 任務目標魔物項[] 目標魔物;
         public int 限制時間_秒;

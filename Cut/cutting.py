@@ -10,6 +10,8 @@
   python Cut/cutting.py 素材總覽.png -r 5 -c 5 -p MAT
   python Cut/cutting.py *.png -r 8 -c 8 -p MAT -o Assets/UI/Materials/icons
   python Cut/cutting.py --folder ./原始圖 -r 5 -c 5 -p ICON
+  python Cut/cutting.py --folder ./新魔物 -r 2 -c 2 -p MON --mon-flat --mon-start 57 \\
+      -o GameClient/Assets/Textures/Monsters --bg-key 255,255,255 --bg-tol 22 --trim
 """
 
 from __future__ import annotations
@@ -77,6 +79,44 @@ def build_output_filename(
     return f"{pfx}_{mat_row_num_1:03d}_{mat_col_num_1:02d}.png"
 
 
+def build_mon_flat_filename(prefix: str, index: int) -> str:
+    """單一編號：MON_057.png（與 monsters.json 慣例一致）。"""
+    pfx = prefix.strip("_") or "MON"
+    return f"{pfx}_{index:03d}.png"
+
+
+def chroma_to_transparent(
+    im: Image.Image,
+    key_rgb: tuple[int, int, int],
+    tol: int,
+) -> Image.Image:
+    """將接近指定 RGB 的像素改為全透明（簡易去背／去底色）。"""
+    im = im.convert("RGBA")
+    kr, kg, kb = key_rgb
+    tol = max(0, tol)
+    tol_sq = float(tol * tol)
+    px = im.load()
+    w, h = im.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            dr, dg, db = r - kr, g - kg, b - kb
+            dist_sq = dr * dr + dg * dg + db * db
+            if dist_sq <= tol_sq and a > 0:
+                px[x, y] = (r, g, b, 0)
+    return im
+
+
+def trim_to_alpha_bbox(im: Image.Image) -> Image.Image:
+    """依 alpha 非零區域裁掉多餘留白（去背後可讓精靈更貼邊）。"""
+    im = im.convert("RGBA")
+    alpha = im.split()[3]
+    bbox = alpha.getbbox()
+    if bbox is None:
+        return im
+    return im.crop(bbox)
+
+
 def _range_or_full(start: int | None, end_excl: int | None, max_n: int) -> range:
     """start=None 當 0；end_excl=None 當 max_n（用滿這一向度）。"""
     s = 0 if start is None else max(0, start)
@@ -94,8 +134,12 @@ def slice_one(
     prefix: str,
     output_dir: Path | None,
     profile: MatCropSettings = MAT,
-) -> Path:
-    """裁切單張圖，回傳實際輸出資料夾路徑。"""
+    mon_flat_start: int | None = None,
+    bg_key: tuple[int, int, int] | None = None,
+    bg_tol: int = 30,
+    trim_alpha_bbox: bool = False,
+) -> tuple[Path, int]:
+    """裁切單張圖，回傳 (輸出資料夾, 產出張數)。mon_flat_start 有值時檔名為 MON_057.png 連號。"""
     cols = max(1, cols)
     rows = max(1, rows)
 
@@ -122,23 +166,32 @@ def slice_one(
     )
 
     n = 0
+    mon_idx = mon_flat_start
     for row in row_iter:
         for col in col_iter:
             left = col * cell_w
             upper = row * cell_h
             sprite = img.crop((left, upper, left + cell_w, upper + cell_h))
-            fname = build_output_filename(
-                prefix,
-                mat_row_num_1=profile.name_row_first_1 + row,
-                mat_col_num_1=profile.name_col_first_1 + col,
-            )
+            if bg_key is not None:
+                sprite = chroma_to_transparent(sprite, bg_key, bg_tol)
+            if trim_alpha_bbox:
+                sprite = trim_to_alpha_bbox(sprite)
+            if mon_idx is not None:
+                fname = build_mon_flat_filename(prefix, mon_idx)
+                mon_idx += 1
+            else:
+                fname = build_output_filename(
+                    prefix,
+                    mat_row_num_1=profile.name_row_first_1 + row,
+                    mat_col_num_1=profile.name_col_first_1 + col,
+                )
             dest = out / fname
             sprite.save(dest)
             n += 1
             print(f"  [{n:3}] {dest}")
 
     print(f"完成：{image_path.name} → {n} 張，資料夾 {out.resolve()}")
-    return out
+    return out, n
 
 
 def collect_inputs(paths: list[str], folder: str | None) -> list[Path]:
@@ -163,6 +216,7 @@ def collect_inputs(paths: list[str], folder: str | None) -> list[Path]:
         if p.is_file() and p.resolve() not in seen:
             seen.add(p.resolve())
             uniq.append(p)
+    uniq.sort(key=lambda x: str(x).lower())
     return uniq
 
 
@@ -211,8 +265,49 @@ def main() -> None:
         dest="output",
         help="輸出根目錄（單檔時可省略，預設 Cut/<檔名不含副檔>）",
     )
+    ap.add_argument(
+        "--mon-flat",
+        action="store_true",
+        help="檔名改為連號 MON_057.png（需搭配 --mon-start；多張輸入圖時序號延續）",
+    )
+    ap.add_argument(
+        "--mon-start",
+        type=int,
+        default=1,
+        metavar="N",
+        help="--mon-flat 時第一張輸出編號（default: %(default)s）",
+    )
+    ap.add_argument(
+        "--bg-key",
+        metavar="R,G,B",
+        dest="bg_key",
+        default="",
+        help="去背：鍵色 RGB（0–255），例 255,255,255；留空則不做鍵色去背",
+    )
+    ap.add_argument(
+        "--bg-tol",
+        type=int,
+        default=38,
+        help="鍵色距離容許值（愈大則吃掉愈多近似色；default: %(default)s）",
+    )
+    ap.add_argument(
+        "--trim",
+        action="store_true",
+        help="依透明／alpha 外框裁掉多餘留白（建議去背後使用）",
+    )
 
     args = ap.parse_args()
+
+    def _parse_bg_key(s: str) -> tuple[int, int, int] | None:
+        s = (s or "").strip()
+        if not s:
+            return None
+        parts = [p.strip() for p in s.replace("，", ",").split(",")]
+        if len(parts) != 3:
+            raise SystemExit(f"--bg-key 需三個數字：R,G,B，收到：{s!r}")
+        return (int(parts[0]), int(parts[1]), int(parts[2]))
+
+    bg_key_parsed = _parse_bg_key(args.bg_key)
 
     imgs: list[str] = list(args.images)
     if not imgs and not args.folder:
@@ -229,22 +324,31 @@ def main() -> None:
 
     root_out = Path(args.output) if args.output else None
 
+    mon_next: int | None = args.mon_start if args.mon_flat else None
+
     for tp in targets:
         if root_out is None:
             od = None
-        elif len(targets) == 1:
+        elif len(targets) == 1 or args.mon_flat:
+            # 連號 MON 多張大圖時一律輸出到同一根目錄，避免每張大圖一層子資料夾
             od = root_out
         else:
             od = root_out / tp.stem
 
-        slice_one(
+        out_dir, n_out = slice_one(
             tp,
             cols=args.cols,
             rows=args.rows,
             prefix=args.prefix,
             output_dir=od,
             profile=MAT,
+            mon_flat_start=mon_next,
+            bg_key=bg_key_parsed,
+            bg_tol=args.bg_tol,
+            trim_alpha_bbox=args.trim,
         )
+        if mon_next is not None:
+            mon_next += n_out
 
 
 if __name__ == "__main__":

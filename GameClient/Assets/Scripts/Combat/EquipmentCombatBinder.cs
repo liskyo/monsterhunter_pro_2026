@@ -7,26 +7,24 @@ using UnityEngine;
 namespace MonsterHunter.Combat
 {
     /// <summary>
-    /// 依本機 Ledger 的穿戴武器編號載入 equipment.json + upgrade_rules.json，填入 <see cref="PlayerCombatLoadout"/>。
+    /// 依本機 Ledger 的穿戴武器編號解析 equipment／upgrade_rules JSON，填入 <see cref="PlayerCombatLoadout"/>。
     /// </summary>
     public static class EquipmentCombatBinder
     {
-        public static bool TryBindFromDisk(
-            string equipmentJsonFullPath,
-            string upgradeRulesJsonFullPath,
+        /// <summary>由已在記憶體的 JSON 字串綁定（WebGL／StreamingAssets）。</summary>
+        public static bool TryBindFromJson(
+            string equipmentJsonText,
+            string upgradeRulesJsonText,
             LocalHunterLedger ledger,
             string fallbackMovesetWeaponType,
             PlayerCombatLoadout loadout)
         {
-            if (loadout == null || ledger == null ||
-                string.IsNullOrEmpty(equipmentJsonFullPath) ||
-                !File.Exists(equipmentJsonFullPath))
+            if (loadout == null || ledger == null || string.IsNullOrEmpty(equipmentJsonText))
                 return false;
 
             try
             {
-                var eqText = File.ReadAllText(equipmentJsonFullPath);
-                var rows = JsonConvert.DeserializeObject<裝備資料列[]>(eqText);
+                var rows = JsonConvert.DeserializeObject<裝備資料列[]>(equipmentJsonText);
                 if (rows == null || rows.Length == 0)
                     return false;
 
@@ -58,10 +56,9 @@ namespace MonsterHunter.Combat
                     return false;
 
                 裝備升級規則列 upgrade = null;
-                if (!string.IsNullOrEmpty(upgradeRulesJsonFullPath) && File.Exists(upgradeRulesJsonFullPath))
+                if (!string.IsNullOrEmpty(upgradeRulesJsonText))
                 {
-                    var upText = File.ReadAllText(upgradeRulesJsonFullPath);
-                    var upRows = JsonConvert.DeserializeObject<裝備升級規則列[]>(upText);
+                    var upRows = JsonConvert.DeserializeObject<裝備升級規則列[]>(upgradeRulesJsonText);
                     if (upRows != null)
                     {
                         foreach (var u in upRows)
@@ -86,6 +83,25 @@ namespace MonsterHunter.Combat
                 Debug.LogWarning("[EquipmentCombatBinder] " + e.Message);
                 return false;
             }
+        }
+
+        public static bool TryBindFromDisk(
+            string equipmentJsonFullPath,
+            string upgradeRulesJsonFullPath,
+            LocalHunterLedger ledger,
+            string fallbackMovesetWeaponType,
+            PlayerCombatLoadout loadout)
+        {
+            if (loadout == null || ledger == null ||
+                string.IsNullOrEmpty(equipmentJsonFullPath) ||
+                !File.Exists(equipmentJsonFullPath))
+                return false;
+
+            var eqText = File.ReadAllText(equipmentJsonFullPath);
+            string upText = null;
+            if (!string.IsNullOrEmpty(upgradeRulesJsonFullPath) && File.Exists(upgradeRulesJsonFullPath))
+                upText = File.ReadAllText(upgradeRulesJsonFullPath);
+            return TryBindFromJson(eqText, upText ?? "", ledger, fallbackMovesetWeaponType, loadout);
         }
 
         static bool LooksLikeWeapon(裝備資料列 r)

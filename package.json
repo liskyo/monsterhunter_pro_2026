@@ -10,7 +10,8 @@
     "supabase:status": "node scripts/supabase-from-root.mjs status",
     "supabase:stop": "node scripts/supabase-from-root.mjs stop",
     "sync:unity-env": "node scripts/sync-unity-supabase-from-env.mjs",
-    "serve:webgl": "npx --yes serve \"Web/webgl\" -l 4173"
+    "serve:webgl": "npx --yes serve \"Web/webgl\" -l 4173",
+    "deploy:vercel": "npx --yes vercel deploy Web/webgl --prod"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

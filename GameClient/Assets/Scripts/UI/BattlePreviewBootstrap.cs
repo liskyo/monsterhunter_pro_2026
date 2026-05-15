@@ -1,5 +1,5 @@
-using System.IO;
 using MonsterHunter.Combat;
+using MonsterHunter.Data;
 using MonsterHunter.DataModels;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -21,7 +21,7 @@ namespace MonsterHunter.UI
         [Tooltip("留空＝依任務「地圖」載入遠景；若填寫則僅覆寫背景圖（不影響任務內容），方便 Bootstrap 試跑指定圖檔。")]
         [SerializeField] string _previewBattleMapOverride = "";
         [SerializeField] string _fallbackMapName = "古代樹森林";
-        [Tooltip("試玩優先載入 Assets/UI/Backgrounds/Battle/CS01R01~CS10R04；若對應檔不存在則用任務「地圖」單張。")]
+        [Tooltip("試玩優先載入 CS{星級兩位}_{地名}.png（名單見 DesignData combat_star_backdrops_by_tier）；若檔不存在則用任務決算／地圖單張。")]
         [SerializeField] bool _prioritizeCombatStarBackdrop = true;
         [Tooltip("直向＋超寬全景時略大（約 7～9）可一次看到較多空景；與戰場可走範圍連動。")]
         [SerializeField] float _orthographicSize = 8.25f;
@@ -109,7 +109,8 @@ namespace MonsterHunter.UI
         }
 
         /// <summary>
-        /// 星級構圖 <c>CS01R01～CS10R04</c> 優先，失敗則回 quests「地圖」單張；旋轉序由任務＋魔物編號決定在同一場固定。
+        /// 星級遠景 <c>CS{tier}_{地圖}.png</c>（名單見 combat_star_backdrops_by_tier.json）優先，
+        /// 失敗則回退任務決算地圖單張；種子來自任務＋魔物。
         /// </summary>
         void ResolveBattleFarBackground(任務資料列 quest, 魔物資料列 monsterRow, string monsterIdResolved)
         {
@@ -126,22 +127,20 @@ namespace MonsterHunter.UI
                 1;
             star = Mathf.Clamp(star, 1, 10);
 
-            var mapLabel =
-                quest != null && !string.IsNullOrWhiteSpace(quest.地圖)
-                    ? quest.地圖.Trim()
-                    : _fallbackMapName;
+            var diceMid = monsterRow != null ? monsterRow.魔物編號 : monsterIdResolved ?? "";
+            var mapLabel = QuestEffectiveMap.GetBattleMapForQuest(quest, diceMid, _fallbackMapName);
 
             var qid = quest != null ? quest.任務編號 : "";
             var mid = monsterRow != null ? monsterRow.魔物編號 : monsterIdResolved ?? "";
-            var rot = StableBackdropRotation4(qid, mid);
 
             if (_prioritizeCombatStarBackdrop &&
-                _background.TryApplyCombatStarBackdrop(star, rot, mapLabel))
+                _background.TryApplyCombatStarBackdrop(star, qid, mid, mapLabel))
                 return;
 
-            if (quest != null && !string.IsNullOrWhiteSpace(quest.地圖))
+            var resolvedSolid = QuestEffectiveMap.GetBattleMapForQuest(quest, diceMid, null);
+            if (!string.IsNullOrWhiteSpace(resolvedSolid))
             {
-                _background.ApplyFromQuest(quest);
+                _background.ApplyMapName(resolvedSolid.Trim());
                 return;
             }
 
@@ -149,18 +148,6 @@ namespace MonsterHunter.UI
             {
                 Debug.LogWarning("[BattlePreviewBootstrap] 使用 fallback 地圖：" + _fallbackMapName);
                 _background.ApplyMapName(_fallbackMapName);
-            }
-        }
-
-        static int StableBackdropRotation4(string questId, string monsterId)
-        {
-            unchecked
-            {
-                var seed = $"{questId}\n{monsterId}";
-                var h = 17;
-                foreach (var ch in seed)
-                    h = h * 31 + ch;
-                return (h & 0x7fffffff) % 4;
             }
         }
 
@@ -203,17 +190,15 @@ namespace MonsterHunter.UI
 
         任務資料列 LoadPreviewQuest()
         {
-            var path = ResolveDesignDataFile("05_Systems", "quests.json");
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            if (!DesignDataReader.TryLoadDesignDataText(out var text, "05_Systems", "quests.json"))
             {
                 Debug.LogWarning(
-                    "[BattlePreviewBootstrap] 找不到 quests.json。預期：…/DesignData/05_Systems/quests.json");
+                    "[BattlePreviewBootstrap] 找不到 quests.json。預期：DesignData/05_Systems/quests.json（編輯器倉庫或 StreamingAssets）。");
                 return null;
             }
 
             try
             {
-                var text = File.ReadAllText(path);
                 var rows = JsonConvert.DeserializeObject<任務資料列[]>(text);
                 if (rows == null) return null;
                 foreach (var r in rows)
@@ -225,20 +210,6 @@ namespace MonsterHunter.UI
             catch (System.Exception e)
             {
                 Debug.LogWarning("[BattlePreviewBootstrap] 讀取任務失敗：" + e.Message);
-            }
-
-            return null;
-        }
-
-        static string ResolveDesignDataFile(params string[] relativeUnderDesignData)
-        {
-            var rel = Path.Combine(relativeUnderDesignData);
-            var dir = new DirectoryInfo(Application.dataPath);
-            for (var i = 0; i < 6 && dir != null; i++)
-            {
-                var candidate = Path.Combine(dir.FullName, "DesignData", rel);
-                if (File.Exists(candidate)) return candidate;
-                dir = dir.Parent;
             }
 
             return null;
@@ -301,9 +272,8 @@ namespace MonsterHunter.UI
 
             try
             {
-                var path = ResolveDesignDataFile("05_Systems", "canteen.json");
-                if (string.IsNullOrEmpty(path)) return null;
-                var txt  = File.ReadAllText(path);
+                if (!DesignDataReader.TryLoadDesignDataText(out var txt, "05_Systems", "canteen.json"))
+                    return null;
                 var rows = JsonConvert.DeserializeObject<貓飯資料列[]>(txt);
                 if (rows == null) return null;
                 foreach (var r in rows)
@@ -327,9 +297,9 @@ namespace MonsterHunter.UI
 
             try
             {
-                var path = ResolveDesignDataFile("04_Items", "paintballs.json");
-                if (string.IsNullOrEmpty(path)) return null;
-                var rows = JsonConvert.DeserializeObject<染色球資料列[]>(File.ReadAllText(path));
+                if (!DesignDataReader.TryLoadDesignDataText(out var json, "04_Items", "paintballs.json"))
+                    return null;
+                var rows = JsonConvert.DeserializeObject<染色球資料列[]>(json);
                 if (rows == null) return null;
                 foreach (var r in rows)
                 {
@@ -352,10 +322,10 @@ namespace MonsterHunter.UI
 
             try
             {
-                var path = ResolveDesignDataFile("04_Items", "monster_traces.json");
-                if (string.IsNullOrEmpty(path)) return null;
+                if (!DesignDataReader.TryLoadDesignDataText(out var json, "04_Items", "monster_traces.json"))
+                    return null;
 
-                var rows = JsonConvert.DeserializeObject<魔物痕跡資料列[]>(File.ReadAllText(path));
+                var rows = JsonConvert.DeserializeObject<魔物痕跡資料列[]>(json);
                 if (rows == null) return null;
 
                 foreach (var r in rows)
@@ -433,16 +403,14 @@ namespace MonsterHunter.UI
 
         魔物資料列 LoadMonsterRow(string 魔物編號)
         {
-            var path = ResolveDesignDataFile("01_Monsters", "monsters.json");
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            if (!DesignDataReader.TryLoadDesignDataText(out var text, "01_Monsters", "monsters.json"))
             {
-                Debug.LogWarning("[BattlePreviewBootstrap] 找不到 monsters.json。");
+                Debug.LogWarning("[BattlePreviewBootstrap] 找不到 monsters.json（編輯器倉庫或 StreamingAssets）。");
                 return null;
             }
 
             try
             {
-                var text = File.ReadAllText(path);
                 var rows = JsonConvert.DeserializeObject<魔物資料列[]>(text);
                 if (rows == null) return null;
                 foreach (var r in rows)
@@ -627,12 +595,16 @@ namespace MonsterHunter.UI
 
             float textRightPad = monster != null && !string.IsNullOrWhiteSpace(monster.圖示路徑) ? 68f : 16f;
 
-            var title = quest != null ? quest.標題 : "（無任務資料）";
-            var map = quest != null ? quest.地圖 : _fallbackMapName;
-            var mName = monster != null ? monster.名稱 : "（無魔物資料）";
-            var mid = monster != null
+            var midHud = monster != null
                 ? monster.魔物編號
                 : ResolveTargetMonsterId(quest, ledgerSnapshot ?? LocalHunterLedger.LoadOrCreate());
+
+            var title = quest != null ? quest.標題 : "（無任務資料）";
+            var map = quest != null
+                ? QuestEffectiveMap.GetBattleMapForQuest(quest, midHud, _fallbackMapName) ?? _fallbackMapName
+                : _fallbackMapName;
+            var mName = monster != null ? monster.名稱 : "（無魔物資料）";
+            var mid = midHud;
             var mMaxHp = monster != null ? Mathf.Max(1, monster.最大血量) : 100;
 
             var bdCaption =

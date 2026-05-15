@@ -14,8 +14,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 4500,
-    "圖片路徑": "Assets/Textures/Monsters/MON_001_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_001_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_001.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_001.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 82,
@@ -92,8 +92,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 4800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_002_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_002_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_002.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_002.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 89,
@@ -124,8 +124,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 5100,
-    "圖片路徑": "Assets/Textures/Monsters/MON_003_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_003_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_003.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_003.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 96,
@@ -156,8 +156,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 5400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_004_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_004_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_004.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_004.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 103,
@@ -188,8 +188,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 5700,
-    "圖片路徑": "Assets/Textures/Monsters/MON_005_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_005_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_005.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_005.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 110,
@@ -220,8 +220,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 6000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_006_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_006_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_006.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_006.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 117,
@@ -252,8 +252,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 6300,
-    "圖片路徑": "Assets/Textures/Monsters/MON_007_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_007_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_007.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_007.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 124,
@@ -284,8 +284,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 6600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_008_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_008_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_008.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_008.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 131,
@@ -316,8 +316,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 6900,
-    "圖片路徑": "Assets/Textures/Monsters/MON_009_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_009_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_009.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_009.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 138,
@@ -348,8 +348,8 @@
     ],
     "身材面積": 27.1,
     "最大血量": 7200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_010_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_010_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_010.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_010.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 145,
@@ -380,8 +380,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 7500,
-    "圖片路徑": "Assets/Textures/Monsters/MON_011_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_011_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_011.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_011.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 152,
@@ -412,8 +412,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 7800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_012_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_012_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_012.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_012.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 159,
@@ -444,8 +444,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 8100,
-    "圖片路徑": "Assets/Textures/Monsters/MON_013_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_013_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_013.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_013.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 166,
@@ -476,8 +476,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 8400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_014_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_014_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_014.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_014.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 173,
@@ -508,8 +508,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 8700,
-    "圖片路徑": "Assets/Textures/Monsters/MON_015_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_015_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_015.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_015.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 180,
@@ -540,8 +540,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 9000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_016_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_016_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_016.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_016.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 187,
@@ -572,8 +572,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 9300,
-    "圖片路徑": "Assets/Textures/Monsters/MON_017_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_017_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_017.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_017.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 194,
@@ -604,8 +604,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 9600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_018_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_018_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_018.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_018.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 201,
@@ -636,8 +636,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 9900,
-    "圖片路徑": "Assets/Textures/Monsters/MON_019_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_019_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_019.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_019.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 208,
@@ -668,8 +668,8 @@
     ],
     "身材面積": 28.3,
     "最大血量": 10200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_020_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_020_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_020.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_020.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 215,
@@ -700,8 +700,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 10500,
-    "圖片路徑": "Assets/Textures/Monsters/MON_021_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_021_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_021.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_021.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 222,
@@ -732,8 +732,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 10800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_022_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_022_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_022.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_022.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 229,
@@ -764,8 +764,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 11100,
-    "圖片路徑": "Assets/Textures/Monsters/MON_023_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_023_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_023.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_023.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 236,
@@ -796,8 +796,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 11400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_024_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_024_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_024.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_024.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 243,
@@ -828,8 +828,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 11700,
-    "圖片路徑": "Assets/Textures/Monsters/MON_025_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_025_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_025.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_025.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 250,
@@ -860,8 +860,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 12000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_026_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_026_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_026.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_026.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 257,
@@ -892,8 +892,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 12300,
-    "圖片路徑": "Assets/Textures/Monsters/MON_027_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_027_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_027.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_027.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 264,
@@ -924,8 +924,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 12600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_028_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_028_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_028.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_028.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 271,
@@ -956,8 +956,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 12900,
-    "圖片路徑": "Assets/Textures/Monsters/MON_029_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_029_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_029.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_029.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 278,
@@ -988,8 +988,8 @@
     ],
     "身材面積": 29.4,
     "最大血量": 13200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_030_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_030_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_030.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_030.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 285,
@@ -1020,8 +1020,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 11740,
-    "圖片路徑": "Assets/Textures/Monsters/MON_031_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_031_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_031.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_031.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 171,
@@ -1058,8 +1058,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 11980,
-    "圖片路徑": "Assets/Textures/Monsters/MON_032_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_032_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_032.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_032.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 177,
@@ -1096,8 +1096,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 12220,
-    "圖片路徑": "Assets/Textures/Monsters/MON_033_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_033_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_033.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_033.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 183,
@@ -1134,8 +1134,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 12460,
-    "圖片路徑": "Assets/Textures/Monsters/MON_034_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_034_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_034.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_034.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 189,
@@ -1172,8 +1172,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 12700,
-    "圖片路徑": "Assets/Textures/Monsters/MON_035_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_035_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_035.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_035.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 195,
@@ -1210,8 +1210,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 12940,
-    "圖片路徑": "Assets/Textures/Monsters/MON_036_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_036_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_036.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_036.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 201,
@@ -1248,8 +1248,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 13180,
-    "圖片路徑": "Assets/Textures/Monsters/MON_037_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_037_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_037.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_037.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 207,
@@ -1286,8 +1286,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 13420,
-    "圖片路徑": "Assets/Textures/Monsters/MON_038_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_038_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_038.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_038.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 213,
@@ -1324,8 +1324,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 13660,
-    "圖片路徑": "Assets/Textures/Monsters/MON_039_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_039_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_039.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_039.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 219,
@@ -1362,8 +1362,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 13900,
-    "圖片路徑": "Assets/Textures/Monsters/MON_040_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_040_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_040.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_040.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 225,
@@ -1400,8 +1400,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 14140,
-    "圖片路徑": "Assets/Textures/Monsters/MON_041_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_041_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_041.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_041.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 231,
@@ -1438,8 +1438,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 14380,
-    "圖片路徑": "Assets/Textures/Monsters/MON_042_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_042_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_042.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_042.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 237,
@@ -1476,8 +1476,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 14620,
-    "圖片路徑": "Assets/Textures/Monsters/MON_043_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_043_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_043.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_043.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 243,
@@ -1514,8 +1514,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 14860,
-    "圖片路徑": "Assets/Textures/Monsters/MON_044_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_044_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_044.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_044.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 249,
@@ -1552,8 +1552,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 15100,
-    "圖片路徑": "Assets/Textures/Monsters/MON_045_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_045_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_045.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_045.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 255,
@@ -1590,8 +1590,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 15340,
-    "圖片路徑": "Assets/Textures/Monsters/MON_046_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_046_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_046.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_046.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 261,
@@ -1628,8 +1628,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 15580,
-    "圖片路徑": "Assets/Textures/Monsters/MON_047_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_047_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_047.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_047.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 267,
@@ -1666,8 +1666,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 15820,
-    "圖片路徑": "Assets/Textures/Monsters/MON_048_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_048_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_048.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_048.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 273,
@@ -1704,8 +1704,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 16060,
-    "圖片路徑": "Assets/Textures/Monsters/MON_049_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_049_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_049.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_049.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 279,
@@ -1742,8 +1742,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 16300,
-    "圖片路徑": "Assets/Textures/Monsters/MON_050_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_050_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_050.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_050.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 285,
@@ -1780,8 +1780,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 16540,
-    "圖片路徑": "Assets/Textures/Monsters/MON_051_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_051_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_051.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_051.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 291,
@@ -1818,8 +1818,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 16780,
-    "圖片路徑": "Assets/Textures/Monsters/MON_052_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_052_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_052.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_052.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 297,
@@ -1856,8 +1856,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 17020,
-    "圖片路徑": "Assets/Textures/Monsters/MON_053_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_053_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_053.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_053.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 303,
@@ -1894,8 +1894,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 17260,
-    "圖片路徑": "Assets/Textures/Monsters/MON_054_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_054_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_054.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_054.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 309,
@@ -1932,8 +1932,8 @@
     ],
     "身材面積": 30.6,
     "最大血量": 17500,
-    "圖片路徑": "Assets/Textures/Monsters/MON_055_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_055_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_055.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_055.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 315,
@@ -1970,8 +1970,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 17740,
-    "圖片路徑": "Assets/Textures/Monsters/MON_056_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_056_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_056.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_056.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 321,
@@ -2008,8 +2008,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 17980,
-    "圖片路徑": "Assets/Textures/Monsters/MON_057_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_057_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_057.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_057.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 327,
@@ -2046,8 +2046,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 18220,
-    "圖片路徑": "Assets/Textures/Monsters/MON_058_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_058_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_058.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_058.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 333,
@@ -2084,8 +2084,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 18460,
-    "圖片路徑": "Assets/Textures/Monsters/MON_059_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_059_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_059.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_059.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 339,
@@ -2122,8 +2122,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 18700,
-    "圖片路徑": "Assets/Textures/Monsters/MON_060_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_060_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_060.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_060.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 345,
@@ -2160,8 +2160,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 18940,
-    "圖片路徑": "Assets/Textures/Monsters/MON_061_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_061_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_061.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_061.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 351,
@@ -2198,8 +2198,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 19180,
-    "圖片路徑": "Assets/Textures/Monsters/MON_062_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_062_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_062.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_062.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 357,
@@ -2236,8 +2236,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 19420,
-    "圖片路徑": "Assets/Textures/Monsters/MON_063_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_063_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_063.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_063.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 363,
@@ -2274,8 +2274,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 19660,
-    "圖片路徑": "Assets/Textures/Monsters/MON_064_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_064_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_064.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_064.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 369,
@@ -2312,8 +2312,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 19900,
-    "圖片路徑": "Assets/Textures/Monsters/MON_065_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_065_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_065.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_065.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 375,
@@ -2350,8 +2350,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 20140,
-    "圖片路徑": "Assets/Textures/Monsters/MON_066_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_066_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_066.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_066.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 381,
@@ -2388,8 +2388,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 20380,
-    "圖片路徑": "Assets/Textures/Monsters/MON_067_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_067_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_067.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_067.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 387,
@@ -2426,8 +2426,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 20620,
-    "圖片路徑": "Assets/Textures/Monsters/MON_068_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_068_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_068.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_068.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 393,
@@ -2464,8 +2464,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 20860,
-    "圖片路徑": "Assets/Textures/Monsters/MON_069_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_069_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_069.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_069.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 399,
@@ -2502,8 +2502,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 21100,
-    "圖片路徑": "Assets/Textures/Monsters/MON_070_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_070_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_070.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_070.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 405,
@@ -2540,8 +2540,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 21340,
-    "圖片路徑": "Assets/Textures/Monsters/MON_071_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_071_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_071.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_071.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 411,
@@ -2578,8 +2578,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 21580,
-    "圖片路徑": "Assets/Textures/Monsters/MON_072_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_072_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_072.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_072.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 417,
@@ -2616,8 +2616,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 21820,
-    "圖片路徑": "Assets/Textures/Monsters/MON_073_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_073_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_073.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_073.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 423,
@@ -2654,8 +2654,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 22060,
-    "圖片路徑": "Assets/Textures/Monsters/MON_074_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_074_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_074.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_074.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 429,
@@ -2692,8 +2692,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 22300,
-    "圖片路徑": "Assets/Textures/Monsters/MON_075_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_075_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_075.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_075.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 435,
@@ -2730,8 +2730,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 22540,
-    "圖片路徑": "Assets/Textures/Monsters/MON_076_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_076_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_076.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_076.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 441,
@@ -2768,8 +2768,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 22780,
-    "圖片路徑": "Assets/Textures/Monsters/MON_077_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_077_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_077.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_077.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 447,
@@ -2806,8 +2806,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 23020,
-    "圖片路徑": "Assets/Textures/Monsters/MON_078_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_078_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_078.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_078.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 453,
@@ -2844,8 +2844,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 23260,
-    "圖片路徑": "Assets/Textures/Monsters/MON_079_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_079_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_079.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_079.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 459,
@@ -2882,8 +2882,8 @@
     ],
     "身材面積": 31.8,
     "最大血量": 23500,
-    "圖片路徑": "Assets/Textures/Monsters/MON_080_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_080_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_080.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_080.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 465,
@@ -2920,8 +2920,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 24150,
-    "圖片路徑": "Assets/Textures/Monsters/MON_081_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_081_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_081.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_081.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 300,
@@ -2964,8 +2964,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 24800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_082_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_082_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_082.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_082.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 310,
@@ -3008,8 +3008,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 25450,
-    "圖片路徑": "Assets/Textures/Monsters/MON_083_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_083_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_083.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_083.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 320,
@@ -3052,8 +3052,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 26100,
-    "圖片路徑": "Assets/Textures/Monsters/MON_084_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_084_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_084.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_084.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 330,
@@ -3096,8 +3096,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 26750,
-    "圖片路徑": "Assets/Textures/Monsters/MON_085_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_085_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_085.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_085.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 340,
@@ -3140,8 +3140,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 27400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_086_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_086_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_086.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_086.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 350,
@@ -3184,8 +3184,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 28050,
-    "圖片路徑": "Assets/Textures/Monsters/MON_087_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_087_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_087.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_087.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 360,
@@ -3228,8 +3228,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 28700,
-    "圖片路徑": "Assets/Textures/Monsters/MON_088_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_088_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_088.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_088.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 370,
@@ -3272,8 +3272,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 29350,
-    "圖片路徑": "Assets/Textures/Monsters/MON_089_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_089_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_089.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_089.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 380,
@@ -3316,8 +3316,8 @@
     ],
     "身材面積": 34.0,
     "最大血量": 30000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_090_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_090_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_090.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_090.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 390,
@@ -3360,8 +3360,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 30650,
-    "圖片路徑": "Assets/Textures/Monsters/MON_091_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_091_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_091.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_091.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 400,
@@ -3404,8 +3404,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 31300,
-    "圖片路徑": "Assets/Textures/Monsters/MON_092_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_092_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_092.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_092.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 410,
@@ -3448,8 +3448,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 31950,
-    "圖片路徑": "Assets/Textures/Monsters/MON_093_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_093_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_093.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_093.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 420,
@@ -3492,8 +3492,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 32600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_094_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_094_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_094.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_094.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 430,
@@ -3536,8 +3536,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 33250,
-    "圖片路徑": "Assets/Textures/Monsters/MON_095_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_095_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_095.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_095.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 440,
@@ -3580,8 +3580,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 33900,
-    "圖片路徑": "Assets/Textures/Monsters/MON_096_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_096_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_096.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_096.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 450,
@@ -3624,8 +3624,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 34550,
-    "圖片路徑": "Assets/Textures/Monsters/MON_097_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_097_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_097.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_097.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 460,
@@ -3668,8 +3668,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 35200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_098_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_098_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_098.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_098.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 470,
@@ -3712,8 +3712,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 35850,
-    "圖片路徑": "Assets/Textures/Monsters/MON_099_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_099_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_099.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_099.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 480,
@@ -3756,8 +3756,8 @@
     ],
     "身材面積": 35.2,
     "最大血量": 36500,
-    "圖片路徑": "Assets/Textures/Monsters/MON_100_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_100_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_100.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_100.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 490,
@@ -3800,8 +3800,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 38200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_101_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_101_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_101.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_101.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 458,
@@ -3850,8 +3850,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 40400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_102_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_102_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_102.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_102.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 496,
@@ -3900,8 +3900,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 42600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_103_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_103_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_103.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_103.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 534,
@@ -3950,8 +3950,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 44800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_104_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_104_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_104.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_104.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 572,
@@ -4000,8 +4000,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 47000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_105_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_105_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_105.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_105.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 610,
@@ -4050,8 +4050,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 49200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_106_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_106_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_106.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_106.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 648,
@@ -4100,8 +4100,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 51400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_107_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_107_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_107.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_107.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 686,
@@ -4150,8 +4150,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 53600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_108_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_108_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_108.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_108.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 724,
@@ -4200,8 +4200,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 55800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_109_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_109_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_109.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_109.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 762,
@@ -4250,8 +4250,8 @@
     ],
     "身材面積": 36.4,
     "最大血量": 58000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_110_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_110_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_110.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_110.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 800,
@@ -4300,8 +4300,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 60200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_111_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_111_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_111.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_111.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 838,
@@ -4350,8 +4350,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 62400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_112_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_112_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_112.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_112.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 876,
@@ -4400,8 +4400,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 64600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_113_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_113_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_113.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_113.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 914,
@@ -4455,8 +4455,8 @@
     ],
     "身材面積": 38.2,
     "最大血量": 66800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_114_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_114_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_114.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_114.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 968,
@@ -4507,8 +4507,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 69000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_115_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_115_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_115.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_115.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 990,
@@ -4557,8 +4557,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 71200,
-    "圖片路徑": "Assets/Textures/Monsters/MON_116_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_116_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_116.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_116.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 1028,
@@ -4607,8 +4607,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 73400,
-    "圖片路徑": "Assets/Textures/Monsters/MON_117_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_117_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_117.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_117.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 1066,
@@ -4657,8 +4657,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 75600,
-    "圖片路徑": "Assets/Textures/Monsters/MON_118_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_118_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_118.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_118.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 1104,
@@ -4707,8 +4707,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 77800,
-    "圖片路徑": "Assets/Textures/Monsters/MON_119_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_119_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_119.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_119.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 1142,
@@ -4757,8 +4757,8 @@
     ],
     "身材面積": 37.5,
     "最大血量": 80000,
-    "圖片路徑": "Assets/Textures/Monsters/MON_120_全身圖.png",
-    "圖示路徑": "Assets/UI/Icons/Monsters/MON_120_圖示.png",
+    "圖片路徑": "Assets/Textures/Monsters/MON_120.png",
+    "圖示路徑": "Assets/Textures/Monsters/MON_120.png",
     "魔物攻擊內容": {
       "普通攻擊": {
         "傷害": 1180,

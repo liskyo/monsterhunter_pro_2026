@@ -40,3 +40,6 @@ GameClient/hunter/
 # Unity WebGL 建置輸出（保留空資料夾）
 Web/webgl/**
 !Web/webgl/.gitkeep
+
+# Unity：建置前由編輯器從倉庫 DesignData 同步的複本（可避免與根目錄雙軌）
+GameClient/Assets/StreamingAssets/DesignData/

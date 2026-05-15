@@ -1,6 +1,6 @@
 using System;
-using System.IO;
 using MonsterHunter.Controllers;
+using MonsterHunter.Data;
 using MonsterHunter.DataModels;
 using MonsterHunter.UI;
 using UnityEngine;
@@ -11,7 +11,7 @@ namespace MonsterHunter.Combat
     /// <summary>
     /// 執行期戰鬥總管：
     ///   1. 在 BattleMonsterPortrait / HunterPreview 上掛載物理與戰鬥元件
-    ///   2. 注入所有 JSON（從磁碟讀取，不依賴 TextAsset Inspector）
+    ///   2. 注入預設企劃 JSON（<see cref="DesignDataReader"/>／StreamingAssets，不依賴 TextAsset Inspector）
     ///   3. 即時更新 HUD 血條、顯示勝負結果畫面
     /// </summary>
     [DefaultExecutionOrder(-100)]
@@ -197,16 +197,14 @@ namespace MonsterHunter.Combat
             loadout.武器屬性 = 0f;
             loadout.武器屬性標籤 = "無";
 
-            var equipPath =
-                ResolveDesignDataPath("02_Equipment", "equipment.json");
-            var upgradePath =
-                ResolveDesignDataPath("02_Equipment", "upgrade_rules.json");
-
-            if (!string.IsNullOrEmpty(equipPath))
+            if (DesignDataReader.TryLoadDesignDataText(out var equipJson, "02_Equipment",
+                    "equipment.json"))
             {
-                var upgradeArg = string.IsNullOrEmpty(upgradePath) ? "" : upgradePath;
+                DesignDataReader.TryLoadDesignDataText(out var upgradeJson, "02_Equipment",
+                    "upgrade_rules.json");
 
-                EquipmentCombatBinder.TryBindFromDisk(equipPath, upgradeArg, ledger,
+                EquipmentCombatBinder.TryBindFromJson(
+                    equipJson, upgradeJson ?? "", ledger,
                     DemoWeaponType, loadout);
 
                 DemoWeaponType = loadout.武器類型;
@@ -614,26 +612,15 @@ namespace MonsterHunter.Combat
             return Mathf.Max(0f, reach);
         }
 
-        static string ResolveDesignDataPath(params string[] relativeUnderDesignData)
-        {
-            var rel = Path.Combine(relativeUnderDesignData);
-            var dir = new DirectoryInfo(Application.dataPath);
-            for (var i = 0; i < 6 && dir != null; i++)
-            {
-                var candidate = Path.Combine(dir.FullName, "DesignData", rel);
-                if (File.Exists(candidate))
-                    return candidate;
-                dir = dir.Parent;
-            }
-
-            Debug.LogWarning($"[BattleCombatManager] 找不到 DesignData/{rel}");
-            return null;
-        }
-
         static string LoadDesignDataJson(params string[] relativeUnderDesignData)
         {
-            var path = ResolveDesignDataPath(relativeUnderDesignData);
-            return path != null ? File.ReadAllText(path) : null;
+            if (DesignDataReader.TryLoadDesignDataText(out var json, relativeUnderDesignData))
+                return json;
+
+            Debug.LogWarning(
+                "[BattleCombatManager] 載入 DesignData 失敗：" +
+                System.IO.Path.Combine(relativeUnderDesignData));
+            return null;
         }
 
         static void TrySetPrivateField(object target, string fieldName, object value)

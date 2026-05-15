@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
+using MonsterHunter.Data;
 using Newtonsoft.Json;
 using UnityEngine;
 
 namespace MonsterHunter.UI
 {
     /// <summary>
-    /// 讀取 <c>DesignData/03_Combat/battle_background_labels.json</c>：檔 key（地圖名或 <c>CS□□R□□</c>）→ 顯示名。
+    /// 讀取 <c>DesignData/03_Combat/battle_background_labels.json</c>：檔 key（地圖名或 <c>CS{tier}_{地圖}</c> 碼）→ 顯示名。
     /// </summary>
     public static class BattleBackgroundLabelTable
     {
@@ -33,13 +33,12 @@ namespace MonsterHunter.UI
             _attempted = true;
             _labels = new Dictionary<string, string>(StringComparer.Ordinal);
 
-            var path = ResolveDesignDataPath("03_Combat", "battle_background_labels.json");
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            if (!DesignDataReader.TryLoadDesignDataText(out var json, "03_Combat",
+                    "battle_background_labels.json"))
                 return;
 
             try
             {
-                var json = File.ReadAllText(path);
                 var dto = JsonConvert.DeserializeObject<FileDto>(json);
                 if (dto?.Labels == null) return;
                 foreach (var kv in dto.Labels)
@@ -56,7 +55,7 @@ namespace MonsterHunter.UI
             }
         }
 
-        /// <summary>依多個候選 key 嘗試取得顯示名（含 <c>檔名去副檔</c>、短碼 <c>CS01R01</c>）。</summary>
+        /// <summary>依多個候選 key 嘗試取得顯示名（含 <c>檔名去副檔</c>、<c>CS01_古代樹森林</c> 類短碼）。</summary>
         public static bool TryPickDisplayName(IEnumerable<string> candidateKeys, out string displayName)
         {
             displayName = null;
@@ -82,7 +81,7 @@ namespace MonsterHunter.UI
                 return true;
             }
 
-            // 允許檔 stem 為 CS01R01_背景 時用短碼查
+            // 允許檔 stem 為「古代樹森林_背景」或舊 CS「CS03_瘴氣之谷_背景」時剝掉尾綴查標籤
             const string suf = "_背景";
             if (key.EndsWith(suf, StringComparison.Ordinal) && key.Length > suf.Length)
             {
@@ -95,21 +94,6 @@ namespace MonsterHunter.UI
             }
 
             return false;
-        }
-
-        static string ResolveDesignDataPath(params string[] relativeUnderDesignData)
-        {
-            var rel = Path.Combine(relativeUnderDesignData);
-            var dir = new DirectoryInfo(Application.dataPath);
-            for (var i = 0; i < 6 && dir != null; i++)
-            {
-                var candidate = Path.Combine(dir.FullName, "DesignData", rel);
-                if (File.Exists(candidate))
-                    return candidate;
-                dir = dir.Parent;
-            }
-
-            return null;
         }
     }
 }
