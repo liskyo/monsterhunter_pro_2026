@@ -29,7 +29,7 @@ namespace MonsterHunter.UI
 
         const int MaxMaterialBuy = 99;
 
-        MobileVillageIntroFlow _flow;
+        Action _onReturnHub;
         SupabaseService _supabase;
 
         ShopTab _tab = ShopTab.Materials;
@@ -49,9 +49,9 @@ namespace MonsterHunter.UI
         染色球資料列[] _paintRows;
         寵物資料列[] _petRows;
 
-        public void Initialize(MobileVillageIntroFlow flow)
+        public void Initialize(Action onReturnHub)
         {
-            _flow = flow;
+            _onReturnHub = onReturnHub;
             BuildUi();
         }
 
@@ -167,9 +167,15 @@ namespace MonsterHunter.UI
             var root = GetComponent<RectTransform>();
             StretchFull(root);
 
-            var bg = AddChildImage(root, "Bg", new Color(0.06f, 0.07f, 0.1f, 0.97f));
-            StretchFull(bg.rectTransform);
-            bg.raycastTarget = true;
+            var bgGo = new GameObject("Bg", typeof(RectTransform), typeof(Image));
+            bgGo.transform.SetParent(root, false);
+            var bgRt = bgGo.GetComponent<RectTransform>();
+            StretchFull(bgRt);
+            var bgImg = bgGo.GetComponent<Image>();
+            bgImg.sprite = SafeSpriteLoader.TryLoadSprite("Assets/UI/Backgrounds/Village/商店.png");
+            bgImg.type = bgImg.sprite != null ? Image.Type.Simple : Image.Type.SolidColor;
+            bgImg.color = bgImg.sprite != null ? Color.white : new Color(0.06f, 0.07f, 0.1f, 0.97f);
+            bgImg.raycastTarget = true;
 
             var header = AddChildPanel(root, "Header", 180f, TextAnchor.UpperCenter);
             var title = AddText(header, "Title", "商店", 40, TextAnchor.UpperCenter, new Vector2(0f, -24f));
@@ -242,11 +248,43 @@ namespace MonsterHunter.UI
             footRt.anchorMax = new Vector2(0.5f, 0f);
             footRt.pivot = new Vector2(0.5f, 0f);
             footRt.anchoredPosition = new Vector2(0f, 28f);
-            footRt.sizeDelta = new Vector2(720f, 88f);
-            CreateButton(foot.transform, "出發狩獵", () => _flow != null && _flow.ContinueFromShopToBattle());
+            footRt.sizeDelta = new Vector2(1020f, 88f);
+            var footHg = foot.gameObject.AddComponent<HorizontalLayoutGroup>();
+            footHg.childAlignment = TextAnchor.MiddleCenter;
+            footHg.spacing = 20f;
+            footHg.padding = new RectOffset(12, 12, 8, 8);
+            footHg.childForceExpandHeight = true;
+            footHg.childForceExpandWidth = true;
+
+            CreateFooterSplitButton(foot.transform, "返回村莊", () => _onReturnHub?.Invoke());
         }
 
-        void SetTab(ShopTab t)
+        void CreateFooterSplitButton(Transform parent, string label, Action onClick)
+        {
+            var go = new GameObject("FooterBtn_" + label, typeof(RectTransform), typeof(Image), typeof(Button),
+                typeof(LayoutElement));
+            go.transform.SetParent(parent, false);
+            var le = go.GetComponent<LayoutElement>();
+            le.flexibleWidth = 1f;
+            le.minWidth = 240f;
+            le.preferredHeight = 72f;
+            var img = go.GetComponent<Image>();
+            img.color = new Color(0.85f, 0.45f, 0.18f, 1f);
+            var btn = go.GetComponent<Button>();
+            btn.onClick.AddListener(() => onClick());
+            var txtGo = new GameObject("Txt", typeof(RectTransform));
+            txtGo.transform.SetParent(go.transform, false);
+            StretchFull(txtGo.GetComponent<RectTransform>());
+            var txt = txtGo.AddComponent<Text>();
+            txt.font = _font;
+            txt.text = label;
+            txt.fontSize = 28;
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.color = Color.white;
+        }
+
+        void CreateFooterSplitButton(Transform parent, string label, Action onClick)
         {
             _tab = t;
             RebuildProductList();
@@ -653,25 +691,3 @@ namespace MonsterHunter.UI
             btn.onClick.AddListener(() => onClick());
         }
 
-        void CreateButton(Transform parent, string label, Action onClick)
-        {
-            var go = new GameObject("Btn", typeof(RectTransform), typeof(Image), typeof(Button));
-            go.transform.SetParent(parent, false);
-            StretchFull(go.GetComponent<RectTransform>());
-            var img = go.GetComponent<Image>();
-            img.color = new Color(0.85f, 0.45f, 0.18f, 1f);
-            var btn = go.GetComponent<Button>();
-            btn.onClick.AddListener(() => onClick());
-            var txtGo = new GameObject("Txt", typeof(RectTransform));
-            txtGo.transform.SetParent(go.transform, false);
-            StretchFull(txtGo.GetComponent<RectTransform>());
-            var txt = txtGo.AddComponent<Text>();
-            txt.font = _font;
-            txt.text = label;
-            txt.fontSize = 30;
-            txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = Color.white;
-        }
-    }
-}

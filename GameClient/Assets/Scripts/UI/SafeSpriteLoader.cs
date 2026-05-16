@@ -129,7 +129,28 @@ namespace MonsterHunter.UI
             }
 
             var full = Path.Combine(Application.dataPath, rel.Replace('/', Path.DirectorySeparatorChar));
-            return TextureFileToSprite(full);
+            return TextureFileToSpriteWithCaseFallback(full);
+        }
+
+        static Sprite TextureFileToSpriteWithCaseFallback(string fullPath)
+        {
+            var sp = TextureFileToSprite(fullPath);
+            if (sp != null) return sp;
+            if (string.IsNullOrEmpty(fullPath)) return null;
+
+            var dir = Path.GetDirectoryName(fullPath);
+            var baseName = Path.GetFileNameWithoutExtension(fullPath);
+            if (string.IsNullOrEmpty(dir) || string.IsNullOrEmpty(baseName))
+                return null;
+
+            foreach (var ext in new[] { ".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG" })
+            {
+                var alt = Path.Combine(dir, baseName + ext);
+                sp = TextureFileToSprite(alt);
+                if (sp != null) return sp;
+            }
+
+            return null;
         }
 
         static Sprite TryLoadFromStreamingAssets(string path)

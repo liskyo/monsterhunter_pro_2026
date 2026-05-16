@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using MonsterHunter.DataModels;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -23,11 +24,31 @@ namespace MonsterHunter.Combat
         /// <summary>對應 equipment.json「裝備編號」（武器）。</summary>
         public string EquippedWeaponEquipmentId = "WEP_001";
 
+        /// <summary>
+        /// 五件防具編號，依序：頭、胸、腕、腰、腳（對應 armor.json 裝備類型頭部／胸部／腕部／腰部／腳部）。
+        /// </summary>
+        public string[] EquippedArmorSlotIds =
+        {
+            "ARM_001", "ARM_002", "ARM_003", "ARM_004", "ARM_005",
+        };
+
         /// <summary>鍵：<c>裝備編號</c>；值：目前強化階級（1=未強化資料表基礎值）。</summary>
         public Dictionary<string, int> EquipmentLevels = new Dictionary<string, int>(StringComparer.Ordinal);
 
         /// <summary>鍵：<c>素材編號</c>。</summary>
         public Dictionary<string, int> Warehouse = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        /// <summary>任務板：目前進行中任務（同時最多一則）。</summary>
+        public string ActiveQuestId = "";
+
+        /// <summary>配合 <see cref="QuestIdsUsedToday"/>：上次重設「每日接任務」的日期（yyyy-MM-dd）。</summary>
+        public string QuestDailyRolloverDate = "";
+
+        /// <summary>今日曾接取過的任務編號（含進行中）；同一任務當日不可再接。</summary>
+        public List<string> QuestIdsUsedToday = new List<string>();
+
+        /// <summary>寵物小屋：隨行出戰寵物（須在倉庫擁有）。留空則戰鬥端改為隨機已擁有寵物。</summary>
+        public string SelectedBattlePetId = "";
 
         public static string FilePath =>
             Path.Combine(Application.persistentDataPath, "mh_local_hunter_ledger.json");
@@ -50,6 +71,8 @@ namespace MonsterHunter.Combat
                             string.IsNullOrEmpty(dto.PreviewPaintballItemId) &&
                             string.IsNullOrEmpty(dto.PreviewTraceId))
                             dto.Zenny = 20000;
+                        dto.NormalizeEquippedArmorSlots();
+                        dto.NormalizeQuestTrackingFields();
                         return dto;
                     }
                 }
@@ -109,6 +132,88 @@ namespace MonsterHunter.Combat
                    lv > 0
                 ? lv
                 : 1;
+        }
+
+        /// <summary>確保五格防具陣列存在；舊存檔沒有欄位時補預設。</summary>
+        public void NormalizeEquippedArmorSlots()
+        {
+            if (EquippedArmorSlotIds == null || EquippedArmorSlotIds.Length != 5)
+            {
+                EquippedArmorSlotIds = new[]
+                {
+                    "ARM_001", "ARM_002", "ARM_003", "ARM_004", "ARM_005",
+                };
+            }
+        }
+
+        public void NormalizeQuestTrackingFields()
+        {
+            QuestIdsUsedToday ??= new List<string>();
+            QuestIdsUsedToday = QuestIdsUsedToday.Where(s => !string.IsNullOrEmpty(s)).Distinct().ToList();
+        }
+
+        /// <summary>跨日時清空「今日已接」名單。</summary>
+        public void TouchDailyQuestRollover()
+        {
+            NormalizeQuestTrackingFields();
+            var d = DateTime.Now.ToString("yyyy-MM-dd");
+            if (QuestDailyRolloverDate != d)
+            {
+                QuestDailyRolloverDate = d;
+                QuestIdsUsedToday.Clear();
+                Save();
+            }
+        }
+
+        /// <summary>接任務：同時僅能一則；同一任務當日僅能接一次（含已放棄）。</summary>
+        public bool TryAcceptQuest(string questId, out string error)
+        {
+            error = null;
+            if (string.IsNullOrWhiteSpace(questId))
+            {
+                error = "任務編號無效";
+                return false;
+            }
+
+            var id = questId.Trim();
+            TouchDailyQuestRollover();
+            NormalizeQuestTrackingFields();
+
+            if (!string.IsNullOrEmpty(ActiveQuestId))
+            {
+                error = "已有一項進行中的任務，請先放棄或完成後再承接其他任務。";
+                return false;
+            }
+
+            if (QuestIdsUsedToday.Contains(id))
+            {
+                error = "今日已接取過此任務。";
+                return false;
+            }
+
+            ActiveQuestId = id;
+            QuestIdsUsedToday.Add(id);
+            Save();
+            return true;
+        }
+
+        public void AbandonActiveQuest()
+        {
+            ActiveQuestId = "";
+            Save();
+        }
+
+        /// <summary>討伐完成結算後呼叫：清空進行中（當日仍不可再接同一任務）。</summary>
+        public void ClearActiveQuestAfterComplete()
+        {
+            ActiveQuestId = "";
+            Save();
+        }
+
+        public int GetWarehouseQuantity(string itemId)
+        {
+            if (string.IsNullOrEmpty(itemId) || Warehouse == null) return 0;
+            return Warehouse.TryGetValue(itemId, out var q) ? q : 0;
         }
     }
 }

@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace MonsterHunter.UI
 {
@@ -26,67 +25,30 @@ namespace MonsterHunter.UI
 
         void Awake()
         {
-            if (_panelShop == null)
-                CreateBuiltInShopPanel();
+            HideLegacyPanelsForHub();
+            if (GetComponent<VillageGameFlow>() == null)
+                gameObject.AddComponent<VillageGameFlow>();
 
-            if (_panelTitle != null) _panelTitle.SetActive(true);
-            if (_panelCanteen != null) _panelCanteen.SetActive(false);
-            if (_panelShop != null) _panelShop.SetActive(false);
             _phase = Phase.TitleScreen;
         }
 
-        void CreateBuiltInShopPanel()
+        void HideLegacyPanelsForHub()
         {
-            var go = new GameObject("Panel_Shop", typeof(RectTransform));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(transform, false);
-            StretchFull(rt);
-            go.SetActive(false);
-            var shop = go.AddComponent<VillageShopScreen>();
-            shop.Initialize(this);
-            _panelShop = go;
+            if (_panelTitle != null) _panelTitle.SetActive(false);
+            if (_panelCanteen != null) _panelCanteen.SetActive(false);
+            if (_panelShop != null) _panelShop.SetActive(false);
         }
 
-        static void StretchFull(RectTransform rt)
-        {
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-            rt.localScale = Vector3.one;
-        }
-
-        /// <summary>由全螢幕透明按鈕／<see cref="IntroScreenTapAdvance"/> 呼叫。</summary>
+        /// <summary>舊版全螢幕點擊前進：改為進入村莊中樞。</summary>
         public void AdvanceFromTap()
         {
-            switch (_phase)
-            {
-                case Phase.TitleScreen:
-                    if (_panelTitle != null) _panelTitle.SetActive(false);
-                    if (_panelCanteen != null) _panelCanteen.SetActive(true);
-                    _phase = Phase.CanteenScreen;
-                    break;
-                case Phase.CanteenScreen:
-                    if (_panelShop != null)
-                    {
-                        if (_panelCanteen != null) _panelCanteen.SetActive(false);
-                        _panelShop.SetActive(true);
-                        _phase = Phase.ShopScreen;
-                    }
-                    else if (!string.IsNullOrWhiteSpace(_nextSceneName))
-                        SceneManager.LoadScene(_nextSceneName.Trim());
-                    break;
-                case Phase.ShopScreen:
-                    break;
-            }
+            GetComponent<VillageGameFlow>()?.ShowHub();
         }
 
-        /// <summary>商店「出發狩獵」：載入戰鬥／下一段場景。</summary>
+        /// <summary>舊版商店「出發狩獵」相容：改為開啟「出戰整備」。</summary>
         public void ContinueFromShopToBattle()
         {
-            if (!string.IsNullOrWhiteSpace(_nextSceneName))
-                SceneManager.LoadScene(_nextSceneName.Trim());
+            GetComponent<VillageGameFlow>()?.OpenBattlePrep();
         }
     }
 }

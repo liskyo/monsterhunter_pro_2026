@@ -53,6 +53,7 @@
     <Compile Include="Assets\Scripts\DataModels\DesignData01Monsters.cs" />
     <Compile Include="Assets\Scripts\UI\BattleBackgroundDisplay.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePortraitLayout.cs" />
+    <Compile Include="Assets\Scripts\UI\WorkshopEquipmentScreen.cs" />
     <Compile Include="Assets\Scripts\Combat\MonsterHurtbox.cs" />
     <Compile Include="Assets\Scripts\Web\HuntSettlementAPI.cs" />
     <Compile Include="Assets\Scripts\Combat\PlayerCombatLoadout.cs" />
@@ -72,6 +73,8 @@
     <Compile Include="Assets\Scripts\DataModels\JsonIntFromNumberConverter.cs" />
     <Compile Include="Assets\Scripts\Combat\SettlementRewardEntry.cs" />
     <Compile Include="Assets\Scripts\UI\MobileVillageIntroFlow.cs" />
+    <Compile Include="Assets\Scripts\UI\VillageBattlePrepRules.cs" />
+    <Compile Include="Assets\Scripts\UI\VillageGameFlow.cs" />
     <Compile Include="Assets\Scripts\UI\VillageShopScreen.cs" />
     <Compile Include="Assets\Scripts\Combat\BattleCombatManager.cs" />
     <Compile Include="Assets\Scripts\Combat\MonsterDataLookup.cs" />
@@ -108,6 +111,9 @@
     <Compile Include="Assets\Scripts\Combat\Hitbox.cs" />
     <Compile Include="Assets\Scripts\DataModels\DesignData03CombatWeaponMovesets.cs" />
     <Compile Include="Assets\Scripts\DataModels\DesignDataDeserialize.cs" />
+    <Compile Include="Assets\Scripts\DataModels\DesignDataHunter.cs" />
+    <Compile Include="Assets\Scripts\Data\EquipmentLoadoutSupport.cs" />
+    <Compile Include="Assets\Scripts\Data\HunterAppearanceResolver.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Shaders\ChromaKeyWhiteSprite.shader" />

@@ -56,10 +56,24 @@ namespace MonsterHunter.Combat
         /// <summary>隨機擇一隻已擁有寵物並套用被動／騎乘等簡化詞條。</summary>
         public static void ApplyRandomOwnedPet(ref BattleRuntimeModifiers m, LocalHunterLedger ledger)
         {
+            ApplySelectedOrRandomOwnedPet(ref m, ledger);
+        }
+
+        /// <summary>
+        /// 優先使用 <see cref="LocalHunterLedger.SelectedBattlePetId"/>（須已擁有），否則與 <see cref="ApplyRandomOwnedPet"/> 相同。
+        /// </summary>
+        public static void ApplySelectedOrRandomOwnedPet(ref BattleRuntimeModifiers m, LocalHunterLedger ledger)
+        {
             var owned = ListOwnedPetIds(ledger);
             if (owned.Count == 0) return;
 
-            var pick = owned[Rng.Next(owned.Count)];
+            string pick = null;
+            var prefer = ledger?.SelectedBattlePetId?.Trim() ?? "";
+            if (!string.IsNullOrEmpty(prefer) && owned.Contains(prefer))
+                pick = prefer;
+            if (pick == null)
+                pick = owned[Rng.Next(owned.Count)];
+
             var row = FindPetRow(LoadAllPets(), pick);
             if (row == null)
             {

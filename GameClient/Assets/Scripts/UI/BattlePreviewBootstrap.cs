@@ -43,6 +43,10 @@ namespace MonsterHunter.UI
         [SerializeField] string _previewTraceId = "";
         [SerializeField] string _previewCanteenFoodId = "";
 
+        [Header("獵人立繪（hunter.json；未齊套裝則 HUNTER_000_1～4 隨機）")]
+        [Tooltip("若恰好填 5 個 ARM_* 且與企劃某套裝五件一致，則用對應獵人出場圖；否則依 hunter.json「未齊套裝預設」隨機。留空＝僅隨機預設。")]
+        [SerializeField] string[] _equippedArmorForHunterPortrait;
+
         BattleBackgroundDisplay _background;
         Camera _bgCamera;
 
@@ -85,9 +89,12 @@ namespace MonsterHunter.UI
             foreach (Transform t in bgGo.GetComponentsInChildren<Transform>(true))
                 t.gameObject.layer = BackdropCullingLayer;
 
-            var quest           = LoadPreviewQuest();
             var ledgerSnapshot = LocalHunterLedger.LoadOrCreate();
+            var quest           = LoadPreviewQuest(ledgerSnapshot);
+            var foodIdForHud    = PreferInspectorOrLedger(_previewCanteenFoodId, ledgerSnapshot.PreviewCanteenFoodId);
+            var foodRowForHud   = LookupCanteenRow(foodIdForHud);
             _combatModifiers    = BuildBattleSessionModifiers(quest, ledgerSnapshot);
+            ConsumePreviewCanteenInLedger(ledgerSnapshot);
 
             var monsterId  = ResolveTargetMonsterId(quest, ledgerSnapshot);
             var monsterRow = LoadMonsterRow(monsterId);
@@ -102,7 +109,7 @@ namespace MonsterHunter.UI
                 CreateHunterPlaceholder(main);
 
             if (_showHudLabel)
-                CreateHudAndBars(quest, monsterRow, ledgerSnapshot);
+                CreateHudAndBars(quest, monsterRow, ledgerSnapshot, foodRowForHud);
 
             // ── 啟動正式戰鬥 ──
             LaunchCombat();
@@ -188,8 +195,23 @@ namespace MonsterHunter.UI
             main.cullingMask = main.cullingMask & ~(1 << BackdropCullingLayer);
         }
 
-        任務資料列 LoadPreviewQuest()
+        任務資料列 LoadPreviewQuest(LocalHunterLedger ledger)
         {
+            if (HuntSessionContext.PendingQuest != null)
+            {
+                var pq = HuntSessionContext.PendingQuest;
+                HuntSessionContext.PendingQuest = null;
+                if (pq != null)
+                    return pq;
+            }
+
+            if (ledger != null && !string.IsNullOrWhiteSpace(ledger.ActiveQuestId))
+            {
+                var active = VillageBattlePrepRules.FindQuestRow(ledger.ActiveQuestId.Trim());
+                if (active != null)
+                    return active;
+            }
+
             if (!DesignDataReader.TryLoadDesignDataText(out var text, "05_Systems", "quests.json"))
             {
                 Debug.LogWarning(
@@ -215,6 +237,14 @@ namespace MonsterHunter.UI
             return null;
         }
 
+        static void ConsumePreviewCanteenInLedger(LocalHunterLedger ledger)
+        {
+            if (ledger == null) return;
+            if (string.IsNullOrWhiteSpace(ledger.PreviewCanteenFoodId)) return;
+            ledger.PreviewCanteenFoodId = "";
+            ledger.Save();
+        }
+
         BattleRuntimeModifiers BuildBattleSessionModifiers(任務資料列 _, LocalHunterLedger ledger)
         {
             var m = BattleRuntimeModifiers.Neutral;
@@ -237,7 +267,7 @@ namespace MonsterHunter.UI
             if (LookupPaintballRow(paintId) != null && trRow != null)
                 m.MonsterMaxHpMultiplier *= 0.98f;
 
-            OwnedPetBattleBuffs.ApplyRandomOwnedPet(ref m, ledger);
+            OwnedPetBattleBuffs.ApplySelectedOrRandomOwnedPet(ref m, ledger);
 
             return m;
         }
@@ -519,7 +549,19 @@ namespace MonsterHunter.UI
             const float monsterTargetRatio = 0.5f;
             var hunterTargetH = halfH * monsterTargetRatio / 3f;
 
-            var hunterSp = SafeSpriteLoader.TryLoadSprite("Assets/Textures/Hunter_placeholder.png");
+            var ledgerForArmor = LocalHunterLedger.LoadOrCreate();
+            ledgerForArmor.NormalizeEquippedArmorSlots();
+            var armorPreview = _equippedArmorForHunterPortrait != null &&
+                               _equippedArmorForHunterPortrait.Length == 5
+                ? _equippedArmorForHunterPortrait
+                : ledgerForArmor.EquippedArmorSlotIds;
+
+            var portraitPath = HunterAppearanceResolver.PickBattlePortraitPath(armorPreview);
+            var hunterSp = !string.IsNullOrWhiteSpace(portraitPath)
+                ? SafeSpriteLoader.TryLoadSprite(portraitPath.Trim())
+                : null;
+            if (hunterSp == null)
+                hunterSp = SafeSpriteLoader.TryLoadSprite("Assets/Textures/Hunter_placeholder.png");
             if (hunterSp != null)
             {
                 sr.sprite = hunterSp;
@@ -543,7 +585,8 @@ namespace MonsterHunter.UI
                 0f);
         }
 
-        void CreateHudAndBars(任務資料列 quest, 魔物資料列 monster, LocalHunterLedger ledgerSnapshot)
+        void CreateHudAndBars(任務資料列 quest, 魔物資料列 monster, LocalHunterLedger ledgerSnapshot,
+            貓飯資料列 canteenRowForDisplay)
         {
             if (!TryEnsureEventSystem())
                 return;
@@ -612,13 +655,14 @@ namespace MonsterHunter.UI
             var bdCaption =
                 _background != null ? _background.LastHudCaption.Trim() : "";
             CreateHudSection(panel.transform, font, monster, quest, textRightPad, mMaxHp, mid, title, map, mName,
-                bdCaption);
+                bdCaption, canteenRowForDisplay);
 
             BuildHintText(canvasGo.transform, font);
         }
 
         void CreateHudSection(Transform panelRoot, Font font, 魔物資料列 monster, 任務資料列 quest, float textRightPad,
-            int mMaxHp, string mid, string title, string map, string mName, string battleBackdropCaption)
+            int mMaxHp, string mid, string title, string map, string mName, string battleBackdropCaption,
+            貓飯資料列 canteenRowForDisplay)
         {
             BuildCompactDualHpRow(panelRoot, font,
                 _demoPlayerHp / (float)Mathf.Max(1, _demoPlayerHpMax), 1f);
@@ -644,9 +688,12 @@ namespace MonsterHunter.UI
                 string.IsNullOrWhiteSpace(battleBackdropCaption)
                     ? ""
                     : $"\n<b>遠景</b>：{battleBackdropCaption.Trim()}";
+            var mealLine = canteenRowForDisplay != null
+                ? $"\n<b>貓飯</b>：{canteenRowForDisplay.名稱}（本場生效）"
+                : "";
 
             label.text =
-                $"<b>戰鬥預覽</b> · {title}\n{map} · <b>{mName}</b> ({mid})　HP上限 {mMaxHp}　獵人 {_demoPlayerHp}/{_demoPlayerHpMax}{bgLine}";
+                $"<b>戰鬥預覽</b> · {title}\n{map} · <b>{mName}</b> ({mid})　HP上限 {mMaxHp}　獵人 {_demoPlayerHp}/{_demoPlayerHpMax}{bgLine}{mealLine}";
         }
 
         static void BuildCompactDualHpRow(Transform parent, Font font, float playerFill, float monsterFill)

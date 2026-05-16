@@ -20,7 +20,9 @@ namespace MonsterHunter.DataModels
     [Serializable]
     public class 裝備基礎數值
     {
+        /// <summary>武器用；<c>armor.json</c> 防具列省略時視為 0。</summary>
         public int 物理傷害;
+        /// <summary>武器用；<c>armor.json</c> 防具列省略時視為 0。</summary>
         public int 屬性傷害;
         /// <summary>護甲用；武器列若缺此鍵 deserialization 為 0。</summary>
         public int 物理防御;

@@ -90,6 +90,7 @@ namespace MonsterHunter.Combat
         {
             var ledger = LocalHunterLedger.LoadOrCreate();
             ledger.MergeSettlementRewards(rewards);
+            ledger.ClearActiveQuestAfterComplete();
         }
     }
 }

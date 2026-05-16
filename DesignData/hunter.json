@@ -1,0 +1,1459 @@
+{
+  "套裝規則": {
+    "說明": "當獵人蒐集並穿戴與該魔物對應之五件式防具（頭、胸、腕、腰、腳）成套，且五件皆為同一魔物套裝時，獵人出場立繪改為對應之獵人編號圖片。套裝基礎數值（僅指防具所提供之可加成項）依套裝星級累加：每1星級額外+2%（1星=+2%，2星=+4%，……，10星=+20%）。",
+    "每星級基礎數值加成百分比": 2,
+    "加成公式備註": "總加成百分比 = 套裝星級 × 每星級基礎數值加成百分比；星級以企劃該套防具之「星級」欄位為準（通常五件同星）。"
+  },
+  "未齊套裝預設": {
+    "說明": "未達成任一魔物五件套裝之『齊套收集並穿戴』條件時，出場獵人立繪自下列編號對應圖檔隨機擇一。圖檔請放在 Unity 專案 Assets/Textures/Hunters/（執行時路徑見各列「隨機出場圖片路徑」）。",
+    "隨機獵人編號": ["HUNTER_000_1", "HUNTER_000_2", "HUNTER_000_3", "HUNTER_000_4"],
+    "隨機出場圖片路徑": [
+      "Assets/Textures/Hunters/HUNTER_000_1.png",
+      "Assets/Textures/Hunters/HUNTER_000_2.png",
+      "Assets/Textures/Hunters/HUNTER_000_3.png",
+      "Assets/Textures/Hunters/HUNTER_000_4.png"
+    ]
+  },
+  "獵人": [
+    {
+      "獵人編號": "HUNTER_001",
+      "對應魔物編號": "MON_001",
+      "套裝防具編號": [
+        "ARM_001",
+        "ARM_002",
+        "ARM_003",
+        "ARM_004",
+        "ARM_005"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_001.png"
+    },
+    {
+      "獵人編號": "HUNTER_002",
+      "對應魔物編號": "MON_002",
+      "套裝防具編號": [
+        "ARM_006",
+        "ARM_007",
+        "ARM_008",
+        "ARM_009",
+        "ARM_010"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_002.png"
+    },
+    {
+      "獵人編號": "HUNTER_003",
+      "對應魔物編號": "MON_003",
+      "套裝防具編號": [
+        "ARM_011",
+        "ARM_012",
+        "ARM_013",
+        "ARM_014",
+        "ARM_015"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_003.png"
+    },
+    {
+      "獵人編號": "HUNTER_004",
+      "對應魔物編號": "MON_004",
+      "套裝防具編號": [
+        "ARM_016",
+        "ARM_017",
+        "ARM_018",
+        "ARM_019",
+        "ARM_020"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_004.png"
+    },
+    {
+      "獵人編號": "HUNTER_005",
+      "對應魔物編號": "MON_005",
+      "套裝防具編號": [
+        "ARM_021",
+        "ARM_022",
+        "ARM_023",
+        "ARM_024",
+        "ARM_025"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_005.png"
+    },
+    {
+      "獵人編號": "HUNTER_006",
+      "對應魔物編號": "MON_006",
+      "套裝防具編號": [
+        "ARM_026",
+        "ARM_027",
+        "ARM_028",
+        "ARM_029",
+        "ARM_030"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_006.png"
+    },
+    {
+      "獵人編號": "HUNTER_007",
+      "對應魔物編號": "MON_007",
+      "套裝防具編號": [
+        "ARM_031",
+        "ARM_032",
+        "ARM_033",
+        "ARM_034",
+        "ARM_035"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_007.png"
+    },
+    {
+      "獵人編號": "HUNTER_008",
+      "對應魔物編號": "MON_008",
+      "套裝防具編號": [
+        "ARM_036",
+        "ARM_037",
+        "ARM_038",
+        "ARM_039",
+        "ARM_040"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_008.png"
+    },
+    {
+      "獵人編號": "HUNTER_009",
+      "對應魔物編號": "MON_009",
+      "套裝防具編號": [
+        "ARM_041",
+        "ARM_042",
+        "ARM_043",
+        "ARM_044",
+        "ARM_045"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_009.png"
+    },
+    {
+      "獵人編號": "HUNTER_010",
+      "對應魔物編號": "MON_010",
+      "套裝防具編號": [
+        "ARM_046",
+        "ARM_047",
+        "ARM_048",
+        "ARM_049",
+        "ARM_050"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_010.png"
+    },
+    {
+      "獵人編號": "HUNTER_011",
+      "對應魔物編號": "MON_011",
+      "套裝防具編號": [
+        "ARM_051",
+        "ARM_052",
+        "ARM_053",
+        "ARM_054",
+        "ARM_055"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_011.png"
+    },
+    {
+      "獵人編號": "HUNTER_012",
+      "對應魔物編號": "MON_012",
+      "套裝防具編號": [
+        "ARM_056",
+        "ARM_057",
+        "ARM_058",
+        "ARM_059",
+        "ARM_060"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_012.png"
+    },
+    {
+      "獵人編號": "HUNTER_013",
+      "對應魔物編號": "MON_013",
+      "套裝防具編號": [
+        "ARM_061",
+        "ARM_062",
+        "ARM_063",
+        "ARM_064",
+        "ARM_065"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_013.png"
+    },
+    {
+      "獵人編號": "HUNTER_014",
+      "對應魔物編號": "MON_014",
+      "套裝防具編號": [
+        "ARM_066",
+        "ARM_067",
+        "ARM_068",
+        "ARM_069",
+        "ARM_070"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_014.png"
+    },
+    {
+      "獵人編號": "HUNTER_015",
+      "對應魔物編號": "MON_015",
+      "套裝防具編號": [
+        "ARM_071",
+        "ARM_072",
+        "ARM_073",
+        "ARM_074",
+        "ARM_075"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_015.png"
+    },
+    {
+      "獵人編號": "HUNTER_016",
+      "對應魔物編號": "MON_016",
+      "套裝防具編號": [
+        "ARM_076",
+        "ARM_077",
+        "ARM_078",
+        "ARM_079",
+        "ARM_080"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_016.png"
+    },
+    {
+      "獵人編號": "HUNTER_017",
+      "對應魔物編號": "MON_017",
+      "套裝防具編號": [
+        "ARM_081",
+        "ARM_082",
+        "ARM_083",
+        "ARM_084",
+        "ARM_085"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_017.png"
+    },
+    {
+      "獵人編號": "HUNTER_018",
+      "對應魔物編號": "MON_018",
+      "套裝防具編號": [
+        "ARM_086",
+        "ARM_087",
+        "ARM_088",
+        "ARM_089",
+        "ARM_090"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_018.png"
+    },
+    {
+      "獵人編號": "HUNTER_019",
+      "對應魔物編號": "MON_019",
+      "套裝防具編號": [
+        "ARM_091",
+        "ARM_092",
+        "ARM_093",
+        "ARM_094",
+        "ARM_095"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_019.png"
+    },
+    {
+      "獵人編號": "HUNTER_020",
+      "對應魔物編號": "MON_020",
+      "套裝防具編號": [
+        "ARM_096",
+        "ARM_097",
+        "ARM_098",
+        "ARM_099",
+        "ARM_100"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_020.png"
+    },
+    {
+      "獵人編號": "HUNTER_021",
+      "對應魔物編號": "MON_021",
+      "套裝防具編號": [
+        "ARM_101",
+        "ARM_102",
+        "ARM_103",
+        "ARM_104",
+        "ARM_105"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_021.png"
+    },
+    {
+      "獵人編號": "HUNTER_022",
+      "對應魔物編號": "MON_022",
+      "套裝防具編號": [
+        "ARM_106",
+        "ARM_107",
+        "ARM_108",
+        "ARM_109",
+        "ARM_110"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_022.png"
+    },
+    {
+      "獵人編號": "HUNTER_023",
+      "對應魔物編號": "MON_023",
+      "套裝防具編號": [
+        "ARM_111",
+        "ARM_112",
+        "ARM_113",
+        "ARM_114",
+        "ARM_115"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_023.png"
+    },
+    {
+      "獵人編號": "HUNTER_024",
+      "對應魔物編號": "MON_024",
+      "套裝防具編號": [
+        "ARM_116",
+        "ARM_117",
+        "ARM_118",
+        "ARM_119",
+        "ARM_120"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_024.png"
+    },
+    {
+      "獵人編號": "HUNTER_025",
+      "對應魔物編號": "MON_025",
+      "套裝防具編號": [
+        "ARM_121",
+        "ARM_122",
+        "ARM_123",
+        "ARM_124",
+        "ARM_125"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_025.png"
+    },
+    {
+      "獵人編號": "HUNTER_026",
+      "對應魔物編號": "MON_026",
+      "套裝防具編號": [
+        "ARM_126",
+        "ARM_127",
+        "ARM_128",
+        "ARM_129",
+        "ARM_130"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_026.png"
+    },
+    {
+      "獵人編號": "HUNTER_027",
+      "對應魔物編號": "MON_027",
+      "套裝防具編號": [
+        "ARM_131",
+        "ARM_132",
+        "ARM_133",
+        "ARM_134",
+        "ARM_135"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_027.png"
+    },
+    {
+      "獵人編號": "HUNTER_028",
+      "對應魔物編號": "MON_028",
+      "套裝防具編號": [
+        "ARM_136",
+        "ARM_137",
+        "ARM_138",
+        "ARM_139",
+        "ARM_140"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_028.png"
+    },
+    {
+      "獵人編號": "HUNTER_029",
+      "對應魔物編號": "MON_029",
+      "套裝防具編號": [
+        "ARM_141",
+        "ARM_142",
+        "ARM_143",
+        "ARM_144",
+        "ARM_145"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_029.png"
+    },
+    {
+      "獵人編號": "HUNTER_030",
+      "對應魔物編號": "MON_030",
+      "套裝防具編號": [
+        "ARM_146",
+        "ARM_147",
+        "ARM_148",
+        "ARM_149",
+        "ARM_150"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_030.png"
+    },
+    {
+      "獵人編號": "HUNTER_031",
+      "對應魔物編號": "MON_031",
+      "套裝防具編號": [
+        "ARM_151",
+        "ARM_152",
+        "ARM_153",
+        "ARM_154",
+        "ARM_155"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_031.png"
+    },
+    {
+      "獵人編號": "HUNTER_032",
+      "對應魔物編號": "MON_032",
+      "套裝防具編號": [
+        "ARM_156",
+        "ARM_157",
+        "ARM_158",
+        "ARM_159",
+        "ARM_160"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_032.png"
+    },
+    {
+      "獵人編號": "HUNTER_033",
+      "對應魔物編號": "MON_033",
+      "套裝防具編號": [
+        "ARM_161",
+        "ARM_162",
+        "ARM_163",
+        "ARM_164",
+        "ARM_165"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_033.png"
+    },
+    {
+      "獵人編號": "HUNTER_034",
+      "對應魔物編號": "MON_034",
+      "套裝防具編號": [
+        "ARM_166",
+        "ARM_167",
+        "ARM_168",
+        "ARM_169",
+        "ARM_170"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_034.png"
+    },
+    {
+      "獵人編號": "HUNTER_035",
+      "對應魔物編號": "MON_035",
+      "套裝防具編號": [
+        "ARM_171",
+        "ARM_172",
+        "ARM_173",
+        "ARM_174",
+        "ARM_175"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_035.png"
+    },
+    {
+      "獵人編號": "HUNTER_036",
+      "對應魔物編號": "MON_036",
+      "套裝防具編號": [
+        "ARM_176",
+        "ARM_177",
+        "ARM_178",
+        "ARM_179",
+        "ARM_180"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_036.png"
+    },
+    {
+      "獵人編號": "HUNTER_037",
+      "對應魔物編號": "MON_037",
+      "套裝防具編號": [
+        "ARM_181",
+        "ARM_182",
+        "ARM_183",
+        "ARM_184",
+        "ARM_185"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_037.png"
+    },
+    {
+      "獵人編號": "HUNTER_038",
+      "對應魔物編號": "MON_038",
+      "套裝防具編號": [
+        "ARM_186",
+        "ARM_187",
+        "ARM_188",
+        "ARM_189",
+        "ARM_190"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_038.png"
+    },
+    {
+      "獵人編號": "HUNTER_039",
+      "對應魔物編號": "MON_039",
+      "套裝防具編號": [
+        "ARM_191",
+        "ARM_192",
+        "ARM_193",
+        "ARM_194",
+        "ARM_195"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_039.png"
+    },
+    {
+      "獵人編號": "HUNTER_040",
+      "對應魔物編號": "MON_040",
+      "套裝防具編號": [
+        "ARM_196",
+        "ARM_197",
+        "ARM_198",
+        "ARM_199",
+        "ARM_200"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_040.png"
+    },
+    {
+      "獵人編號": "HUNTER_041",
+      "對應魔物編號": "MON_041",
+      "套裝防具編號": [
+        "ARM_201",
+        "ARM_202",
+        "ARM_203",
+        "ARM_204",
+        "ARM_205"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_041.png"
+    },
+    {
+      "獵人編號": "HUNTER_042",
+      "對應魔物編號": "MON_042",
+      "套裝防具編號": [
+        "ARM_206",
+        "ARM_207",
+        "ARM_208",
+        "ARM_209",
+        "ARM_210"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_042.png"
+    },
+    {
+      "獵人編號": "HUNTER_043",
+      "對應魔物編號": "MON_043",
+      "套裝防具編號": [
+        "ARM_211",
+        "ARM_212",
+        "ARM_213",
+        "ARM_214",
+        "ARM_215"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_043.png"
+    },
+    {
+      "獵人編號": "HUNTER_044",
+      "對應魔物編號": "MON_044",
+      "套裝防具編號": [
+        "ARM_216",
+        "ARM_217",
+        "ARM_218",
+        "ARM_219",
+        "ARM_220"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_044.png"
+    },
+    {
+      "獵人編號": "HUNTER_045",
+      "對應魔物編號": "MON_045",
+      "套裝防具編號": [
+        "ARM_221",
+        "ARM_222",
+        "ARM_223",
+        "ARM_224",
+        "ARM_225"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_045.png"
+    },
+    {
+      "獵人編號": "HUNTER_046",
+      "對應魔物編號": "MON_046",
+      "套裝防具編號": [
+        "ARM_226",
+        "ARM_227",
+        "ARM_228",
+        "ARM_229",
+        "ARM_230"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_046.png"
+    },
+    {
+      "獵人編號": "HUNTER_047",
+      "對應魔物編號": "MON_047",
+      "套裝防具編號": [
+        "ARM_231",
+        "ARM_232",
+        "ARM_233",
+        "ARM_234",
+        "ARM_235"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_047.png"
+    },
+    {
+      "獵人編號": "HUNTER_048",
+      "對應魔物編號": "MON_048",
+      "套裝防具編號": [
+        "ARM_236",
+        "ARM_237",
+        "ARM_238",
+        "ARM_239",
+        "ARM_240"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_048.png"
+    },
+    {
+      "獵人編號": "HUNTER_049",
+      "對應魔物編號": "MON_049",
+      "套裝防具編號": [
+        "ARM_241",
+        "ARM_242",
+        "ARM_243",
+        "ARM_244",
+        "ARM_245"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_049.png"
+    },
+    {
+      "獵人編號": "HUNTER_050",
+      "對應魔物編號": "MON_050",
+      "套裝防具編號": [
+        "ARM_246",
+        "ARM_247",
+        "ARM_248",
+        "ARM_249",
+        "ARM_250"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_050.png"
+    },
+    {
+      "獵人編號": "HUNTER_051",
+      "對應魔物編號": "MON_051",
+      "套裝防具編號": [
+        "ARM_251",
+        "ARM_252",
+        "ARM_253",
+        "ARM_254",
+        "ARM_255"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_051.png"
+    },
+    {
+      "獵人編號": "HUNTER_052",
+      "對應魔物編號": "MON_052",
+      "套裝防具編號": [
+        "ARM_256",
+        "ARM_257",
+        "ARM_258",
+        "ARM_259",
+        "ARM_260"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_052.png"
+    },
+    {
+      "獵人編號": "HUNTER_053",
+      "對應魔物編號": "MON_053",
+      "套裝防具編號": [
+        "ARM_261",
+        "ARM_262",
+        "ARM_263",
+        "ARM_264",
+        "ARM_265"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_053.png"
+    },
+    {
+      "獵人編號": "HUNTER_054",
+      "對應魔物編號": "MON_054",
+      "套裝防具編號": [
+        "ARM_266",
+        "ARM_267",
+        "ARM_268",
+        "ARM_269",
+        "ARM_270"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_054.png"
+    },
+    {
+      "獵人編號": "HUNTER_055",
+      "對應魔物編號": "MON_055",
+      "套裝防具編號": [
+        "ARM_271",
+        "ARM_272",
+        "ARM_273",
+        "ARM_274",
+        "ARM_275"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_055.png"
+    },
+    {
+      "獵人編號": "HUNTER_056",
+      "對應魔物編號": "MON_056",
+      "套裝防具編號": [
+        "ARM_276",
+        "ARM_277",
+        "ARM_278",
+        "ARM_279",
+        "ARM_280"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_056.png"
+    },
+    {
+      "獵人編號": "HUNTER_057",
+      "對應魔物編號": "MON_057",
+      "套裝防具編號": [
+        "ARM_281",
+        "ARM_282",
+        "ARM_283",
+        "ARM_284",
+        "ARM_285"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_057.png"
+    },
+    {
+      "獵人編號": "HUNTER_058",
+      "對應魔物編號": "MON_058",
+      "套裝防具編號": [
+        "ARM_286",
+        "ARM_287",
+        "ARM_288",
+        "ARM_289",
+        "ARM_290"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_058.png"
+    },
+    {
+      "獵人編號": "HUNTER_059",
+      "對應魔物編號": "MON_059",
+      "套裝防具編號": [
+        "ARM_291",
+        "ARM_292",
+        "ARM_293",
+        "ARM_294",
+        "ARM_295"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_059.png"
+    },
+    {
+      "獵人編號": "HUNTER_060",
+      "對應魔物編號": "MON_060",
+      "套裝防具編號": [
+        "ARM_296",
+        "ARM_297",
+        "ARM_298",
+        "ARM_299",
+        "ARM_300"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_060.png"
+    },
+    {
+      "獵人編號": "HUNTER_061",
+      "對應魔物編號": "MON_061",
+      "套裝防具編號": [
+        "ARM_301",
+        "ARM_302",
+        "ARM_303",
+        "ARM_304",
+        "ARM_305"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_061.png"
+    },
+    {
+      "獵人編號": "HUNTER_062",
+      "對應魔物編號": "MON_062",
+      "套裝防具編號": [
+        "ARM_306",
+        "ARM_307",
+        "ARM_308",
+        "ARM_309",
+        "ARM_310"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_062.png"
+    },
+    {
+      "獵人編號": "HUNTER_063",
+      "對應魔物編號": "MON_063",
+      "套裝防具編號": [
+        "ARM_311",
+        "ARM_312",
+        "ARM_313",
+        "ARM_314",
+        "ARM_315"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_063.png"
+    },
+    {
+      "獵人編號": "HUNTER_064",
+      "對應魔物編號": "MON_064",
+      "套裝防具編號": [
+        "ARM_316",
+        "ARM_317",
+        "ARM_318",
+        "ARM_319",
+        "ARM_320"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_064.png"
+    },
+    {
+      "獵人編號": "HUNTER_065",
+      "對應魔物編號": "MON_065",
+      "套裝防具編號": [
+        "ARM_321",
+        "ARM_322",
+        "ARM_323",
+        "ARM_324",
+        "ARM_325"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_065.png"
+    },
+    {
+      "獵人編號": "HUNTER_066",
+      "對應魔物編號": "MON_066",
+      "套裝防具編號": [
+        "ARM_326",
+        "ARM_327",
+        "ARM_328",
+        "ARM_329",
+        "ARM_330"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_066.png"
+    },
+    {
+      "獵人編號": "HUNTER_067",
+      "對應魔物編號": "MON_067",
+      "套裝防具編號": [
+        "ARM_331",
+        "ARM_332",
+        "ARM_333",
+        "ARM_334",
+        "ARM_335"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_067.png"
+    },
+    {
+      "獵人編號": "HUNTER_068",
+      "對應魔物編號": "MON_068",
+      "套裝防具編號": [
+        "ARM_336",
+        "ARM_337",
+        "ARM_338",
+        "ARM_339",
+        "ARM_340"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_068.png"
+    },
+    {
+      "獵人編號": "HUNTER_069",
+      "對應魔物編號": "MON_069",
+      "套裝防具編號": [
+        "ARM_341",
+        "ARM_342",
+        "ARM_343",
+        "ARM_344",
+        "ARM_345"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_069.png"
+    },
+    {
+      "獵人編號": "HUNTER_070",
+      "對應魔物編號": "MON_070",
+      "套裝防具編號": [
+        "ARM_346",
+        "ARM_347",
+        "ARM_348",
+        "ARM_349",
+        "ARM_350"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_070.png"
+    },
+    {
+      "獵人編號": "HUNTER_071",
+      "對應魔物編號": "MON_071",
+      "套裝防具編號": [
+        "ARM_351",
+        "ARM_352",
+        "ARM_353",
+        "ARM_354",
+        "ARM_355"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_071.png"
+    },
+    {
+      "獵人編號": "HUNTER_072",
+      "對應魔物編號": "MON_072",
+      "套裝防具編號": [
+        "ARM_356",
+        "ARM_357",
+        "ARM_358",
+        "ARM_359",
+        "ARM_360"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_072.png"
+    },
+    {
+      "獵人編號": "HUNTER_073",
+      "對應魔物編號": "MON_073",
+      "套裝防具編號": [
+        "ARM_361",
+        "ARM_362",
+        "ARM_363",
+        "ARM_364",
+        "ARM_365"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_073.png"
+    },
+    {
+      "獵人編號": "HUNTER_074",
+      "對應魔物編號": "MON_074",
+      "套裝防具編號": [
+        "ARM_366",
+        "ARM_367",
+        "ARM_368",
+        "ARM_369",
+        "ARM_370"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_074.png"
+    },
+    {
+      "獵人編號": "HUNTER_075",
+      "對應魔物編號": "MON_075",
+      "套裝防具編號": [
+        "ARM_371",
+        "ARM_372",
+        "ARM_373",
+        "ARM_374",
+        "ARM_375"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_075.png"
+    },
+    {
+      "獵人編號": "HUNTER_076",
+      "對應魔物編號": "MON_076",
+      "套裝防具編號": [
+        "ARM_376",
+        "ARM_377",
+        "ARM_378",
+        "ARM_379",
+        "ARM_380"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_076.png"
+    },
+    {
+      "獵人編號": "HUNTER_077",
+      "對應魔物編號": "MON_077",
+      "套裝防具編號": [
+        "ARM_381",
+        "ARM_382",
+        "ARM_383",
+        "ARM_384",
+        "ARM_385"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_077.png"
+    },
+    {
+      "獵人編號": "HUNTER_078",
+      "對應魔物編號": "MON_078",
+      "套裝防具編號": [
+        "ARM_386",
+        "ARM_387",
+        "ARM_388",
+        "ARM_389",
+        "ARM_390"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_078.png"
+    },
+    {
+      "獵人編號": "HUNTER_079",
+      "對應魔物編號": "MON_079",
+      "套裝防具編號": [
+        "ARM_391",
+        "ARM_392",
+        "ARM_393",
+        "ARM_394",
+        "ARM_395"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_079.png"
+    },
+    {
+      "獵人編號": "HUNTER_080",
+      "對應魔物編號": "MON_080",
+      "套裝防具編號": [
+        "ARM_396",
+        "ARM_397",
+        "ARM_398",
+        "ARM_399",
+        "ARM_400"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_080.png"
+    },
+    {
+      "獵人編號": "HUNTER_081",
+      "對應魔物編號": "MON_081",
+      "套裝防具編號": [
+        "ARM_401",
+        "ARM_402",
+        "ARM_403",
+        "ARM_404",
+        "ARM_405"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_081.png"
+    },
+    {
+      "獵人編號": "HUNTER_082",
+      "對應魔物編號": "MON_082",
+      "套裝防具編號": [
+        "ARM_406",
+        "ARM_407",
+        "ARM_408",
+        "ARM_409",
+        "ARM_410"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_082.png"
+    },
+    {
+      "獵人編號": "HUNTER_083",
+      "對應魔物編號": "MON_083",
+      "套裝防具編號": [
+        "ARM_411",
+        "ARM_412",
+        "ARM_413",
+        "ARM_414",
+        "ARM_415"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_083.png"
+    },
+    {
+      "獵人編號": "HUNTER_084",
+      "對應魔物編號": "MON_084",
+      "套裝防具編號": [
+        "ARM_416",
+        "ARM_417",
+        "ARM_418",
+        "ARM_419",
+        "ARM_420"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_084.png"
+    },
+    {
+      "獵人編號": "HUNTER_085",
+      "對應魔物編號": "MON_085",
+      "套裝防具編號": [
+        "ARM_421",
+        "ARM_422",
+        "ARM_423",
+        "ARM_424",
+        "ARM_425"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_085.png"
+    },
+    {
+      "獵人編號": "HUNTER_086",
+      "對應魔物編號": "MON_086",
+      "套裝防具編號": [
+        "ARM_426",
+        "ARM_427",
+        "ARM_428",
+        "ARM_429",
+        "ARM_430"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_086.png"
+    },
+    {
+      "獵人編號": "HUNTER_087",
+      "對應魔物編號": "MON_087",
+      "套裝防具編號": [
+        "ARM_431",
+        "ARM_432",
+        "ARM_433",
+        "ARM_434",
+        "ARM_435"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_087.png"
+    },
+    {
+      "獵人編號": "HUNTER_088",
+      "對應魔物編號": "MON_088",
+      "套裝防具編號": [
+        "ARM_436",
+        "ARM_437",
+        "ARM_438",
+        "ARM_439",
+        "ARM_440"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_088.png"
+    },
+    {
+      "獵人編號": "HUNTER_089",
+      "對應魔物編號": "MON_089",
+      "套裝防具編號": [
+        "ARM_441",
+        "ARM_442",
+        "ARM_443",
+        "ARM_444",
+        "ARM_445"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_089.png"
+    },
+    {
+      "獵人編號": "HUNTER_090",
+      "對應魔物編號": "MON_090",
+      "套裝防具編號": [
+        "ARM_446",
+        "ARM_447",
+        "ARM_448",
+        "ARM_449",
+        "ARM_450"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_090.png"
+    },
+    {
+      "獵人編號": "HUNTER_091",
+      "對應魔物編號": "MON_091",
+      "套裝防具編號": [
+        "ARM_451",
+        "ARM_452",
+        "ARM_453",
+        "ARM_454",
+        "ARM_455"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_091.png"
+    },
+    {
+      "獵人編號": "HUNTER_092",
+      "對應魔物編號": "MON_092",
+      "套裝防具編號": [
+        "ARM_456",
+        "ARM_457",
+        "ARM_458",
+        "ARM_459",
+        "ARM_460"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_092.png"
+    },
+    {
+      "獵人編號": "HUNTER_093",
+      "對應魔物編號": "MON_093",
+      "套裝防具編號": [
+        "ARM_461",
+        "ARM_462",
+        "ARM_463",
+        "ARM_464",
+        "ARM_465"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_093.png"
+    },
+    {
+      "獵人編號": "HUNTER_094",
+      "對應魔物編號": "MON_094",
+      "套裝防具編號": [
+        "ARM_466",
+        "ARM_467",
+        "ARM_468",
+        "ARM_469",
+        "ARM_470"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_094.png"
+    },
+    {
+      "獵人編號": "HUNTER_095",
+      "對應魔物編號": "MON_095",
+      "套裝防具編號": [
+        "ARM_471",
+        "ARM_472",
+        "ARM_473",
+        "ARM_474",
+        "ARM_475"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_095.png"
+    },
+    {
+      "獵人編號": "HUNTER_096",
+      "對應魔物編號": "MON_096",
+      "套裝防具編號": [
+        "ARM_476",
+        "ARM_477",
+        "ARM_478",
+        "ARM_479",
+        "ARM_480"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_096.png"
+    },
+    {
+      "獵人編號": "HUNTER_097",
+      "對應魔物編號": "MON_097",
+      "套裝防具編號": [
+        "ARM_481",
+        "ARM_482",
+        "ARM_483",
+        "ARM_484",
+        "ARM_485"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_097.png"
+    },
+    {
+      "獵人編號": "HUNTER_098",
+      "對應魔物編號": "MON_098",
+      "套裝防具編號": [
+        "ARM_486",
+        "ARM_487",
+        "ARM_488",
+        "ARM_489",
+        "ARM_490"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_098.png"
+    },
+    {
+      "獵人編號": "HUNTER_099",
+      "對應魔物編號": "MON_099",
+      "套裝防具編號": [
+        "ARM_491",
+        "ARM_492",
+        "ARM_493",
+        "ARM_494",
+        "ARM_495"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_099.png"
+    },
+    {
+      "獵人編號": "HUNTER_100",
+      "對應魔物編號": "MON_100",
+      "套裝防具編號": [
+        "ARM_496",
+        "ARM_497",
+        "ARM_498",
+        "ARM_499",
+        "ARM_500"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_100.png"
+    },
+    {
+      "獵人編號": "HUNTER_101",
+      "對應魔物編號": "MON_101",
+      "套裝防具編號": [
+        "ARM_501",
+        "ARM_502",
+        "ARM_503",
+        "ARM_504",
+        "ARM_505"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_101.png"
+    },
+    {
+      "獵人編號": "HUNTER_102",
+      "對應魔物編號": "MON_102",
+      "套裝防具編號": [
+        "ARM_506",
+        "ARM_507",
+        "ARM_508",
+        "ARM_509",
+        "ARM_510"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_102.png"
+    },
+    {
+      "獵人編號": "HUNTER_103",
+      "對應魔物編號": "MON_103",
+      "套裝防具編號": [
+        "ARM_511",
+        "ARM_512",
+        "ARM_513",
+        "ARM_514",
+        "ARM_515"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_103.png"
+    },
+    {
+      "獵人編號": "HUNTER_104",
+      "對應魔物編號": "MON_104",
+      "套裝防具編號": [
+        "ARM_516",
+        "ARM_517",
+        "ARM_518",
+        "ARM_519",
+        "ARM_520"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_104.png"
+    },
+    {
+      "獵人編號": "HUNTER_105",
+      "對應魔物編號": "MON_105",
+      "套裝防具編號": [
+        "ARM_521",
+        "ARM_522",
+        "ARM_523",
+        "ARM_524",
+        "ARM_525"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_105.png"
+    },
+    {
+      "獵人編號": "HUNTER_106",
+      "對應魔物編號": "MON_106",
+      "套裝防具編號": [
+        "ARM_526",
+        "ARM_527",
+        "ARM_528",
+        "ARM_529",
+        "ARM_530"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_106.png"
+    },
+    {
+      "獵人編號": "HUNTER_107",
+      "對應魔物編號": "MON_107",
+      "套裝防具編號": [
+        "ARM_531",
+        "ARM_532",
+        "ARM_533",
+        "ARM_534",
+        "ARM_535"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_107.png"
+    },
+    {
+      "獵人編號": "HUNTER_108",
+      "對應魔物編號": "MON_108",
+      "套裝防具編號": [
+        "ARM_536",
+        "ARM_537",
+        "ARM_538",
+        "ARM_539",
+        "ARM_540"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_108.png"
+    },
+    {
+      "獵人編號": "HUNTER_109",
+      "對應魔物編號": "MON_109",
+      "套裝防具編號": [
+        "ARM_541",
+        "ARM_542",
+        "ARM_543",
+        "ARM_544",
+        "ARM_545"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_109.png"
+    },
+    {
+      "獵人編號": "HUNTER_110",
+      "對應魔物編號": "MON_110",
+      "套裝防具編號": [
+        "ARM_546",
+        "ARM_547",
+        "ARM_548",
+        "ARM_549",
+        "ARM_550"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_110.png"
+    },
+    {
+      "獵人編號": "HUNTER_111",
+      "對應魔物編號": "MON_111",
+      "套裝防具編號": [
+        "ARM_551",
+        "ARM_552",
+        "ARM_553",
+        "ARM_554",
+        "ARM_555"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_111.png"
+    },
+    {
+      "獵人編號": "HUNTER_112",
+      "對應魔物編號": "MON_112",
+      "套裝防具編號": [
+        "ARM_556",
+        "ARM_557",
+        "ARM_558",
+        "ARM_559",
+        "ARM_560"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_112.png"
+    },
+    {
+      "獵人編號": "HUNTER_113",
+      "對應魔物編號": "MON_113",
+      "套裝防具編號": [
+        "ARM_561",
+        "ARM_562",
+        "ARM_563",
+        "ARM_564",
+        "ARM_565"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_113.png"
+    },
+    {
+      "獵人編號": "HUNTER_114",
+      "對應魔物編號": "MON_114",
+      "套裝防具編號": [
+        "ARM_566",
+        "ARM_567",
+        "ARM_568",
+        "ARM_569",
+        "ARM_570"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_114.png"
+    },
+    {
+      "獵人編號": "HUNTER_115",
+      "對應魔物編號": "MON_115",
+      "套裝防具編號": [
+        "ARM_571",
+        "ARM_572",
+        "ARM_573",
+        "ARM_574",
+        "ARM_575"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_115.png"
+    },
+    {
+      "獵人編號": "HUNTER_116",
+      "對應魔物編號": "MON_116",
+      "套裝防具編號": [
+        "ARM_576",
+        "ARM_577",
+        "ARM_578",
+        "ARM_579",
+        "ARM_580"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_116.png"
+    },
+    {
+      "獵人編號": "HUNTER_117",
+      "對應魔物編號": "MON_117",
+      "套裝防具編號": [
+        "ARM_581",
+        "ARM_582",
+        "ARM_583",
+        "ARM_584",
+        "ARM_585"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_117.png"
+    },
+    {
+      "獵人編號": "HUNTER_118",
+      "對應魔物編號": "MON_118",
+      "套裝防具編號": [
+        "ARM_586",
+        "ARM_587",
+        "ARM_588",
+        "ARM_589",
+        "ARM_590"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_118.png"
+    },
+    {
+      "獵人編號": "HUNTER_119",
+      "對應魔物編號": "MON_119",
+      "套裝防具編號": [
+        "ARM_591",
+        "ARM_592",
+        "ARM_593",
+        "ARM_594",
+        "ARM_595"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_119.png"
+    },
+    {
+      "獵人編號": "HUNTER_120",
+      "對應魔物編號": "MON_120",
+      "套裝防具編號": [
+        "ARM_596",
+        "ARM_597",
+        "ARM_598",
+        "ARM_599",
+        "ARM_600"
+      ],
+      "獵人出場圖片路徑": "Assets/Textures/Hunters/HUNTER_120.png"
+    }
+  ]
+}
