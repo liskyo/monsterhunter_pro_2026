@@ -45,6 +45,7 @@ namespace MonsterHunter.Controllers
         WeaponMovesetRuntime.ParsedMoveset _moves;
 
         float _playerOutgoingDamageMul = 1f;
+        float _playerMoveSpeedMul = 1f;
         float _comboResetTimer;
         int _comboIndex;
         float _skillCd;
@@ -94,13 +95,15 @@ namespace MonsterHunter.Controllers
             string weaponMovesetsJson,
             float maxHp = 1000f,
             PortraitCombatTouchInput touchInputForCombat = null,
-            float outgoingDamageMultiplier = 1f)
+            float outgoingDamageMultiplier = 1f,
+            float moveSpeedMultiplier = 1f)
         {
             _tuningStore              = ts;
             _loadout                  = loadout;
             _touchInput               = touchInputForCombat;
             _weaponMovesetsJsonText   = weaponMovesetsJson;
             _playerOutgoingDamageMul  = Mathf.Clamp(outgoingDamageMultiplier, 0.2f, 5f);
+            _playerMoveSpeedMul       = Mathf.Clamp(moveSpeedMultiplier, 0.5f, 2.5f);
             MaxHp     = Mathf.Max(1f, maxHp);
             CurrentHp = MaxHp;
 
@@ -124,7 +127,8 @@ namespace MonsterHunter.Controllers
             if (_loadout == null || string.IsNullOrEmpty(_loadout.武器類型) || string.IsNullOrEmpty(json))
                 return;
 
-            WeaponMovesetRuntime.TryParseMoveset(_loadout.武器類型, json, melee, gate, sigR, out _moves);
+            var star = Mathf.Clamp(_loadout.武器星級 <= 0 ? 5 : _loadout.武器星級, 1, 10);
+            WeaponMovesetRuntime.TryParseMoveset(_loadout.武器類型, json, melee, gate, sigR, star, out _moves);
         }
 
         public void SetOutgoingDamageMultiplier(float m) =>
@@ -182,7 +186,9 @@ namespace MonsterHunter.Controllers
             }
 
             var moving = _move.sqrMagnitude > tuning.移動歸零閾值 * tuning.移動歸零閾值;
-            _rb.linearVelocity = moving ? _move.normalized * tuning.玩家移動速度 : Vector2.zero;
+            _rb.linearVelocity = moving
+                ? _move.normalized * (tuning.玩家移動速度 * _playerMoveSpeedMul)
+                : Vector2.zero;
 
             if (_attackHitbox != null && !_strikeCoroutineActive)
                 _attackHitbox.SetEnabled(false);
@@ -259,8 +265,10 @@ namespace MonsterHunter.Controllers
             if (_moves != null && _moves.TapChain.Length > 0)
                 return _moves.TapChain;
             float mv = FallbackTapMv(tun), rg = tun.近戰預設攻擊距離;
+            var star = Mathf.Clamp(_loadout != null && _loadout.武器星級 > 0 ? _loadout.武器星級 : 5, 1, 10);
             if (!string.IsNullOrEmpty(_weaponMovesetsJsonText) &&
-                WeaponMovesetRuntime.TryGetTapMoveStats(_loadout.武器類型, _weaponMovesetsJsonText, out var m2,
+                _loadout != null && !string.IsNullOrEmpty(_loadout.武器類型) &&
+                WeaponMovesetRuntime.TryGetTapMoveStats(_loadout.武器類型, _weaponMovesetsJsonText, star, out var m2,
                     out var r2))
             {
                 mv = m2 > 0f ? m2 : mv;
@@ -281,8 +289,9 @@ namespace MonsterHunter.Controllers
                 return _moves.TapChain[0].動作倍率;
 
             var j = string.IsNullOrEmpty(_weaponMovesetsJsonText) ? "" : _weaponMovesetsJsonText;
-            if (!string.IsNullOrEmpty(j) &&
-                WeaponMovesetRuntime.TryGetTapMoveStats(_loadout.武器類型, j, out var mv, out _))
+            var star = Mathf.Clamp(_loadout != null && _loadout.武器星級 > 0 ? _loadout.武器星級 : 5, 1, 10);
+            if (!string.IsNullOrEmpty(j) && _loadout != null && !string.IsNullOrEmpty(_loadout.武器類型) &&
+                WeaponMovesetRuntime.TryGetTapMoveStats(_loadout.武器類型, j, star, out var mv, out _))
                 return Mathf.Max(0.01f, mv);
             return 0.45f;
         }

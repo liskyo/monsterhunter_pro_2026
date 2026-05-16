@@ -16,11 +16,15 @@ namespace MonsterHunter.Combat
         /// <summary>魔物企劃最大血量倍率。</summary>
         public float MonsterMaxHpMultiplier;
 
+        /// <summary>玩家移動速度倍率（如加爾克騎乘詞條）。</summary>
+        public float PlayerMoveSpeedMultiplier;
+
         public static BattleRuntimeModifiers Neutral => new BattleRuntimeModifiers
         {
             PlayerMaxHpMultiplier = 1f,
             PlayerOutgoingDamageMultiplier = 1f,
             MonsterMaxHpMultiplier = 1f,
+            PlayerMoveSpeedMultiplier = 1f,
         };
 
         public BattleRuntimeModifiers Clamp()
@@ -30,6 +34,7 @@ namespace MonsterHunter.Combat
                 PlayerMaxHpMultiplier = Mathf.Clamp(PlayerMaxHpMultiplier, 0.2f, 5f),
                 PlayerOutgoingDamageMultiplier = Mathf.Clamp(PlayerOutgoingDamageMultiplier, 0.2f, 5f),
                 MonsterMaxHpMultiplier = Mathf.Clamp(MonsterMaxHpMultiplier, 0.2f, 10f),
+                PlayerMoveSpeedMultiplier = Mathf.Clamp(PlayerMoveSpeedMultiplier, 0.5f, 2.5f),
             };
         }
     }

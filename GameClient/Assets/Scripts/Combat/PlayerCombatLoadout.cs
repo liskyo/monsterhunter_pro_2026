@@ -10,6 +10,10 @@ namespace MonsterHunter.Combat
         [Tooltip("對應 weapon_movesets.json 的「武器類型」字串")]
         public string 武器類型 = "";
 
+        [Tooltip("對應 equipment.json 與招式表「星級下限／上限」區間（1~10）；試玩預設 5")]
+        [Range(1, 10)]
+        public int 武器星級 = 5;
+
         [Tooltip("對應 equipment 基礎數值等")]
         public float 武器基礎物理;
 

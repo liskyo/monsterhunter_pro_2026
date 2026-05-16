@@ -8,6 +8,7 @@ namespace MonsterHunter.Combat
 {
     /// <summary>
     /// 依本機 Ledger 的穿戴武器編號解析 equipment／upgrade_rules JSON，填入 <see cref="PlayerCombatLoadout"/>。
+    /// 護甲強化規則見 <c>DesignData/02_Equipment/upgrade_rules_armor.json</c>（結構同 <see cref="裝備升級規則列"/>，待 UI／育成系統載入）。
     /// </summary>
     public static class EquipmentCombatBinder
     {
@@ -76,6 +77,8 @@ namespace MonsterHunter.Combat
                 loadout.武器屬性標籤 =
                     string.IsNullOrWhiteSpace(weapon.裝備屬性) ? "無" : weapon.裝備屬性.Trim();
                 loadout.BoundWeaponEquipmentId = weapon.裝備編號;
+                var star = weapon.星級;
+                loadout.武器星級 = star <= 0 ? 5 : Mathf.Clamp(star, 1, 10);
                 return true;
             }
             catch (Exception e)

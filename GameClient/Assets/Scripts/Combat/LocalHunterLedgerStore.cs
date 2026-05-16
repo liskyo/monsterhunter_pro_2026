@@ -13,6 +13,9 @@ namespace MonsterHunter.Combat
     [Serializable]
     public sealed class LocalHunterLedger
     {
+        /// <summary>本機試玩用金幣（未登入 Supabase 時與商店／結算共用）。</summary>
+        public long Zenny = 20000;
+
         public string PreviewPaintballItemId = "";
         public string PreviewTraceId = "";
         public string PreviewCanteenFoodId = "";
@@ -42,6 +45,11 @@ namespace MonsterHunter.Combat
                     {
                         dto.Warehouse ??= new Dictionary<string, int>(StringComparer.Ordinal);
                         dto.EquipmentLevels ??= new Dictionary<string, int>(StringComparer.Ordinal);
+                        if (dto.Zenny <= 0 &&
+                            (dto.Warehouse == null || dto.Warehouse.Count == 0) &&
+                            string.IsNullOrEmpty(dto.PreviewPaintballItemId) &&
+                            string.IsNullOrEmpty(dto.PreviewTraceId))
+                            dto.Zenny = 20000;
                         return dto;
                     }
                 }
@@ -65,6 +73,16 @@ namespace MonsterHunter.Combat
             {
                 Debug.LogWarning("[LocalHunterLedger] 寫入失敗：" + e.Message);
             }
+        }
+
+        public void AddWarehouseItems(string itemId, int quantity)
+        {
+            if (string.IsNullOrEmpty(itemId) || quantity == 0) return;
+            Warehouse ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            if (!Warehouse.TryGetValue(itemId, out var n))
+                n = 0;
+            Warehouse[itemId] = Mathf.Max(0, n + quantity);
+            Save();
         }
 
         public void MergeSettlementRewards(IEnumerable<SettlementRewardEntry> rewards)

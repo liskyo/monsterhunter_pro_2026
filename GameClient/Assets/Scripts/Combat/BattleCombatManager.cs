@@ -213,7 +213,8 @@ namespace MonsterHunter.Combat
             }
 
             // 割草軌道：軌道半徑略大以利刃口靠近魔物本體；碰撞半徑隨資料放大
-            var atkRangeGuess = GuessWeaponReach(loadout.武器類型, weaponJson);
+            var starGuess = Mathf.Clamp(loadout.武器星級 > 0 ? loadout.武器星級 : 5, 1, 10);
+            var atkRangeGuess = GuessWeaponReach(loadout.武器類型, weaponJson, starGuess);
             var orbitRadius   = atkRangeGuess > 0.05f
                 ? Mathf.Clamp(atkRangeGuess * 0.52f, 0.88f, 2.75f)
                 : 1.12f;
@@ -263,7 +264,7 @@ namespace MonsterHunter.Combat
             touchInput.Inject(_tuningStore, _playerCtrl);
 
             _playerCtrl.Inject(_tuningStore, loadout, weaponJson, playerMaxHp, touchInput,
-                session.PlayerOutgoingDamageMultiplier);
+                session.PlayerOutgoingDamageMultiplier, session.PlayerMoveSpeedMultiplier);
 
             TrySetPrivateField(_playerCtrl, "_attackHitbox", hitbox);
 
@@ -603,11 +604,11 @@ namespace MonsterHunter.Combat
         //  工具
         // ────────────────────────────────────────────────────
 
-        static float GuessWeaponReach(string weaponType, string weaponJsonText)
+        static float GuessWeaponReach(string weaponType, string weaponJsonText, int weaponStar)
         {
             if (string.IsNullOrEmpty(weaponType) ||
                 string.IsNullOrEmpty(weaponJsonText) ||
-                !WeaponMovesetRuntime.TryGetTapMoveStats(weaponType, weaponJsonText, out _, out var reach))
+                !WeaponMovesetRuntime.TryGetTapMoveStats(weaponType, weaponJsonText, weaponStar, out _, out var reach))
                 return 0f;
             return Mathf.Max(0f, reach);
         }

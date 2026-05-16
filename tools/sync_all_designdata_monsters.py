@@ -4,7 +4,7 @@
 - materials.json：魔物 MAT_###_## 全量依 drop_rates 重建；保留 ITM／MAT_COM 等。
 - quests.json：QST_k ↔ MON_k（至多 120 筆）；不足則自 QST_100 模板補上。
 - monster_traces.json：TRC_k ↔ MON_k（至多 120）。
-- pets.json：依「對應魔物編號」更新顯示名（艾路／加爾克後綴分開）。
+- pets.json：已改為自訂艾路貓／加爾克名稱、無「對應魔物編號」；sync_pets 不會變更名稱（保留相容：若列上仍有 MON_ 欄位才會套舊邏輯）。
 - canteen.json：依主題對應表重對 MAT 魔物編號、移除需求素材「名稱」、修正金幣錯字。
 """
 from __future__ import annotations
@@ -177,6 +177,7 @@ def sync_traces(monsters: list) -> None:
 
 def sync_pets(monsters: list) -> None:
     data = json.loads(PET_PATH.read_text(encoding="utf-8"))
+    touched = False
     for p in data:
         mid = p.get("對應魔物編號") or ""
         if not mid.startswith("MON_"):
@@ -192,8 +193,10 @@ def sync_pets(monsters: list) -> None:
         suf = "風加爾克" if p.get("種類") == "加爾克" else "風艾路"
         p["對應魔物編號"] = f"MON_{n:03d}"
         p["名稱"] = f"{sn}{suf}"
-    PET_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print("pets.json:", len(data), "rows")
+        touched = True
+    if touched:
+        PET_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("pets.json:", len(data), "rows" + ("" if touched else " (sync_pets: no MON_ rows to rewrite)"))
 
 
 def remap_mat_mon(mat_id: str, new_mon: int) -> str:

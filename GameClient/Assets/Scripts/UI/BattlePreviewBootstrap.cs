@@ -237,6 +237,8 @@ namespace MonsterHunter.UI
             if (LookupPaintballRow(paintId) != null && trRow != null)
                 m.MonsterMaxHpMultiplier *= 0.98f;
 
+            OwnedPetBattleBuffs.ApplyRandomOwnedPet(ref m, ledger);
+
             return m;
         }
 

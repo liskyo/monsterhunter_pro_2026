@@ -86,7 +86,8 @@ namespace MonsterHunter.DataModels
         public string 圖片路徑;
         public string 種類;
         public string 定位;
-        public string 對應魔物編號;
+        /// <summary>商店販售價；未填時由程式以寵物編號推估。</summary>
+        public int 購買價格;
         public 寵物基礎數值 基礎數值;
         public 寵物技能組 技能組;
     }
@@ -97,6 +98,8 @@ namespace MonsterHunter.DataModels
         public int 體力;
         public int 攻擊力;
         public int 防禦力;
+        /// <summary>加爾克可選；貓則為 0。對應 pets.json「騎乘移動加成」。</summary>
+        public float 騎乘移動加成;
     }
 
     [Serializable]
@@ -104,6 +107,10 @@ namespace MonsterHunter.DataModels
     {
         public string 主動技能;
         public string 被動技能;
+        /// <summary>加爾克：對應 JSON「同步攻擊」。</summary>
+        public string 同步攻擊;
+        /// <summary>加爾克：如「可騎乘」等。</summary>
+        public string 特殊功能;
     }
 
     /// <summary>對應 DesignData/05_Systems/quests.json（根為陣列）。</summary>

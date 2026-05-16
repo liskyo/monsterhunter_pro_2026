@@ -13,7 +13,11 @@ namespace MonsterHunter.DataModels
         public int 稀有度;
         public string 分類;
         public string 描述;
+        /// <summary>任務結算／商店等取得說明（非討伐表 drop_rates）。</summary>
+        public string 取得途徑;
         public int 出售價格;
+        /// <summary>商店售價；未填時 UI 可回推。</summary>
+        public int 購買價格;
         public int 攜帶上限;
     }
 
@@ -45,6 +49,10 @@ namespace MonsterHunter.DataModels
         public string 圖片路徑;
         public string 對應魔物編號;
         public int 魔物星級;
+        /// <summary>討伐結算時取得此痕跡的機率（0～1）；星級越高通常越低。</summary>
+        public float 掉落機率;
+        /// <summary>固定為討伐後隨機；與商店／任務固定報酬分流。</summary>
+        public string 來源;
         public string 描述;
         public string 取得途徑;
     }

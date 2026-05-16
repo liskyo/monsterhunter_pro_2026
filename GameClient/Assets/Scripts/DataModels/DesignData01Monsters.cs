@@ -84,5 +84,9 @@ namespace MonsterHunter.DataModels
         public string 圖片路徑;
         public float 掉落機率;
         public string 掉落條件;
+        /// <summary>固定為討伐掉落；與 materials.json（商店／任務）分流。</summary>
+        public string 來源;
+        /// <summary>企劃補述；可選。</summary>
+        public string 描述;
     }
 }

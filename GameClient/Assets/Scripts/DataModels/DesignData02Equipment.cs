@@ -44,7 +44,7 @@ namespace MonsterHunter.DataModels
         public int 需求數量;
     }
 
-    /// <summary>對應 DesignData/02_Equipment/upgrade_rules.json（根為陣列）。</summary>
+    /// <summary>對應 <c>DesignData/02_Equipment/upgrade_rules.json</c>（武器 WEP_*）或 <c>upgrade_rules_armor.json</c>（護甲 ARM_*）；根皆為陣列。</summary>
     [Serializable]
     public class 裝備升級規則列
     {

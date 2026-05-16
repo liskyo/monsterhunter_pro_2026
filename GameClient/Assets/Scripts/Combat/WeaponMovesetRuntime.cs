@@ -53,9 +53,14 @@ namespace MonsterHunter.Combat
 
         public static bool TryParseMoveset(string weaponType, string jsonText, float tapFallbackReach,
             float singleChargeGateSeconds, float skillDefaultReach, out ParsedMoveset moveset)
+            => TryParseMoveset(weaponType, jsonText, tapFallbackReach, singleChargeGateSeconds, skillDefaultReach, 5,
+                out moveset);
+
+        public static bool TryParseMoveset(string weaponType, string jsonText, float tapFallbackReach,
+            float singleChargeGateSeconds, float skillDefaultReach, int weaponStar, out ParsedMoveset moveset)
             =>
             TryParseMovesetInner(weaponType, jsonText, tapFallbackReach, singleChargeGateSeconds, skillDefaultReach,
-                out moveset);
+                weaponStar, out moveset);
 
         public static bool TryParseMoveset(string weaponType, TextAsset movesetsJson, float tapFallbackReach,
             float singleChargeGateSeconds, float skillDefaultReach, out ParsedMoveset moveset)
@@ -63,11 +68,20 @@ namespace MonsterHunter.Combat
             moveset = null;
             return movesetsJson != null &&
                    TryParseMovesetInner(weaponType, movesetsJson.text, tapFallbackReach, singleChargeGateSeconds,
-                       skillDefaultReach, out moveset);
+                       skillDefaultReach, 5, out moveset);
+        }
+
+        public static bool TryParseMoveset(string weaponType, TextAsset movesetsJson, float tapFallbackReach,
+            float singleChargeGateSeconds, float skillDefaultReach, int weaponStar, out ParsedMoveset moveset)
+        {
+            moveset = null;
+            return movesetsJson != null &&
+                   TryParseMovesetInner(weaponType, movesetsJson.text, tapFallbackReach, singleChargeGateSeconds,
+                       skillDefaultReach, weaponStar, out moveset);
         }
 
         static bool TryParseMovesetInner(string weaponType, string jsonText, float tapFallbackReach,
-            float singleChargeGateSeconds, float skillDefaultReach, out ParsedMoveset moveset)
+            float singleChargeGateSeconds, float skillDefaultReach, int weaponStar, out ParsedMoveset moveset)
         {
             moveset = null;
             if (string.IsNullOrEmpty(jsonText) || string.IsNullOrEmpty(weaponType)) return false;
@@ -83,20 +97,53 @@ namespace MonsterHunter.Combat
             }
 
             if (rows == null) return false;
+            var star = Mathf.Clamp(weaponStar <= 0 ? 5 : weaponStar, 1, 10);
+            武器招式表列 fallback = null;
             foreach (var row in rows)
             {
                 if (row?.操作配置 == null || row.武器類型 != weaponType) continue;
-                var tapChain = ExtractTapChain(row.操作配置.點擊, tapFallbackReach);
-                if (tapChain.Count == 0) return false;
-                var skillRange = tapChain.Count > 0 ? tapChain[0].攻擊距離 : tapFallbackReach;
-                if (skillRange < 0.05f) skillRange = skillDefaultReach;
-                var charge = ExtractChargeStages(row.操作配置.長按, singleChargeGateSeconds);
-                var skill = ExtractSkill(row.操作配置.專屬技能, Mathf.Max(skillRange, skillDefaultReach));
-                moveset = new ParsedMoveset(tapChain.ToArray(), charge, skill);
-                return true;
+                if (fallback == null) fallback = row;
+                if (RowMatchesStar(row, star) && TryBuildMovesetFromRow(row, tapFallbackReach, singleChargeGateSeconds,
+                        skillDefaultReach, out moveset))
+                    return true;
             }
 
+            if (fallback != null &&
+                TryBuildMovesetFromRow(fallback, tapFallbackReach, singleChargeGateSeconds, skillDefaultReach,
+                    out moveset))
+                return true;
+
             return false;
+        }
+
+        /// <summary>星級欄位皆 ≤0 視為舊表「通配」列；否則須落在 [星級下限, 星級上限]。</summary>
+        static bool RowMatchesStar(武器招式表列 row, int star)
+        {
+            if (row == null) return false;
+            if (row.星級下限 <= 0 && row.星級上限 <= 0) return true;
+            var lo = row.星級下限;
+            var hi = row.星級上限 <= 0 ? lo : row.星級上限;
+            if (lo > hi)
+            {
+                var tmp = lo;
+                lo = hi;
+                hi = tmp;
+            }
+            return star >= lo && star <= hi;
+        }
+
+        static bool TryBuildMovesetFromRow(武器招式表列 row, float tapFallbackReach, float singleChargeGateSeconds,
+            float skillDefaultReach, out ParsedMoveset moveset)
+        {
+            moveset = null;
+            var tapChain = ExtractTapChain(row.操作配置.點擊, tapFallbackReach);
+            if (tapChain.Count == 0) return false;
+            var skillRange = tapChain[0].攻擊距離;
+            if (skillRange < 0.05f) skillRange = skillDefaultReach;
+            var charge = ExtractChargeStages(row.操作配置.長按, singleChargeGateSeconds);
+            var skill = ExtractSkill(row.操作配置.專屬技能, Mathf.Max(skillRange, skillDefaultReach));
+            moveset = new ParsedMoveset(tapChain.ToArray(), charge, skill);
+            return true;
         }
 
         static List<TapComboStep> ExtractTapChain(JToken tap, float fallbackR)
@@ -203,10 +250,15 @@ namespace MonsterHunter.Combat
         // ─── 相容舊呼叫：首段點擊 ─────────────────────────────────────
 
         public static bool TryGetTapMoveStats(string weaponType, string jsonText, out float 動作倍率, out float 攻擊距離)
+            => TryGetTapMoveStats(weaponType, jsonText, 5, out 動作倍率, out 攻擊距離);
+
+        public static bool TryGetTapMoveStats(string weaponType, string jsonText, int weaponStar, out float 動作倍率,
+            out float 攻擊距離)
         {
             動作倍率 = 0f;
             攻擊距離 = 0f;
-            if (!TryParseMoveset(weaponType, jsonText, 4f, 0.28f, 5.5f, out var p) || p.TapChain.Length == 0)
+            if (!TryParseMoveset(weaponType, jsonText, 4f, 0.28f, 5.5f, weaponStar, out var p) ||
+                p.TapChain.Length == 0)
                 return false;
             var t = p.TapChain[0];
             動作倍率 = t.動作倍率;
@@ -216,10 +268,15 @@ namespace MonsterHunter.Combat
 
         public static bool TryGetTapMoveStats(string weaponType, TextAsset movesetsJson, out float 動作倍率,
             out float 攻擊距離)
+            => TryGetTapMoveStats(weaponType, movesetsJson, 5, out 動作倍率, out 攻擊距離);
+
+        public static bool TryGetTapMoveStats(string weaponType, TextAsset movesetsJson, int weaponStar,
+            out float 動作倍率, out float 攻擊距離)
         {
             動作倍率 = 0f;
             攻擊距離 = 0f;
-            if (!TryParseMoveset(weaponType, movesetsJson, 4f, 0.28f, 5.5f, out var p) || p.TapChain.Length == 0)
+            if (!TryParseMoveset(weaponType, movesetsJson, 4f, 0.28f, 5.5f, weaponStar, out var p) ||
+                p.TapChain.Length == 0)
                 return false;
             var t = p.TapChain[0];
             動作倍率 = t.動作倍率;

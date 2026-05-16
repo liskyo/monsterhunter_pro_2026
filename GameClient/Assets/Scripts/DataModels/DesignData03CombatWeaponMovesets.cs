@@ -12,6 +12,10 @@ namespace MonsterHunter.DataModels
     {
         public string 武器類型;
         public string 核心機制;
+        /// <summary>含此星等以上的列；0 表示與 <see cref="星級上限"/> 皆為 0 時視為任意星等（舊資料相容）。</summary>
+        public int 星級下限;
+        /// <summary>含此星等以下的列；與下限皆為 0 時視為通配。</summary>
+        public int 星級上限;
         public 武器操作配置 操作配置;
     }
 
@@ -29,6 +33,8 @@ namespace MonsterHunter.DataModels
     public class 武器長按招式
     {
         public string 招式名稱;
+        /// <summary>企劃用英數鍵，例 MOV_001；與 <see cref="招式名稱"/> 並存。</summary>
+        public string 招式編號;
         public float 動作倍率;
         public string 特性;
         public int 消耗氣刃;
@@ -51,6 +57,8 @@ namespace MonsterHunter.DataModels
     public class 武器專屬技能招式
     {
         public string 招式名稱;
+        /// <summary>企劃用英數鍵，例 MOV_001；與 <see cref="招式名稱"/> 並存。</summary>
+        public string 招式編號;
         public int 冷卻時間;
         public float 動作倍率;
         public string 描述;
@@ -62,6 +70,8 @@ namespace MonsterHunter.DataModels
     public class 武器點擊單招
     {
         public string 招式名稱;
+        /// <summary>企劃用英數鍵，例 MOV_001；與 <see cref="招式名稱"/> 並存。</summary>
+        public string 招式編號;
         public float 動作倍率;
         public string 特效;
         public string 銜接邏輯;

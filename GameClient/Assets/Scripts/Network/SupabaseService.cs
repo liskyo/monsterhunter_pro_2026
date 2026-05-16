@@ -165,6 +165,78 @@ namespace MonsterHunter.Network
             yield return Client.PostMerge("warehouse_items", body, AuthSession.AccessToken, onError, onOk);
         }
 
+        /// <summary>讀取目前使用者的倉庫列（item_id → quantity）。</summary>
+        public IEnumerator LoadWarehouseItemDictionary(
+            Action<string> onError,
+            Action<System.Collections.Generic.Dictionary<string, int>> onOk)
+        {
+            if (!AuthSession.IsSignedIn)
+            {
+                onError?.Invoke("未登入，無法讀取 warehouse_items。");
+                yield break;
+            }
+
+            if (Client == null)
+            {
+                onError?.Invoke("缺少 SupabaseRuntimeConfig。");
+                yield break;
+            }
+
+            var uid = Uri.EscapeDataString(AuthSession.UserId);
+            var path = $"warehouse_items?owner_id=eq.{uid}&select=item_id,quantity";
+            string err = null;
+            string json = null;
+            yield return Client.GetJson(path, AuthSession.AccessToken, e => err = e, j => json = j);
+            if (err != null)
+            {
+                onError?.Invoke(err);
+                yield break;
+            }
+
+            WarehouseItemRow[] rows = null;
+            try
+            {
+                rows = JsonConvert.DeserializeObject<WarehouseItemRow[]>(json);
+            }
+            catch (Exception e)
+            {
+                onError?.Invoke("warehouse_items 解析失敗：" + e.Message);
+                yield break;
+            }
+
+            var dict = new System.Collections.Generic.Dictionary<string, int>(StringComparer.Ordinal);
+            if (rows != null)
+            {
+                foreach (var r in rows)
+                {
+                    if (r == null || string.IsNullOrEmpty(r.item_id)) continue;
+                    dict[r.item_id.Trim()] = r.quantity;
+                }
+            }
+
+            onOk?.Invoke(dict);
+        }
+
+        /// <summary>更新 <c>profiles.zeni</c>（須已登入）。</summary>
+        public IEnumerator PatchProfileZeni(long newZeni, Action<string> onError, Action onOk)
+        {
+            if (!AuthSession.IsSignedIn)
+            {
+                onError?.Invoke("未登入，無法更新金幣。");
+                yield break;
+            }
+
+            if (Client == null)
+            {
+                onError?.Invoke("缺少 SupabaseRuntimeConfig。");
+                yield break;
+            }
+
+            var uid = Uri.EscapeDataString(AuthSession.UserId);
+            var body = JsonConvert.SerializeObject(new { zeni = newZeni, updated_at = DateTime.UtcNow });
+            yield return Client.PatchJson($"profiles?id=eq.{uid}", body, AuthSession.AccessToken, onError, onOk);
+        }
+
         /// <summary>PostgREST <c>profiles</c> 列（欄位名與資料庫一致）。</summary>
         [Serializable]
         public class ProfileRow
@@ -184,6 +256,13 @@ namespace MonsterHunter.Network
         [Serializable]
         class WarehouseQuantityRow
         {
+            public int quantity;
+        }
+
+        [Serializable]
+        class WarehouseItemRow
+        {
+            public string item_id;
             public int quantity;
         }
 

@@ -72,6 +72,7 @@
     <Compile Include="Assets\Scripts\DataModels\JsonIntFromNumberConverter.cs" />
     <Compile Include="Assets\Scripts\Combat\SettlementRewardEntry.cs" />
     <Compile Include="Assets\Scripts\UI\MobileVillageIntroFlow.cs" />
+    <Compile Include="Assets\Scripts\UI\VillageShopScreen.cs" />
     <Compile Include="Assets\Scripts\Combat\BattleCombatManager.cs" />
     <Compile Include="Assets\Scripts\Combat\MonsterDataLookup.cs" />
     <Compile Include="Assets\Scripts\DataModels\CombatTuningRow.cs" />
@@ -92,6 +93,7 @@
     <Compile Include="Assets\Scripts\Network\NetworkManager.cs" />
     <Compile Include="Assets\Scripts\Combat\MonsterStatResolver.cs" />
     <Compile Include="Assets\Scripts\Combat\BattleRuntimeModifiers.cs" />
+    <Compile Include="Assets\Scripts\Combat\OwnedPetBattleBuffs.cs" />
     <Compile Include="Assets\Scripts\Combat\HuntSettlementService.cs" />
     <Compile Include="Assets\Scripts\Combat\MeleeOrbitPivot.cs" />
     <Compile Include="Assets\Scripts\UI\IntroFlowAdvanceInvoker.cs" />
