@@ -30,9 +30,15 @@
   <p class="hint">成功後會顯示 access_token（測試用）。遊戲內請使用 Unity AuthSession／EmailPasswordAuth。</p>
   <pre id="out">尚未操作</pre>
 
+  <script src="config.js"></script>
   <script type="module">
     const out = document.getElementById("out");
     const $ = (id) => document.getElementById(id);
+
+    if (window.SUPABASE_CONFIG) {
+      if (window.SUPABASE_CONFIG.url) $("url").value = window.SUPABASE_CONFIG.url;
+      if (window.SUPABASE_CONFIG.anon) $("anon").value = window.SUPABASE_CONFIG.anon;
+    }
 
     function cfg() {
       const url = $("url").value.trim().replace(/\/$/, "");
