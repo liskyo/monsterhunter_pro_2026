@@ -140,14 +140,41 @@ namespace MonsterHunter.Combat
                         var match = System.Text.RegularExpressions.Regex.Match(monsterId, @"\d+");
                         if (match.Success) midNum = match.Value;
                     }
+
+                    string monsterName = "魔物";
+                    if (MonsterHunter.Data.DesignDataReader.TryLoadDesignDataText(out var monstersJson, "01_Monsters", "monsters.json"))
+                    {
+                        try
+                        {
+                            var monsters = JsonConvert.DeserializeObject<魔物資料列[]>(monstersJson);
+                            if (monsters != null)
+                            {
+                                foreach (var m in monsters)
+                                {
+                                    if (m != null && string.Equals(m.魔物編號?.Trim(), monsterId?.Trim(), StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        monsterName = m.名稱;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        catch {}
+                    }
                     
                     while (list.Count < 2)
                     {
                         var fallbackId = $"MAT_{midNum}_0{(list.Count + 1)}";
+                        string matName;
+                        if (list.Count == 0) matName = $"{monsterName}的鱗";
+                        else if (list.Count == 1) matName = $"{monsterName}的甲殼";
+                        else if (list.Count == 2) matName = $"{monsterName}的尖爪";
+                        else matName = $"{monsterName}的稀有素材";
+
                         list.Add(new SettlementRewardEntry
                         {
                             素材編號 = fallbackId,
-                            素材名稱 = monsterId == "MON_001" ? (list.Count == 0 ? "青熊獸的鱗" : "青熊獸的甲殼") : "討伐戰利品素材",
+                            素材名稱 = matName,
                             圖片路徑 = $"Assets/Textures/Items/{fallbackId}.png",
                             數量 = 1,
                         });

@@ -387,28 +387,41 @@ namespace MonsterHunter.UI
             var pbRow          = LookupPaintballRow(paintId);
             var traceMonsterId = traceRow != null ? traceRow.對應魔物編號?.Trim() : null;
 
-            if (string.IsNullOrEmpty(traceMonsterId))
-                return questMonster;
+            string finalId = questMonster;
 
-            if (pbRow == null)
-                return traceMonsterId;
+            if (!string.IsNullOrEmpty(traceMonsterId))
+            {
+                if (pbRow == null)
+                {
+                    finalId = traceMonsterId;
+                }
+                else
+                {
+                    var starGuess = traceRow != null && traceRow.魔物星級 > 0
+                        ? traceRow.魔物星級
+                        : MonsterStarGuess(traceMonsterId);
 
-            var starGuess = traceRow != null && traceRow.魔物星級 > 0
-                ? traceRow.魔物星級
-                : MonsterStarGuess(traceMonsterId);
+                    starGuess = Mathf.Max(1, starGuess);
 
-            starGuess = Mathf.Max(1, starGuess);
+                    var lo = Mathf.Max(1, pbRow.吸引星級_最低);
+                    var hi = Mathf.Max(lo, pbRow.吸引星級_最高);
 
-            var lo = Mathf.Max(1, pbRow.吸引星級_最低);
-            var hi = Mathf.Max(lo, pbRow.吸引星級_最高);
+                    if (starGuess >= lo && starGuess <= hi)
+                        finalId = traceMonsterId;
+                    else
+                        Debug.LogWarning($"[BattlePreviewBootstrap] 染色球星級區間[{lo}-{hi}] 與痕跡目標約 {starGuess}★ 不符，沿用任務目標。");
+                }
+            }
 
-            if (starGuess >= lo && starGuess <= hi)
-                return traceMonsterId;
+            // ✦ 測試專用：若目標魔物是預設的 MON_001，隨機挑選 MON_001 至 MON_020 讓每次試玩體驗完全不同！
+            if (finalId == "MON_001" || string.IsNullOrEmpty(finalId))
+            {
+                var randNum = UnityEngine.Random.Range(1, 21); // 1 ~ 20 隨機
+                finalId = "MON_" + randNum.ToString("D3");
+                Debug.Log("[BattlePreviewBootstrap] ✦ 觸發魔物隨機試玩！隨機挑選出魔物：" + finalId);
+            }
 
-            Debug.LogWarning(
-                $"[BattlePreviewBootstrap] 染色球星級區間[{lo}-{hi}] 與痕跡目標約 {starGuess}★ 不符，沿用任務目標。");
-
-            return questMonster;
+            return finalId;
 
             string FallbackQuestMonsterId(任務資料列 q)
             {
