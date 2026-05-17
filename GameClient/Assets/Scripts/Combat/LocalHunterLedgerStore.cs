@@ -134,10 +134,15 @@ namespace MonsterHunter.Combat
                 : 1;
         }
 
-        /// <summary>確保五格防具陣列存在；舊存檔沒有欄位時補預設。</summary>
+        /// <summary>確保武器與五格防具陣列存在且填妥初始值；舊存檔沒有欄位或毀損時補預設。</summary>
         public void NormalizeEquippedArmorSlots()
         {
-            if (EquippedArmorSlotIds == null || EquippedArmorSlotIds.Length != 5)
+            if (string.IsNullOrWhiteSpace(EquippedWeaponEquipmentId))
+            {
+                EquippedWeaponEquipmentId = "WEP_001";
+            }
+
+            if (EquippedArmorSlotIds == null || EquippedArmorSlotIds.Length != 5 || EquippedArmorSlotIds.Any(string.IsNullOrWhiteSpace))
             {
                 EquippedArmorSlotIds = new[]
                 {

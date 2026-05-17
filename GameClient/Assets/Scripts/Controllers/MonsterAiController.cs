@@ -232,8 +232,8 @@ namespace MonsterHunter.Controllers
             }
 
             var dist = Vector2.Distance(transform.position, _player.position);
-            // 只在玩家仍在範圍內才造成傷害（玩家閃避離開即無效）
-            if (dist <= _plannedHitRadius)
+            // 縮小判定半徑（砍半，剩餘 50%）：必須真的貼在魔物臉上才會被打到，增加閃避空間
+            if (dist <= _plannedHitRadius * 0.5f)
                 PerformAttackOnPlayer();
             _pendingProjectileMove = null;
         }
@@ -346,7 +346,8 @@ namespace MonsterHunter.Controllers
         float BuildApproachMeleeDistance(out float normalDistOnly)
         {
             var norm = _data?.魔物攻擊內容?.普通攻擊;
-            normalDistOnly = norm != null ? Mathf.Max(0.1f, norm.攻擊距離) : 2f;
+            // 配合貼臉攻擊，將接戰距離與上限皆砍半（乘上 0.5f）
+            normalDistOnly = norm != null ? Mathf.Max(0.1f, norm.攻擊距離 * 0.5f) : 1f;
             var atkDist = normalDistOnly;
             var specs = _data?.魔物攻擊內容?.特殊招式;
             if (specs != null)
@@ -357,11 +358,11 @@ namespace MonsterHunter.Controllers
                     if (s == null || s.攻擊距離 <= 0f) continue;
                     // 投射物「攻擊距離」常在 8～10：若混入接戰距離，AI 會在畫邊就判定已到位而不再逼近。
                     if (!string.IsNullOrWhiteSpace(s.投射物型別)) continue;
-                    atkDist = Mathf.Max(atkDist, s.攻擊距離);
+                    atkDist = Mathf.Max(atkDist, s.攻擊距離 * 0.5f);
                 }
             }
 
-            const float moveCap = 4.85f;
+            const float moveCap = 2.42f; // 上限亦砍半
             return Mathf.Min(atkDist, moveCap);
         }
 

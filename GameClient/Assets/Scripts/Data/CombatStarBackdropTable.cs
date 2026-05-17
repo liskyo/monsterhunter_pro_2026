@@ -44,8 +44,8 @@ namespace MonsterHunter.Data
             if (picks == null || picks.Length == 0)
                 return null;
 
-            var seed = $"{questId ?? ""}\u241F{(monsterId ?? "").Trim()}\u241F{tier}";
-            var ix = StablePickIndex(seed, picks.Length);
+            // 改為完全隨機選取該星級的背景，讓每次進關都能體驗不同的美麗地圖
+            var ix = UnityEngine.Random.Range(0, picks.Length);
             var s = picks[ix]?.Trim();
             return string.IsNullOrEmpty(s) ? null : s;
         }

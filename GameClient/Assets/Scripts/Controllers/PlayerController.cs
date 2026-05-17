@@ -529,7 +529,8 @@ namespace MonsterHunter.Controllers
 
             var tag = string.IsNullOrEmpty(row.異常屬性) ? "異常" : row.異常屬性;
             var end = Time.time + Mathf.Max(0.05f, row.持續時間秒);
-            var dps = Mathf.Max(0f, row.每秒傷害);
+            // 削弱 DoT 傷害：將每秒異常狀態傷害限制在最大 2.0 點，避免玩家快速大扣血
+            var dps = Mathf.Clamp(row.每秒傷害, 0f, 2f);
 
             for (var i = 0; i < _ailments.Count; i++)
             {
@@ -593,6 +594,18 @@ namespace MonsterHunter.Controllers
                 if (now >= a.結束時間) continue;
                 yield return $"{a.異常名稱} ({a.每秒傷害}/s, {a.結束時間 - now:F1}s)";
             }
+        }
+
+        public List<string> GetActiveAilmentNames()
+        {
+            var list = new List<string>();
+            var now = Time.time;
+            for (var i = 0; i < _ailments.Count; i++)
+            {
+                if (now < _ailments[i].結束時間)
+                    list.Add(_ailments[i].異常名稱);
+            }
+            return list;
         }
     }
 }

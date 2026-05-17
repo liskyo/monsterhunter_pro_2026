@@ -65,9 +65,8 @@ namespace MonsterHunter.Data
                     ? null
                     : fallbackWhenUnresolved.Trim();
 
-            var seed =
-                $"{quest.任務編號}\u241F{tier}\u241F{(monsterIdForStableMapDice ?? "").Trim()}";
-            var ix = StablePickIndex(seed, picks.Length);
+            // 改為完全隨機選取地圖，每次都有不同體驗
+            var ix = UnityEngine.Random.Range(0, picks.Length);
             var chosen = picks[ix]?.Trim();
             if (string.IsNullOrEmpty(chosen) && !string.IsNullOrEmpty(fixedMap))
                 return fixedMap;

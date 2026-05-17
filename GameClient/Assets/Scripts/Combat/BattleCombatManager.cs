@@ -3,6 +3,7 @@ using MonsterHunter.Controllers;
 using MonsterHunter.Data;
 using MonsterHunter.DataModels;
 using MonsterHunter.UI;
+using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -197,14 +198,15 @@ namespace MonsterHunter.Combat
             loadout.武器屬性 = 0f;
             loadout.武器屬性標籤 = "無";
 
-            if (DesignDataReader.TryLoadDesignDataText(out var equipJson, "02_Equipment",
+            string equipJsonText = null;
+            if (DesignDataReader.TryLoadDesignDataText(out equipJsonText, "02_Equipment",
                     "equipment.json"))
             {
                 DesignDataReader.TryLoadDesignDataText(out var upgradeJson, "02_Equipment",
                     "upgrade_rules.json");
 
                 EquipmentCombatBinder.TryBindFromJson(
-                    equipJson, upgradeJson ?? "", ledger,
+                    equipJsonText, upgradeJson ?? "", ledger,
                     DemoWeaponType, loadout);
 
                 DemoWeaponType = loadout.武器類型;
@@ -215,9 +217,10 @@ namespace MonsterHunter.Combat
             // 割草軌道：軌道半徑略大以利刃口靠近魔物本體；碰撞半徑隨資料放大
             var starGuess = Mathf.Clamp(loadout.武器星級 > 0 ? loadout.武器星級 : 5, 1, 10);
             var atkRangeGuess = GuessWeaponReach(loadout.武器類型, weaponJson, starGuess);
+            // 直徑再加大 1.5 倍：乘數調高至 1.32x，最小半徑提升至 2.18f，最大至 5.25f，預設值提升至 2.48f，直徑極大化！
             var orbitRadius   = atkRangeGuess > 0.05f
-                ? Mathf.Clamp(atkRangeGuess * 0.52f, 0.88f, 2.75f)
-                : 1.12f;
+                ? Mathf.Clamp(atkRangeGuess * 1.32f, 2.18f, 5.25f)
+                : 2.48f;
 
             var orbitPivotGo = new GameObject("MeleeOrbitPivot");
             orbitPivotGo.transform.SetParent(HunterGo.transform, false);
@@ -236,14 +239,54 @@ namespace MonsterHunter.Combat
             hbCol.enabled = false;
             var hitbox = hitboxGo.AddComponent<Hitbox>();
 
-            // 占位視覺：實心圓球繞獵人轉（美術就位前可先辨識攻擊端位置）
+            // 占位視覺：改為武器圖片繞獵人轉（外圍軌道）
             var orbSr = hitboxGo.AddComponent<SpriteRenderer>();
-            orbSr.sprite       = PlaceholderSpriteFactory.GetSharedOrbSprite();
             orbSr.sortingLayerName = "Default";
             orbSr.sortingOrder     = 50;
             orbSr.transform.localRotation = Quaternion.identity;
-            orbSr.transform.localScale =
-                Vector3.one * Mathf.Clamp(hbCol.radius * 0.92f + 0.045f, 0.17f, 0.62f);
+
+            string weaponImgPath = null;
+            if (!string.IsNullOrEmpty(equipJsonText) && !string.IsNullOrEmpty(loadout.BoundWeaponEquipmentId))
+            {
+                try
+                {
+                    var eqRows = Newtonsoft.Json.JsonConvert.DeserializeObject<裝備資料列[]>(equipJsonText);
+                    if (eqRows != null)
+                    {
+                        foreach (var row in eqRows)
+                        {
+                            if (row != null && row.裝備編號 == loadout.BoundWeaponEquipmentId)
+                            {
+                                weaponImgPath = row.圖片路徑;
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning("[BattleCombatManager] 解析裝備圖片路徑失敗：" + ex.Message);
+                }
+            }
+
+            Sprite weaponSp = null;
+            if (!string.IsNullOrEmpty(weaponImgPath))
+                weaponSp = SafeSpriteLoader.TryLoadSprite(weaponImgPath.Trim());
+            if (weaponSp == null)
+                weaponSp = SafeSpriteLoader.TryLoadSprite("Assets/Textures/Equipment/WEP_001.png");
+
+            if (weaponSp != null)
+            {
+                orbSr.sprite = weaponSp;
+                var bh = Mathf.Max(weaponSp.bounds.size.y, weaponSp.bounds.size.x, 0.01f);
+                var scale = (hbCol.radius * 2f) / bh;
+                orbSr.transform.localScale = Vector3.one * scale;
+            }
+            else
+            {
+                orbSr.sprite = PlaceholderSpriteFactory.GetSharedOrbSprite();
+                orbSr.transform.localScale = Vector3.one * Mathf.Clamp(hbCol.radius * 0.92f + 0.045f, 0.17f, 0.62f);
+            }
 
             // 玩家 HP = 魔物最大血量 × 魔物詞條倍率 × 0.25 × 獵人體魄詞條
             var monsterHpScale =
@@ -405,9 +448,20 @@ namespace MonsterHunter.Combat
         {
             if (_battleOver) return;
 
+            string ailmentSuffix = null;
+            if (_playerCtrl != null)
+            {
+                var list = _playerCtrl.GetActiveAilmentNames();
+                if (list != null && list.Count > 0)
+                {
+                    ailmentSuffix = $"<color=#FF3B30><b>[{string.Join("中！][", list)}中！]</b></color>";
+                }
+            }
+
             UpdateHpBar(_playerHpFill, _playerHpText,
                 _playerCtrl != null ? _playerCtrl.CurrentHp : 0f,
-                _playerCtrl != null ? _playerCtrl.MaxHp : 150f);
+                _playerCtrl != null ? _playerCtrl.MaxHp : 150f,
+                ailmentSuffix);
 
             UpdateHpBar(_monsterHpFill, _monsterHpText,
                 _monsterAi != null ? _monsterAi.CurrentHp : 0f,
@@ -476,14 +530,18 @@ namespace MonsterHunter.Combat
             }
         }
 
-        static void UpdateHpBar(Image fill, Text label, float cur, float max)
+        static void UpdateHpBar(Image fill, Text label, float cur, float max, string suffix = null)
         {
             if (fill == null) return;
             var ratio = Mathf.Clamp01(cur / Mathf.Max(1f, max));
             var fr = fill.GetComponent<RectTransform>();
             fr.anchorMax = new Vector2(ratio, 1f);
             if (label != null)
-                label.text = $"{Mathf.CeilToInt(cur)}";
+            {
+                label.text = suffix != null 
+                    ? $"{Mathf.CeilToInt(cur)} {suffix}" 
+                    : $"{Mathf.CeilToInt(cur)}";
+            }
         }
 
         void ClampToCamera(GameObject go)
