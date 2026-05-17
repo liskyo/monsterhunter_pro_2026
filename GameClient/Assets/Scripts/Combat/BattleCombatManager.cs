@@ -101,6 +101,94 @@ namespace MonsterHunter.Combat
                 Debug.LogWarning("[BattleCombatManager] 找不到 BattleBackdropCamera：遠景相機將無法跟隨／視差。");
 
             BuildCombatHud();
+            
+            // ✦ 啟動開場慢動作倒數！
+            StartCoroutine(EntranceCountdownRoutine());
+        }
+
+        System.Collections.IEnumerator EntranceCountdownRoutine()
+        {
+            // 1. 凍結雙方控制權
+            if (_playerCtrl != null) _playerCtrl.enabled = false;
+            if (_monsterAi != null) _monsterAi.enabled = false;
+            var touch = UnityEngine.Object.FindAnyObjectByType<PortraitCombatTouchInput>();
+            if (touch != null) touch.enabled = false;
+
+            // 2. 進入極致慢動作 (0.25倍速)
+            Time.timeScale = 0.25f;
+
+            // 3. 建立倒數 UI
+            var overlay = new GameObject("CountdownOverlay", typeof(RectTransform));
+            if (HudCanvas != null)
+                overlay.transform.SetParent(HudCanvas.transform, false);
+            var ort = overlay.GetComponent<RectTransform>();
+            ort.anchorMin = Vector2.zero; ort.anchorMax = Vector2.one;
+            ort.offsetMin = Vector2.zero; ort.offsetMax = Vector2.zero;
+
+            var txtGo = new GameObject("CountdownText", typeof(RectTransform));
+            txtGo.transform.SetParent(overlay.transform, false);
+            var trt = txtGo.GetComponent<RectTransform>();
+            trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
+            trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
+
+            var font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Segoe UI", "Arial" }, 72)
+                       ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var t = txtGo.AddComponent<Text>();
+            t.font = font;
+            t.fontSize = 140;
+            t.fontStyle = FontStyle.Bold;
+            t.alignment = TextAnchor.MiddleCenter;
+            t.supportRichText = true;
+            t.color = new Color(1f, 0.85f, 0.1f, 1f); // 經典閃亮金
+            
+            var shadow = txtGo.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            shadow.effectDistance = new Vector2(4f, -4f);
+
+            // 3... 2... 1...
+            string[] steps = { "3", "2", "1" };
+            foreach (var step in steps)
+            {
+                t.text = step;
+                t.transform.localScale = Vector3.one * 1.5f;
+                t.color = new Color(1f, 0.85f, 0.1f, 1f);
+                
+                // 動畫：使用真實時間 (unscaledDeltaTime) 以確保不受慢動作影響
+                float elapsed = 0f;
+                while (elapsed < 1f) 
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    t.transform.localScale = Vector3.Lerp(Vector3.one * 1.5f, Vector3.one * 0.9f, elapsed / 0.3f);
+                    t.color = Color.Lerp(new Color(1f, 0.85f, 0.1f, 1f), new Color(1f, 0.5f, 0f, 0.5f), (elapsed - 0.5f) / 0.5f);
+                    yield return null;
+                }
+            }
+
+            // 恢復正常時間
+            Time.timeScale = 1f;
+
+            // START!
+            t.text = "<color=#FF2222>開始狩獵！</color>";
+            t.transform.localScale = Vector3.one * 1.5f;
+            t.color = Color.white;
+
+            // 解除凍結
+            if (_playerCtrl != null) _playerCtrl.enabled = true;
+            if (_monsterAi != null) _monsterAi.enabled = true;
+            if (touch != null) touch.enabled = true;
+
+            // START 字樣短暫停留並漸隱
+            float fade = 0f;
+            while (fade < 0.6f) 
+            {
+                fade += Time.deltaTime;
+                t.transform.localScale = Vector3.Lerp(Vector3.one * 1.5f, Vector3.one * 2f, fade / 0.6f);
+                t.color = new Color(1f, 1f, 1f, 1f - (fade / 0.6f));
+                yield return null;
+            }
+
+            Destroy(overlay);
         }
 
         /// <summary>
@@ -300,11 +388,11 @@ namespace MonsterHunter.Combat
             // 魔物實際 HP 乘上星級折扣，大幅提高擊殺效率，爽快通關！
             var star = MonsterDataRow != null ? MonsterDataRow.星級 : 1;
             float starHpScale = 1.0f;
-            if (star == 1) starHpScale = 0.21f;       // ✦ 再下修 1/2（約 945 HP），重回流暢討伐
-            else if (star == 2) starHpScale = 0.31f;   // ✦ 再下修 1/2
-            else if (star == 3) starHpScale = 0.43f;   // ✦ 再下修 1/2
-            else if (star == 4) starHpScale = 0.56f;   // ✦ 再下修 1/2
-            else starHpScale = 0.87f;                   // ✦ 再下修 1/2
+            if (star == 1) starHpScale = 0.105f;       // ✦ 再下修 1/2（約 472 HP）
+            else if (star == 2) starHpScale = 0.155f;  // ✦ 再下修 1/2
+            else if (star == 3) starHpScale = 0.215f;  // ✦ 再下修 1/2
+            else if (star == 4) starHpScale = 0.28f;   // ✦ 再下修 1/2
+            else starHpScale = 0.435f;                 // ✦ 再下修 1/2
 
             var monsterHpScale = Mathf.Max(0.05f, rawMonsterHpScale * starHpScale);
 
@@ -996,6 +1084,43 @@ namespace MonsterHunter.Combat
             t.text = won
                 ? $"<color=#FFEE44><size=56><b>任務成功！</b></size></color>\n<size=28>魔物已被討伐</size>{dropsText}"
                 : "<color=#FF4444><size=56><b>任務失敗</b></size></color>\n<size=28>獵人倒下了……</size>";
+
+            // ✦ 新增「重新挑戰 / 下一隻魔物」按鈕，讓玩家不用回 Editor 狂按 Play！
+            var btnGo = new GameObject("RestartButton", typeof(RectTransform));
+            btnGo.transform.SetParent(overlay.transform, false);
+            var brt = btnGo.GetComponent<RectTransform>();
+            brt.anchorMin = new Vector2(0.5f, 0f);
+            brt.anchorMax = new Vector2(0.5f, 0f);
+            brt.pivot = new Vector2(0.5f, 0f);
+            brt.sizeDelta = new Vector2(320f, 80f);
+            brt.anchoredPosition = new Vector2(0f, 150f); // 螢幕下方
+
+            var btnImg = btnGo.AddComponent<Image>();
+            btnImg.color = new Color(0.15f, 0.45f, 0.2f, 0.95f); // 沉穩森林綠
+
+            var btn = btnGo.AddComponent<Button>();
+            btn.onClick.AddListener(() => {
+                // 重新載入當前場景
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+            });
+
+            var btnTxtGo = new GameObject("Text", typeof(RectTransform));
+            btnTxtGo.transform.SetParent(btnGo.transform, false);
+            var btnTrt = btnTxtGo.GetComponent<RectTransform>();
+            btnTrt.anchorMin = Vector2.zero; btnTrt.anchorMax = Vector2.one;
+            btnTrt.offsetMin = Vector2.zero; btnTrt.offsetMax = Vector2.zero;
+            
+            var btnTxt = btnTxtGo.AddComponent<Text>();
+            btnTxt.font = font;
+            btnTxt.fontSize = 32;
+            btnTxt.fontStyle = FontStyle.Bold;
+            btnTxt.alignment = TextAnchor.MiddleCenter;
+            btnTxt.color = Color.white;
+            btnTxt.text = "繼續狩獵 (Restart)";
+
+            var btnShadow = btnTxtGo.AddComponent<Shadow>();
+            btnShadow.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            btnShadow.effectDistance = new Vector2(2f, -2f);
         }
 
         /// <summary>勝負已分：停用輸入與 AI、清投射物、停軌道刃口。</summary>

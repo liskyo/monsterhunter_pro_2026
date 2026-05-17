@@ -46,6 +46,14 @@ const ELEMENT_SKILLS = {
     "龍": [
         "龍之怒吼", "龍星群", "逆鱗之怒", "龍之吐息", "滅世衝擊", "龍牙撕咬", "暗黑射線", "混沌之爪", "破滅之光", "狂暴突襲",
         "古龍威壓", "毀滅風暴", "龍爪粉碎", "深淵重擊", "暗龍突刺", "終焉射線", "狂龍亂舞", "霸王衝擊", "龍息重槌", "黑龍咆哮"
+    ],
+    "無": [
+        "飛撲壓制", "熊掌橫掃", "岩塊投擲", "泰山壓頂", "迴旋甩尾", "瘋狂抓撓", "蠻牛衝撞", "裂地猛擊", "震天咆哮", "狂暴突刺",
+        "野蠻撕咬", "致命碎骨", "巨力踐踏", "鋼鐵護盾", "毀滅衝擊", "死亡翻滾", "音速突進", "無情痛擊", "狂怒連打", "地裂衝擊"
+    ],
+    "毒": [
+        "劇毒吐息", "猛毒射線", "毒液噴灑", "致命毒霧", "劇毒泥沼", "毒刺連射", "腐蝕毒雨", "瘟疫爆發", "紫毒風暴", "毒液炸彈",
+        "猛毒陷阱", "毒刺突襲", "腐化之觸", "劇毒之潮", "猛毒噴射", "毒牙撕咬", "瘴氣爆破", "致死毒霧", "毒液飛濺", "致命紫斑"
     ]
 };
 
@@ -96,10 +104,12 @@ function generateMasterSkills() {
 
             // Random but deterministic characteristics based on skill name hash
             const nameHash = skillName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const visualType = placeholderVisuals[nameHash % placeholderVisuals.length];
+            // ✦ 無屬性技能預設為近戰肉搏招式，不給予投射物，迫使 AI 貼身攻擊
+            const isMelee = element === "無"; 
+            const visualType = isMelee ? "" : placeholderVisuals[nameHash % placeholderVisuals.length];
             const baseSpeed = 4.5 + (nameHash % 5) * 1.2;
             const baseRadius = 0.18 + (nameHash % 4) * 0.08;
-            const baseDist = 3.0 + (nameHash % 7) * 1.2;
+            const baseDist = isMelee ? 2.5 + (nameHash % 3) * 0.5 : 3.0 + (nameHash % 7) * 1.2; // 近戰距離縮短
 
             for (let lv = 1; lv <= 4; lv++) {
                 levels[`LV${lv}`] = {
@@ -110,8 +120,8 @@ function generateMasterSkills() {
                     "使用權重": 10 + (nameHash % 15) + lv * 2,
                     "冷卻秒": parseFloat((4.5 - lv * 0.5 + (nameHash % 3) * 0.5).toFixed(1)),
                     "投射物型別": visualType,
-                    "投射物速度": parseFloat((baseSpeed * (1 + lv * 0.15)).toFixed(1)),
-                    "投射物半徑": parseFloat((baseRadius * (1 + lv * 0.2)).toFixed(2)),
+                    "投射物速度": isMelee ? 0 : parseFloat((baseSpeed * (1 + lv * 0.15)).toFixed(1)),
+                    "投射物半徑": isMelee ? 0 : parseFloat((baseRadius * (1 + lv * 0.2)).toFixed(2)),
                     "圖片路徑": `Assets/Textures/Skills/${id}_LV${lv}.png`
                 };
             }
@@ -144,7 +154,7 @@ function main() {
         const star = monster.星級 || 1;
         const elements = monster.屬性 || ["無"];
         // Pick primary element
-        let primaryElement = elements[0] === "無" ? "火" : elements[0];
+        let primaryElement = elements[0];
         if (!ELEMENT_SKILLS[primaryElement]) {
             // Cycle element deterministically if not standard
             const keys = Object.keys(ELEMENT_SKILLS);

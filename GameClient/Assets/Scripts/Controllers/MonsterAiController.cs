@@ -89,11 +89,16 @@ namespace MonsterHunter.Controllers
         {
             _data = data;
             _player = player;
+            if (data != null && !string.IsNullOrEmpty(data.魔物編號))
+            {
+                _魔物編號 = data.魔物編號; // ✦ 更新底層識別碼，確保掉落結算正確對應
+            }
             if (tuningStore != null) _tuningStore = tuningStore;
             if (data != null)
             {
                 var m = Mathf.Max(0.1f, monsterMaxHpMultiplier);
                 InitializeMonsterHealthFromData(Mathf.Max(1f, data.最大血量 * m));
+                PickNextMeleePlan(); // ✦ 初次遇敵直接心裡想好第一招
             }
         }
 
@@ -115,6 +120,11 @@ namespace MonsterHunter.Controllers
                 Debug.LogError($"[MonsterAi] 找不到魔物 {_魔物編號}");
             else
                 InitializeMonsterHealthFromData(_data.最大血量);
+        }
+
+        void Start()
+        {
+            if (_currentSkill == null) PickNextMeleePlan();
         }
 
         void Update()
@@ -171,11 +181,16 @@ namespace MonsterHunter.Controllers
                     var chaseMag = baseChase;
                     if (tuning.魔物追擊低速底線 > 1e-3f)
                         chaseMag = Mathf.Max(tuning.魔物追擊低速底線, baseChase);
-                    _rb.linearVelocity = dir * chaseMag;
+
+                    // ✦ 加入蛇行 / 側步偏移量
+                    var perp = new Vector2(-dir.y, dir.x);
+                    var sway = Mathf.Sin(Time.time * 2.5f) * 0.4f * chaseMag; // 隨時間左右橫移
+                    
+                    _rb.linearVelocity = dir * chaseMag + perp * sway;
                     break;
 
                 case AiState.發動招式:
-                    if (dist > atkDist * 1.1f)
+                    if (dist > atkDist * 1.15f) // ✦ 稍微放寬 1.15f 避免距離邊緣判斷浮動抖動
                     {
                         _state = AiState.追擊;
                         break;
@@ -183,7 +198,7 @@ namespace MonsterHunter.Controllers
 
                     if (!_telegraphing)
                     {
-                        PickNextMeleePlan();
+                        // ✦ 已經提早選好招式了，不須再 PickNextMeleePlan()
                         _telegraphing = true;
                         
                         // ✦ 招式釋放時間快慢區別！技能越強 (傷害倍率越高)，速度越快！
@@ -225,11 +240,11 @@ namespace MonsterHunter.Controllers
                 Color warnColor = new Color(1f, 0.42f, 0.32f, 1f); // 預設橙紅
                 float pulseFreq = 12f;
 
-                if (skillName == "飛撲壓制") { warnColor = new Color(0.92f, 0.05f, 0.05f); pulseFreq = 18f; }
-                else if (skillName == "熊掌橫掃") { warnColor = new Color(1f, 0.45f, 0f); pulseFreq = 22f; }
-                else if (skillName == "落雷角") { warnColor = new Color(0f, 0.85f, 1f); pulseFreq = 28f; }
-                else if (skillName == "岩塊投擲") { warnColor = new Color(0.6f, 0.4f, 0.2f); pulseFreq = 14f; }
-                else if (skillName == "桃紅彈") { warnColor = new Color(1f, 0.25f, 0.72f); pulseFreq = 16f; }
+                if (skillName.Contains("飛撲") || skillName.Contains("重擊")) { warnColor = new Color(0.92f, 0.05f, 0.05f); pulseFreq = 18f; }
+                else if (skillName.Contains("橫掃") || skillName.Contains("熊掌")) { warnColor = new Color(1f, 0.45f, 0f); pulseFreq = 22f; }
+                else if (skillName.Contains("雷") || skillName.Contains("電")) { warnColor = new Color(0f, 0.85f, 1f); pulseFreq = 28f; }
+                else if (skillName.Contains("岩") || skillName.Contains("石")) { warnColor = new Color(0.6f, 0.4f, 0.2f); pulseFreq = 14f; }
+                else if (skillName.Contains("桃紅") || skillName.Contains("粉")) { warnColor = new Color(1f, 0.25f, 0.72f); pulseFreq = 16f; }
 
                 // ✦ 建立巨大且極度顯眼的「技能專屬顏色光環/光束」在魔物背後！絕對不可能看不到！
                 var auraGo = new GameObject("TelegraphAura");
@@ -256,8 +271,8 @@ namespace MonsterHunter.Controllers
                         float auraT = Mathf.PingPong(elapsed * pulseFreq * 0.4f, 1f);
                         auraSr.color = Color.Lerp(warnColor, new Color(1f, 1f, 1f, 0.85f), auraT); // 更明亮的漸變！
                         
-                        // ✦ 必殺大招如「落雷角」或大體積攻擊（飛撲壓制、熊掌橫掃）展現更巨大的發光氣場！
-                        float baseScale = (skillName == "落雷角" || skillName == "飛撲壓制" || skillName == "熊掌橫掃") ? 2.5f : 1.4f;
+                        // ✦ 必殺大招展現更巨大的發光氣場！
+                        float baseScale = (skillName.Contains("雷") || skillName.Contains("電") || skillName.Contains("飛撲") || skillName.Contains("熊掌") || skillName.Contains("重擊") || skillName.Contains("橫掃")) ? 2.5f : 1.4f;
                         float auraScale = baseScale + Mathf.Sin(elapsed * pulseFreq) * 0.5f;
                         // 上下稍微拉長，營造出強烈的氣場或光束感
                         auraGo.transform.localScale = new Vector3(auraScale, auraScale * 2.2f, 1f);
@@ -357,6 +372,9 @@ namespace MonsterHunter.Controllers
             if (dist <= _plannedHitRadius * checkMul)
                 PerformAttackOnPlayer();
             _pendingProjectileMove = null;
+
+            // ✦ 當前攻擊結束，立刻「心裡想好下一招」！
+            PickNextMeleePlan();
         }
 
         /// <summary>在魔物頭上建立包含技能名稱的 Pill 提示框物件。</summary>
@@ -373,18 +391,19 @@ namespace MonsterHunter.Controllers
             Color bgColor = new Color(1f, 0.9f, 0f, 0.8f); // 預設亮黃
             if (!isNormalAttack)
             {
-                if (skillName == "飛撲壓制") bgColor = new Color(0.85f, 0f, 0.05f, 0.85f); // 亮血紅
-                else if (skillName == "熊掌橫掃") bgColor = new Color(0.95f, 0.42f, 0f, 0.85f); // 亮橘色
-                else if (skillName == "落雷角") bgColor = new Color(0f, 0.55f, 1f, 0.85f); // 閃電藍
-                else if (skillName == "岩塊投擲") bgColor = new Color(0.55f, 0.35f, 0.15f, 0.85f); // 黏土褐
-                else if (skillName == "桃紅彈") bgColor = new Color(0.95f, 0.15f, 0.65f, 0.85f); // 桃粉紅
+                if (skillName.Contains("飛撲") || skillName.Contains("重擊")) bgColor = new Color(0.85f, 0f, 0.05f, 0.85f); // 亮血紅
+                else if (skillName.Contains("橫掃") || skillName.Contains("熊掌")) bgColor = new Color(0.95f, 0.42f, 0f, 0.85f); // 亮橘色
+                else if (skillName.Contains("雷") || skillName.Contains("電")) bgColor = new Color(0f, 0.55f, 1f, 0.85f); // 閃電藍
+                else if (skillName.Contains("岩") || skillName.Contains("石")) bgColor = new Color(0.55f, 0.35f, 0.15f, 0.85f); // 黏土褐
+                else if (skillName.Contains("桃紅") || skillName.Contains("粉")) bgColor = new Color(0.95f, 0.15f, 0.65f, 0.85f); // 桃粉紅
+                else bgColor = new Color(0.85f, 0f, 0.05f, 0.85f); // 其他特殊招式預設為亮紅色重擊
             }
 
             sr.sprite = CreateSolidSprite(bgColor);
             sr.sortingOrder = 3000;
             
             // 動態依據是否為普攻來決定背景寬度
-            float bgWidth = isNormalAttack ? 0.35f : 1.15f;
+            float bgWidth = 0.35f; // 統一縮小為精緻的驚嘆號框
             float bgHeight = 0.46f;
             go.transform.localScale = new Vector3(bgWidth, bgHeight, 1f);
 
@@ -396,7 +415,7 @@ namespace MonsterHunter.Controllers
             txtGo.transform.localScale = new Vector3(1f / bgWidth * 0.35f, 1f / bgHeight * 0.35f, 1f);
 
             var tm = txtGo.AddComponent<TextMesh>();
-            tm.text = isNormalAttack ? "!" : skillName;
+            tm.text = "!"; // ✦ 取消突兀的招式文字，統一顯示為經典的「!」
             tm.fontSize = 24;
             tm.fontStyle = FontStyle.Bold;
             tm.color = (bgColor.r < 0.4f || bgColor.g < 0.4f) ? Color.white : Color.black;
@@ -443,6 +462,7 @@ namespace MonsterHunter.Controllers
         void PickNextMeleePlan()
         {
             _pendingProjectileMove = null;
+            _currentSkill = null;
 
             var norm = _data?.魔物攻擊內容?.普通攻擊;
             if (norm == null)
@@ -457,7 +477,7 @@ namespace MonsterHunter.Controllers
             _plannedHitRadius = meleeDist + slack;
 
             var specs = _data.魔物攻擊內容.特殊招式;
-            var normDmg = Mathf.Max(0, Mathf.RoundToInt(norm.傷害 * 1.4f)); // ✦ 傷害下修 1/2（降為 1.4 倍），維持合理的高容錯挑戰！
+            var normDmg = Mathf.Max(0, Mathf.RoundToInt(norm.傷害 * 0.7f)); // ✦ 傷害再下修 1/2（降為 0.7 倍），極致提高容錯！
 
             float sum = 0f;
             if (specs != null && specs.Length > 0)
@@ -498,6 +518,7 @@ namespace MonsterHunter.Controllers
                     if (s.冷卻秒 > 0f)
                         _specialMoveCdUntil[i] = Time.time + s.冷卻秒;
                     _isExecutingSpecialMove = true;
+                    _currentSkill = s; // ✦ 綁定技能
                     Debug.Log($"[MonsterAi] 選招「{(string.IsNullOrEmpty(s.名稱) ? $"特殊招式#{i}" : s.名稱)}」直傷={_plannedDirectDamageFlat}");
                     return;
                 }
@@ -507,28 +528,31 @@ namespace MonsterHunter.Controllers
             _isExecutingSpecialMove = false;
         }
 
-        /// <summary>追擊／站樁分界：只吃「近戰型」招式距離，不含投射物遠射程，並封頂避免遠距離站樁不動。</summary>
+        /// <summary>動態距離分界：如果已經選好大招（尤其是遠程），就以大招射程作為追擊終點！</summary>
         float BuildApproachMeleeDistance(out float normalDistOnly)
         {
             var norm = _data?.魔物攻擊內容?.普通攻擊;
             // 配合貼臉攻擊，將接戰距離與上限皆砍半（乘上 0.5f）
             normalDistOnly = norm != null ? Mathf.Max(0.1f, norm.攻擊距離 * 0.5f) : 1f;
-            var atkDist = normalDistOnly;
-            var specs = _data?.魔物攻擊內容?.特殊招式;
-            if (specs != null)
+
+            if (_currentSkill != null)
             {
-                for (var i = 0; i < specs.Length; i++)
+                // 如果已經決定好放特殊招式
+                if (!string.IsNullOrWhiteSpace(_currentSkill.投射物型別))
                 {
-                    var s = specs[i];
-                    if (s == null || s.攻擊距離 <= 0f) continue;
-                    // 投射物「攻擊距離」常在 8～10：若混入接戰距離，AI 會在畫邊就判定已到位而不再逼近。
-                    if (!string.IsNullOrWhiteSpace(s.投射物型別)) continue;
-                    atkDist = Mathf.Max(atkDist, s.攻擊距離 * 0.5f);
+                    // ✦ 若為投射物，直接使用投射物的超大射程作為追擊終點（打個 85 折，確保一定在射程內）！
+                    return Mathf.Max(normalDistOnly, _currentSkill.攻擊距離 * 0.85f);
+                }
+                else
+                {
+                    // 近戰特殊技，依然拉近
+                    float specDist = Mathf.Max(0.1f, _currentSkill.攻擊距離 * 0.5f);
+                    return Mathf.Min(Mathf.Max(normalDistOnly, specDist), 2.42f); // 上限亦砍半
                 }
             }
 
-            const float moveCap = 2.42f; // 上限亦砍半
-            return Mathf.Min(atkDist, moveCap);
+            // 如果還沒選招，預設維持近戰距離上限
+            return Mathf.Min(normalDistOnly, 2.42f);
         }
 
         /// <summary>中心距離判定的容差：僅略大於雙方碰撞體，避免舊版 ×1.65 導致隔空受擊。</summary>
