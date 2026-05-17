@@ -615,8 +615,8 @@ namespace MonsterHunter.UI
             bg.color = new Color(0f, 0f, 0f, 0.55f);
             bg.raycastTarget = false;
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                        ?? Font.CreateDynamicFontFromOSFont(new[] { "Segoe UI", "Microsoft JhengHei", "Arial" }, 16);
+            var font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Segoe UI", "Arial" }, 22)
+                        ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             if (monster != null && !string.IsNullOrWhiteSpace(monster.圖示路徑))
             {
@@ -672,18 +672,23 @@ namespace MonsterHunter.UI
             var tr = textGo.GetComponent<RectTransform>();
             tr.anchorMin = new Vector2(0f, 0f);
             tr.anchorMax = new Vector2(1f, 1f);
-            tr.offsetMin = new Vector2(12f, 4f);
-            tr.offsetMax = new Vector2(-textRightPad, -34f);
+            tr.offsetMin = new Vector2(16f, 6f);
+            tr.offsetMax = new Vector2(-textRightPad, -74f); // 向下偏移至 -74f，完美避開 44px 高的血條！
 
             var label = textGo.AddComponent<Text>();
             label.font = font;
-            label.fontSize = 15;
+            label.fontSize = 24; // 調整為 24 點，極度清晰！
             label.color = Color.white;
             label.alignment = TextAnchor.UpperLeft;
             label.supportRichText = true;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Truncate;
-            label.lineSpacing = 0.9f;
+            label.lineSpacing = 1.15f; // 行高加寬，讓排版大氣易讀
+            
+            // 加上高質感黑陰影，保證無論背景是什麼都能完美看清！
+            var shadow = textGo.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            shadow.effectDistance = new Vector2(2f, -2f);
             var bgLine =
                 string.IsNullOrWhiteSpace(battleBackdropCaption)
                     ? ""

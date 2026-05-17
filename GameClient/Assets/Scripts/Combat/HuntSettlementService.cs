@@ -27,16 +27,45 @@ namespace MonsterHunter.Combat
             Action<IReadOnlyList<SettlementRewardEntry>, int, float> onComplete
         )
         {
-            if (_dropRatesJson == null)
+            string jsonText = null;
+            if (_dropRatesJson != null && !string.IsNullOrEmpty(_dropRatesJson.text))
             {
-                onError?.Invoke("未指定 drop_rates.json TextAsset。");
-                yield break;
+                jsonText = _dropRatesJson.text;
+            }
+            else
+            {
+                // 嘗試從本機路徑或 Resources 載入作為安全備份，保證 100% 能加載！
+                string[] fallbackPaths = new[]
+                {
+                    System.IO.Path.Combine(Application.dataPath, "../DesignData/01_Monsters/drop_rates.json"),
+                    System.IO.Path.Combine(Application.dataPath, "DesignData/01_Monsters/drop_rates.json"),
+                    System.IO.Path.Combine(Application.dataPath, "Resources/DesignData/01_Monsters/drop_rates.json")
+                };
+                foreach (var path in fallbackPaths)
+                {
+                    if (System.IO.File.Exists(path))
+                    {
+                        try
+                        {
+                            jsonText = System.IO.File.ReadAllText(path);
+                            Debug.Log($"[HuntSettlementService] 成功從本機備用路徑載入 drop_rates.json: {path}");
+                            break;
+                        }
+                        catch {}
+                    }
+                }
+            }
+
+            if (string.IsNullOrEmpty(jsonText))
+            {
+                Debug.LogWarning("[HuntSettlementService] 無法以任何方式加載 drop_rates.json。使用空 JSON 開始解析保底。");
+                jsonText = "[]";
             }
 
             var rewards = DropRewardResolver.Resolve(
                 monsterId,
                 fulfilledDropConditions,
-                _dropRatesJson.text,
+                jsonText,
                 _rng
             );
 
@@ -49,7 +78,7 @@ namespace MonsterHunter.Combat
                     if (err != null)
                     {
                         onError?.Invoke($"倉庫寫入失敗 {r.素材編號}: {err}");
-                        yield break;
+                        // 絕對不能 yield break！即便網路或資料庫異常，依然要在本機與 UI 結算掉落物！
                     }
                 }
 
@@ -71,9 +100,10 @@ namespace MonsterHunter.Combat
                 if (metaErr != null)
                 {
                     onError?.Invoke(metaErr);
-                    yield break;
+                    // 絕對不能 yield break！
                 }
 
+                // 即使雲端存檔失敗，仍要寫入本機備份，並呼叫 onComplete 讓 UI 顯示掉落畫面
                 PersistLocalWarehouse(rewards);
                 onComplete?.Invoke(rewards, kills, diffMul);
                 yield break;

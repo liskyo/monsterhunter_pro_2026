@@ -288,15 +288,25 @@ namespace MonsterHunter.Combat
                 orbSr.transform.localScale = Vector3.one * Mathf.Clamp(hbCol.radius * 0.92f + 0.045f, 0.17f, 0.62f);
             }
 
-            // 玩家 HP = 魔物最大血量 × 魔物詞條倍率 × 0.25 × 獵人體魄詞條
-            var monsterHpScale =
-                Mathf.Max(0.05f, session.MonsterMaxHpMultiplier);
+            // 玩家 HP 使用原始的 session.MonsterMaxHpMultiplier 計算，保證血量大、極具安全感！
+            var rawMonsterHpScale = Mathf.Max(0.05f, session.MonsterMaxHpMultiplier);
             var monsterBaseHp =
                 MonsterDataRow != null ? Mathf.Max(1f, MonsterDataRow.最大血量) : 2000f;
 
             var playerMaxHp =
-                Mathf.Max(500f, monsterBaseHp * monsterHpScale * 0.25f *
-                                       session.PlayerMaxHpMultiplier);
+                Mathf.Max(800f, monsterBaseHp * rawMonsterHpScale * 0.35f *
+                                       session.PlayerMaxHpMultiplier); // 獵人血量倍增，保證容錯率！
+
+            // 魔物實際 HP 乘上星級折扣，大幅提高擊殺效率，爽快通關！
+            var star = MonsterDataRow != null ? MonsterDataRow.星級 : 1;
+            float starHpScale = 1.0f;
+            if (star == 1) starHpScale = 0.22f;       // 1星血量打 2.2 折（約 990 HP），體驗極佳！
+            else if (star == 2) starHpScale = 0.38f;   // 2星血量打 3.8 折
+            else if (star == 3) starHpScale = 0.52f;   // 3星血量打 5.2 折
+            else if (star == 4) starHpScale = 0.68f;   // 4星血量打 6.8 折
+            else starHpScale = 0.82f;                 // 5星以上打 8.2 折以防血量膨脹
+
+            var monsterHpScale = Mathf.Max(0.05f, rawMonsterHpScale * starHpScale);
 
             // PlayerController on hunter
             var touchGo = new GameObject("CombatTouchInput");
@@ -306,8 +316,9 @@ namespace MonsterHunter.Combat
 
             touchInput.Inject(_tuningStore, _playerCtrl);
 
+            // 獵人輸出直接提升 1.5 倍，戰鬥爽感爆棚！
             _playerCtrl.Inject(_tuningStore, loadout, weaponJson, playerMaxHp, touchInput,
-                session.PlayerOutgoingDamageMultiplier, session.PlayerMoveSpeedMultiplier);
+                session.PlayerOutgoingDamageMultiplier * 1.5f, session.PlayerMoveSpeedMultiplier);
 
             TrySetPrivateField(_playerCtrl, "_attackHitbox", hitbox);
 
@@ -336,8 +347,8 @@ namespace MonsterHunter.Combat
         {
             if (HudCanvas == null) return;
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
-                       ?? Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Arial" }, 14);
+            var font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Segoe UI", "Arial" }, 20)
+                       ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             // 魔物血條（上方 HUD 右半）
             _monsterHpFill = BuildTopBar(HudCanvas.transform, font,
@@ -397,15 +408,16 @@ namespace MonsterHunter.Combat
             var rr = root.GetComponent<RectTransform>();
             rr.anchorMin = anchorMin + new Vector2(0.01f, 0f);
             rr.anchorMax = anchorMax + new Vector2(-0.01f, 0f);
-            rr.offsetMin = new Vector2(0f, -32f);
-            rr.offsetMax = new Vector2(0f, -6f);
+            // 增加血條高度：原為 -32f 到 -6f (26px)，改為 -54f 到 -10f (44px)
+            rr.offsetMin = new Vector2(0f, -54f);
+            rr.offsetMax = new Vector2(0f, -10f);
 
             var track = new GameObject("Track", typeof(RectTransform));
             track.transform.SetParent(root.transform, false);
             var trk = track.GetComponent<RectTransform>();
             trk.anchorMin = new Vector2(0f, 0f);
             trk.anchorMax = new Vector2(1f, 1f);
-            trk.offsetMin = new Vector2(26f, 0f);
+            trk.offsetMin = Vector2.zero; // 置中填滿，不需留左側空間
             trk.offsetMax = Vector2.zero;
             var trackImg = track.AddComponent<Image>();
             trackImg.color = new Color(0.08f, 0.08f, 0.08f, 0.9f);
@@ -422,20 +434,28 @@ namespace MonsterHunter.Combat
             fi.color = fillColor;
             fi.raycastTarget = false;
 
+            // 置中文字標籤，覆蓋在血條正上方
             var capGo = new GameObject("Label", typeof(RectTransform));
-            capGo.transform.SetParent(root.transform, false);
+            capGo.transform.SetParent(track.transform, false);
             var crt = capGo.GetComponent<RectTransform>();
-            crt.anchorMin = new Vector2(0f, 0f);
-            crt.anchorMax = new Vector2(0f, 1f);
-            crt.pivot = new Vector2(0f, 0.5f);
-            crt.sizeDelta = new Vector2(26f, 0f);
-            crt.anchoredPosition = Vector2.zero;
+            crt.anchorMin = Vector2.zero;
+            crt.anchorMax = Vector2.one;
+            crt.offsetMin = Vector2.zero;
+            crt.offsetMax = Vector2.zero;
+            
             label = capGo.AddComponent<Text>();
             label.font = font;
-            label.fontSize = 14;
+            label.fontSize = 20; // 顯著放大字體
+            label.fontStyle = FontStyle.Bold;
             label.color = Color.white;
-            label.alignment = TextAnchor.MiddleCenter;
+            label.alignment = TextAnchor.MiddleCenter; // 水平垂直置中
+            label.supportRichText = true;
             label.text = tag;
+
+            // 增加黑陰影以確保背景亮色時文字依然清晰
+            var shadow = capGo.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            shadow.effectDistance = new Vector2(1.5f, -1.5f);
 
             return fi;
         }
@@ -461,11 +481,13 @@ namespace MonsterHunter.Combat
             UpdateHpBar(_playerHpFill, _playerHpText,
                 _playerCtrl != null ? _playerCtrl.CurrentHp : 0f,
                 _playerCtrl != null ? _playerCtrl.MaxHp : 150f,
+                "獵人",
                 ailmentSuffix);
 
             UpdateHpBar(_monsterHpFill, _monsterHpText,
                 _monsterAi != null ? _monsterAi.CurrentHp : 0f,
-                _monsterAi != null ? Mathf.Max(1f, _monsterAi.MaxHp) : 1f);
+                _monsterAi != null ? Mathf.Max(1f, _monsterAi.MaxHp) : 1f,
+                "魔物");
 
             // 邊界鉗制（防止角色跑出鏡頭）
             if (_playerCtrl != null) ClampToCamera(HunterGo);
@@ -530,7 +552,7 @@ namespace MonsterHunter.Combat
             }
         }
 
-        static void UpdateHpBar(Image fill, Text label, float cur, float max, string suffix = null)
+        static void UpdateHpBar(Image fill, Text label, float cur, float max, string prefix, string suffix = null)
         {
             if (fill == null) return;
             var ratio = Mathf.Clamp01(cur / Mathf.Max(1f, max));
@@ -538,9 +560,10 @@ namespace MonsterHunter.Combat
             fr.anchorMax = new Vector2(ratio, 1f);
             if (label != null)
             {
+                var hpStr = $"{Mathf.CeilToInt(cur)}/{Mathf.CeilToInt(max)}";
                 label.text = suffix != null 
-                    ? $"{Mathf.CeilToInt(cur)} {suffix}" 
-                    : $"{Mathf.CeilToInt(cur)}";
+                    ? $"{prefix}  {hpStr} {suffix}" 
+                    : $"{prefix}  {hpStr}";
             }
         }
 
@@ -561,20 +584,290 @@ namespace MonsterHunter.Combat
 
         void OnMonsterDamaged(float dmg, bool crit)
         {
-            if (_floatingDmgText == null) return;
-            _floatingDmgText.text = crit
-                ? $"<color=#FF4400><b>暴！{dmg:F0}</b></color>"
-                : $"<color=#FFE84A>{dmg:F0}</color>";
-            var c = _floatingDmgText.color; c.a = 1f; _floatingDmgText.color = c;
-            _floatingDmgTimer = 1f;
+            if (HudCanvas == null || MonsterGo == null) return;
+
+            // 建立一個漂浮傷害數字物件
+            var go = new GameObject("DmgPop", typeof(RectTransform));
+            go.transform.SetParent(HudCanvas.transform, false);
+            
+            var rt = go.GetComponent<RectTransform>();
+            
+            // 將魔物世界座標轉為螢幕 Canvas 局部座標
+            Vector2 screenPos = Camera.main.WorldToScreenPoint(MonsterGo.transform.position);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                HudCanvas.transform as RectTransform, 
+                screenPos, 
+                HudCanvas.worldCamera, 
+                out Vector2 localPos
+            );
+            
+            // 隨機微調初始位置，避免多段傷害重疊
+            localPos.x += UnityEngine.Random.Range(-35f, 35f);
+            localPos.y += UnityEngine.Random.Range(30f, 75f);
+            rt.anchoredPosition = localPos;
+
+            // 字型處理，若無自訂字型，則自動回退使用系統內建或大體字
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                       ?? Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Arial" }, 22);
+
+            var txt = go.AddComponent<Text>();
+            txt.font = font;
+            txt.fontSize = crit ? 38 : 28; // 暴擊字體更大
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.supportRichText = true;
+            
+            // 暴擊使用高飽和亮橘紅，普通使用亮黃色
+            txt.text = crit 
+                ? $"<color=#FF4500><b>暴！{dmg:F0}</b></color>" 
+                : $"<color=#FFD700><b>{dmg:F0}</b></color>";
+
+            // 加上高對比黑陰影（Shadow）元件，讓數字在多變的戰鬥背景下依然極度耀眼清晰
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
+            shadow.effectDistance = new Vector2(2f, -2f);
+
+            // 啟動漂浮並漸變消失協程
+            StartCoroutine(FloatAndFadeRoutine(go, rt, txt));
+        }
+
+        System.Collections.IEnumerator FloatAndFadeRoutine(GameObject go, RectTransform rt, Text txt)
+        {
+            float elapsed = 0f;
+            float duration = 0.8f;
+            Vector2 startPos = rt.anchoredPosition;
+            
+            while (elapsed < duration)
+            {
+                if (go == null || rt == null || txt == null) yield break;
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                // 順滑向上漂移，前期快、後期慢
+                float lift = Mathf.Sin(t * Mathf.PI * 0.5f) * 90f;
+                rt.anchoredPosition = startPos + new Vector2(0f, lift);
+                
+                // 漸變淡出
+                var c = txt.color;
+                c.a = Mathf.Clamp01(1f - t);
+                txt.color = c;
+                
+                yield return null;
+            }
+            
+            if (go != null) Destroy(go);
         }
 
         void OnPlayerDamaged(float dmg, bool crit) { }
 
-        void OnMonsterDefeated() => ShowResult(won: true);
-        void OnPlayerDefeated() => ShowResult(won: false);
+        void OnMonsterDefeated()
+        {
+            StartCoroutine(WaitAndShowSuccessResult());
+        }
 
-        void ShowResult(bool won)
+        void OnPlayerDefeated() => ShowResult(won: false, rewards: null);
+
+        System.Collections.IEnumerator WaitAndShowSuccessResult()
+        {
+            // 等待直到 _monsterAi 的 SettlementRewards 不是 null（限時最多 2.5 秒，保證流暢）
+            float elapsed = 0f;
+            while (_monsterAi != null && _monsterAi.SettlementRewards == null && elapsed < 2.5f)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            var rewards = _monsterAi != null ? _monsterAi.SettlementRewards : null;
+            
+            // 任務成功！把素材噴在戰鬥畫面上！
+            SpawnPhysicalLootDrops(rewards);
+
+            // ✦ 新增互動：先等待玩家點擊畫面，將素材吸入玩家身上後，才跳出結算藍色畫面！
+            yield return StartCoroutine(WaitForPlayerClickToCollect());
+
+            ShowResult(won: true, rewards: rewards);
+        }
+
+        System.Collections.IEnumerator WaitForPlayerClickToCollect()
+        {
+            // 在 HUD 上加一個暫時的提示字體：「✦ 點擊畫面收集素材 ✦」
+            GameObject hintGo = null;
+            if (HudCanvas != null)
+            {
+                hintGo = new GameObject("CollectHint", typeof(RectTransform));
+                hintGo.transform.SetParent(HudCanvas.transform, false);
+                var rt = hintGo.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0f, 0.22f);
+                rt.anchorMax = new Vector2(1f, 0.32f);
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+
+                var txt = hintGo.AddComponent<Text>();
+                var font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Segoe UI", "Arial" }, 28)
+                           ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                txt.font = font;
+                txt.fontSize = 32;
+                txt.fontStyle = FontStyle.Bold;
+                txt.alignment = TextAnchor.MiddleCenter;
+                txt.color = new Color(1f, 0.92f, 0.25f, 1f); // 亮金色
+                txt.text = "✦ 點擊畫面任意處收集掉落素材 ✦";
+
+                var shadow = hintGo.AddComponent<Shadow>();
+                shadow.effectColor = new Color(0f, 0f, 0f, 0.9f);
+                shadow.effectDistance = new Vector2(2f, -2f);
+            }
+
+            // 等待玩家點擊 (滑鼠左鍵或觸控)
+            // 首 0.6 秒不接受點擊，給予素材完美的噴出散開動畫時間
+            yield return new WaitForSeconds(0.6f);
+
+            bool clicked = false;
+            while (!clicked)
+            {
+                if (Input.GetMouseButtonDown(0) || (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began))
+                {
+                    clicked = true;
+                }
+                yield return null;
+            }
+
+            // 點擊後，播放動感的素材「向玩家中心飛入吸收」的特效！
+            var drops = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+            var dropList = new System.Collections.Generic.List<GameObject>();
+            var startScales = new System.Collections.Generic.Dictionary<GameObject, Vector3>();
+            foreach (var d in drops)
+            {
+                if (d != null && d.name.StartsWith("PhysicalDrop_"))
+                {
+                    dropList.Add(d);
+                    startScales[d] = d.transform.localScale;
+                }
+            }
+
+            float animDur = 0.5f;
+            float animElapsed = 0f;
+            Vector3 targetPos = Vector3.zero;
+            if (HunterGo != null) 
+            {
+                targetPos = HunterGo.transform.position;
+            }
+            else if (MonsterGo != null)
+            {
+                targetPos = MonsterGo.transform.position;
+            }
+
+            // 關閉所有掉落物的物理碰撞，準備用飛入內插動畫
+            foreach (var d in dropList)
+            {
+                if (d != null)
+                {
+                    var rb = d.GetComponent<Rigidbody2D>();
+                    if (rb != null) rb.simulated = false; // 停用物理
+                    var col = d.GetComponent<Collider2D>();
+                    if (col != null) col.enabled = false;
+                }
+            }
+
+            // 內插飛入動畫：飛向獵人並縮小
+            while (animElapsed < animDur)
+            {
+                animElapsed += Time.deltaTime;
+                float t = animElapsed / animDur;
+                float tEase = t * t; // 速度由慢變快，極有吸力感
+                
+                // 動態追蹤獵人此時的最新位置
+                if (HunterGo != null) targetPos = HunterGo.transform.position;
+
+                foreach (var d in dropList)
+                {
+                    if (d != null)
+                    {
+                        d.transform.position = Vector3.Lerp(d.transform.position, targetPos, tEase);
+                        if (startScales.TryGetValue(d, out var startScale))
+                        {
+                            d.transform.localScale = Vector3.Lerp(startScale, Vector3.zero, t);
+                        }
+                    }
+                }
+                yield return null;
+            }
+
+            // 清理掉落物
+            foreach (var d in dropList)
+            {
+                if (d != null) Destroy(d);
+            }
+
+            if (hintGo != null) Destroy(hintGo);
+        }
+
+        void SpawnPhysicalLootDrops(System.Collections.Generic.IReadOnlyList<MonsterHunter.Combat.SettlementRewardEntry> rewards)
+        {
+            if (rewards == null || rewards.Count == 0) return;
+
+            Vector2 spawnCenter = Vector2.zero;
+            if (MonsterGo != null)
+                spawnCenter = MonsterGo.transform.position;
+            else if (HunterGo != null)
+                spawnCenter = HunterGo.transform.position;
+
+            foreach (var r in rewards)
+            {
+                for (int i = 0; i < r.數量; i++)
+                {
+                    var dropGo = new GameObject("PhysicalDrop_" + r.素材編號);
+                    dropGo.transform.position = spawnCenter + new Vector2(UnityEngine.Random.Range(-0.3f, 0.3f), UnityEngine.Random.Range(-0.3f, 0.3f));
+                    dropGo.transform.localScale = new Vector3(1f, 1f, 1f); // 預設基礎大小
+
+                    var sr = dropGo.AddComponent<SpriteRenderer>();
+                    sr.sortingOrder = 3000; // 顯示在最上層
+                    
+                    if (!string.IsNullOrEmpty(r.圖片路徑))
+                    {
+                        var spr = MonsterHunter.UI.SafeSpriteLoader.TryLoadSprite(r.圖片路徑);
+                        if (spr != null)
+                        {
+                            sr.sprite = spr;
+                            // ✦ 智慧尺寸標準化防線：不論圖片解析度多高，強制將 2D 世界空間寬高限制在 0.8f ~ 1.0f 單位左右！
+                            float maxDim = Mathf.Max(spr.rect.width, spr.rect.height) / spr.pixelsPerUnit;
+                            if (maxDim > 0f)
+                            {
+                                float targetSize = 0.8f; // 理想的 2D 物理掉落大小 (約地圖格子的 80%，非常精緻！)
+                                float scale = targetSize / maxDim;
+                                dropGo.transform.localScale = new Vector3(scale, scale, scale);
+                            }
+                        }
+                    }
+
+                    // 針對 2D Top-Down 俯視地圖的無重力噴出與摩擦力減速設計！
+                    var rb = dropGo.AddComponent<Rigidbody2D>();
+                    rb.gravityScale = 0f; // 頂部視角，無重力！
+                    rb.mass = 1f;
+                    rb.linearDamping = 3.5f; // 阻尼減速
+                    rb.angularDamping = 2.5f;
+
+#pragma warning disable CS0618
+                    rb.drag = 3.5f; // 相容舊版 Unity 屬性
+#pragma warning restore CS0618
+
+                    var col = dropGo.AddComponent<CircleCollider2D>();
+                    col.radius = 0.3f;
+                    col.isTrigger = true; // 設為 Trigger 避免擋住人物或互推
+
+                    // 向 360 度任意方向大角度噴射！
+                    float angle = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+                    float speed = UnityEngine.Random.Range(6f, 10f); // 噴發力度
+                    var vel = new Vector2(Mathf.Cos(angle) * speed, Mathf.Sin(angle) * speed);
+                    
+                    rb.linearVelocity = vel;
+                    rb.angularVelocity = UnityEngine.Random.Range(-540f, 540f); // 旋轉效果
+                    
+                    Destroy(dropGo, 12f); // 防呆銷毀
+                }
+            }
+        }
+
+        void ShowResult(bool won, System.Collections.Generic.IReadOnlyList<MonsterHunter.Combat.SettlementRewardEntry> rewards)
         {
             if (IsBattleConcluded)
                 return;
@@ -592,17 +885,23 @@ namespace MonsterHunter.Combat
             ort.offsetMin = Vector2.zero; ort.offsetMax = Vector2.zero;
 
             var bg = overlay.AddComponent<Image>();
+            // 使用更具質感的深色半透明背景
             bg.color = won
-                ? new Color(0f, 0.1f, 0.4f, 0.75f)
-                : new Color(0.4f, 0f, 0f, 0.75f);
+                ? new Color(0.05f, 0.08f, 0.22f, 0.88f) // 勝利：深藍金屬光澤
+                : new Color(0.22f, 0.04f, 0.04f, 0.88f); // 失敗：深暗紅警戒光澤
 
             var txtGo = new GameObject("ResultText", typeof(RectTransform));
             txtGo.transform.SetParent(overlay.transform, false);
             var trt = txtGo.GetComponent<RectTransform>();
-            trt.anchorMin = new Vector2(0.1f, 0.35f); trt.anchorMax = new Vector2(0.9f, 0.65f);
+            // 拓寬垂直顯示範圍，保證大量素材列表完美呈現在中央！
+            trt.anchorMin = new Vector2(0.05f, 0.12f); 
+            trt.anchorMax = new Vector2(0.95f, 0.88f);
             trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            // 載入高品質中文字型，絕不顯示豆腐塊
+            var font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Segoe UI", "Arial" }, 32)
+                       ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
             var t = txtGo.AddComponent<Text>();
             t.font = font;
             t.fontSize = 52;
@@ -610,9 +909,33 @@ namespace MonsterHunter.Combat
             t.alignment = TextAnchor.MiddleCenter;
             t.supportRichText = true;
             t.color = Color.white;
+            t.lineSpacing = 1.15f; // 字行間距稍微加寬，極具大氣感
+
+            // 加上高對比黑陰影
+            var shadow = txtGo.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.95f);
+            shadow.effectDistance = new Vector2(2f, -2f);
+
+            var dropsText = "";
+            if (won)
+            {
+                dropsText = "\n\n<color=#FFDD44><size=30><b>✦ 獲得討伐掉落素材 ✦</b></size></color>\n\n";
+                if (rewards != null && rewards.Count > 0)
+                {
+                    foreach (var r in rewards)
+                    {
+                        dropsText += $"<color=#FFFFFF><size=26>✨  {r.素材名稱}  x  {r.數量}</size></color>\n";
+                    }
+                }
+                else
+                {
+                    dropsText += "<color=#AAAAAA><size=24>無素材掉落</size></color>\n";
+                }
+            }
+
             t.text = won
-                ? "<color=#FFEE44>任務成功！</color>\n<size=28>魔物已被討伐</size>"
-                : "<color=#FF4444>任務失敗</color>\n<size=28>獵人倒下了……</size>";
+                ? $"<color=#FFEE44><size=56><b>任務成功！</b></size></color>\n<size=28>魔物已被討伐</size>{dropsText}"
+                : "<color=#FF4444><size=56><b>任務失敗</b></size></color>\n<size=28>獵人倒下了……</size>";
         }
 
         /// <summary>勝負已分：停用輸入與 AI、清投射物、停軌道刃口。</summary>

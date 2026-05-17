@@ -59,6 +59,9 @@ namespace MonsterHunter.Controllers
         /// <summary>執行期可取得根節點血量元件（供 UI／除錯）。</summary>
         public MonsterHealth Health => _health;
 
+        /// <summary>結算獲得的掉落素材清單（供 UI 結算畫面顯示）。</summary>
+        public System.Collections.Generic.IReadOnlyList<MonsterHunter.Combat.SettlementRewardEntry> SettlementRewards { get; private set; }
+
         /// <summary>近戰判定用：本體碰撞近似半徑（世界空間）。</summary>
         public float BodyHitRadius
         {
@@ -464,6 +467,16 @@ namespace MonsterHunter.Controllers
 
         IEnumerator DefeatFlow()
         {
+            if (_settlement == null)
+            {
+                _settlement = UnityEngine.Object.FindAnyObjectByType<HuntSettlementService>();
+                if (_settlement == null)
+                {
+                    var go = new GameObject("HuntSettlementService");
+                    _settlement = go.AddComponent<HuntSettlementService>();
+                }
+            }
+
             if (_settlement != null && _data != null)
             {
                 var cond = _breakState.ToDropConditions();
@@ -475,8 +488,11 @@ namespace MonsterHunter.Controllers
                         cond,
                         System.DateTime.Today,
                         e => err = e,
-                        (_, kills, diffMul) =>
-                            Debug.Log($"[MonsterAi] 結算完成 當日擊殺數={kills} 難度倍率={diffMul:F3}")
+                        (rewards, kills, diffMul) =>
+                        {
+                            SettlementRewards = rewards;
+                            Debug.Log($"[MonsterAi] 結算完成 獲得 {rewards.Count} 個掉落物，當日擊殺數={kills} 難度倍率={diffMul:F3}");
+                        }
                     )
                 );
                 if (err != null) Debug.LogWarning("[MonsterAi] 結算：" + err);
