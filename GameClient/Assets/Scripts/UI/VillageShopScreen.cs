@@ -57,7 +57,7 @@ namespace MonsterHunter.UI
 
         void OnEnable()
         {
-            _supabase = FindFirstObjectByType<SupabaseService>();
+            _supabase = FindAnyObjectByType<SupabaseService>();
             StartCoroutine(RefreshAll());
         }
 
@@ -173,7 +173,7 @@ namespace MonsterHunter.UI
             StretchFull(bgRt);
             var bgImg = bgGo.GetComponent<Image>();
             bgImg.sprite = SafeSpriteLoader.TryLoadSprite("Assets/UI/Backgrounds/Village/商店.png");
-            bgImg.type = bgImg.sprite != null ? Image.Type.Simple : Image.Type.SolidColor;
+            bgImg.type = Image.Type.Simple;
             bgImg.color = bgImg.sprite != null ? Color.white : new Color(0.06f, 0.07f, 0.1f, 0.97f);
             bgImg.raycastTarget = true;
 
@@ -284,7 +284,7 @@ namespace MonsterHunter.UI
             txt.color = Color.white;
         }
 
-        void CreateFooterSplitButton(Transform parent, string label, Action onClick)
+        void SetTab(ShopTab t)
         {
             _tab = t;
             RebuildProductList();
@@ -690,4 +690,6 @@ namespace MonsterHunter.UI
             txt.color = Color.white;
             btn.onClick.AddListener(() => onClick());
         }
+    }
+}
 

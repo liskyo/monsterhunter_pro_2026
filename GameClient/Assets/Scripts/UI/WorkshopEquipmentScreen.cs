@@ -56,7 +56,7 @@ namespace MonsterHunter.UI
             StretchFull(bgRt);
             var bgImg = bgGo.GetComponent<Image>();
             bgImg.sprite = SafeSpriteLoader.TryLoadSprite(BackgroundPath);
-            bgImg.type = bgImg.sprite != null ? Image.Type.Simple : Image.Type.SolidColor;
+            bgImg.type = Image.Type.Simple;
             bgImg.color = Color.white;
             bgImg.raycastTarget = true;
 

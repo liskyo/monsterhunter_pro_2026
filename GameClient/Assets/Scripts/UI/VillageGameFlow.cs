@@ -398,7 +398,7 @@ namespace MonsterHunter.UI
             StretchFull(bgGo.GetComponent<RectTransform>());
             var img = bgGo.GetComponent<Image>();
             img.sprite = SafeSpriteLoader.TryLoadSprite(bgPath);
-            img.type = img.sprite != null ? Image.Type.Simple : Image.Type.SolidColor;
+            img.type = Image.Type.Simple;
             img.color = img.sprite != null ? Color.white : new Color(0.04f, 0.05f, 0.08f, 1f);
 
             var dim = new GameObject("Dim", typeof(RectTransform), typeof(Image));
@@ -723,7 +723,7 @@ namespace MonsterHunter.UI
                         return;
                     }
 
-                    var flow = FindObjectOfType<VillageGameFlow>();
+                    var flow = FindAnyObjectByType<VillageGameFlow>();
                     if (flow != null) flow.RefreshCanteenStatus();
                 });
                 var bt = new GameObject("L", typeof(RectTransform));

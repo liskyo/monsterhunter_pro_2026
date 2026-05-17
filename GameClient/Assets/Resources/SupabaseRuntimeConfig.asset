@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c9e2f1a4b6d8e0c9a5b3d7f1e4c8a2b, type: 3}
   m_Name: SupabaseRuntimeConfig
   m_EditorClassIdentifier: 
-  SupabaseUrl: http://127.0.0.1:54321
+  SupabaseUrl: "http://127.0.0.1:54321"
   SupabaseAnonKey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH

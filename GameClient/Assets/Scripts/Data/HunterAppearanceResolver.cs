@@ -113,10 +113,10 @@ namespace MonsterHunter.Data
                 }
 
                 if (list.Count > 0)
-                    return list[Random.Range(0, list.Count)];
+                    return list[UnityEngine.Random.Range(0, list.Count)];
             }
 
-            return FallbackRandomPaths[Random.Range(0, FallbackRandomPaths.Length)];
+            return FallbackRandomPaths[UnityEngine.Random.Range(0, FallbackRandomPaths.Length)];
         }
 
         static 獵人企劃根 LoadOrCacheRoot()

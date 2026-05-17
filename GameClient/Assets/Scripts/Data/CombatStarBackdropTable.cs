@@ -115,7 +115,7 @@ namespace MonsterHunter.Data
                 foreach (var ch in seed ?? "")
                     h = h * 31 + ch;
                 h ^= h >> 15;
-                h *= 2246822519;
+                h = (int)((uint)h * 2246822519u);
                 h ^= h >> 13;
                 return ((h & 0x7fffffff) % modulus + modulus) % modulus;
             }
