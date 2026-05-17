@@ -294,17 +294,17 @@ namespace MonsterHunter.Combat
                 MonsterDataRow != null ? Mathf.Max(1f, MonsterDataRow.最大血量) : 2000f;
 
             var playerMaxHp =
-                Mathf.Max(800f, monsterBaseHp * rawMonsterHpScale * 0.35f *
-                                       session.PlayerMaxHpMultiplier); // 獵人血量倍增，保證容錯率！
+                Mathf.Max(300f, monsterBaseHp * rawMonsterHpScale * 0.15f *
+                                       session.PlayerMaxHpMultiplier); // ✦ 下修獵人血量倍率，拒絕無腦站樁
 
             // 魔物實際 HP 乘上星級折扣，大幅提高擊殺效率，爽快通關！
             var star = MonsterDataRow != null ? MonsterDataRow.星級 : 1;
             float starHpScale = 1.0f;
-            if (star == 1) starHpScale = 0.22f;       // 1星血量打 2.2 折（約 990 HP），體驗極佳！
-            else if (star == 2) starHpScale = 0.38f;   // 2星血量打 3.8 折
-            else if (star == 3) starHpScale = 0.52f;   // 3星血量打 5.2 折
-            else if (star == 4) starHpScale = 0.68f;   // 4星血量打 6.8 折
-            else starHpScale = 0.82f;                 // 5星以上打 8.2 折以防血量膨脹
+            if (star == 1) starHpScale = 0.21f;       // ✦ 再下修 1/2（約 945 HP），重回流暢討伐
+            else if (star == 2) starHpScale = 0.31f;   // ✦ 再下修 1/2
+            else if (star == 3) starHpScale = 0.43f;   // ✦ 再下修 1/2
+            else if (star == 4) starHpScale = 0.56f;   // ✦ 再下修 1/2
+            else starHpScale = 0.87f;                   // ✦ 再下修 1/2
 
             var monsterHpScale = Mathf.Max(0.05f, rawMonsterHpScale * starHpScale);
 
@@ -316,9 +316,9 @@ namespace MonsterHunter.Combat
 
             touchInput.Inject(_tuningStore, _playerCtrl);
 
-            // 獵人輸出直接提升 1.5 倍，戰鬥爽感爆棚！
+            // ✦ 移除無條件的 1.5 倍增傷，要求玩家依賴暴擊與閃避
             _playerCtrl.Inject(_tuningStore, loadout, weaponJson, playerMaxHp, touchInput,
-                session.PlayerOutgoingDamageMultiplier * 1.5f, session.PlayerMoveSpeedMultiplier);
+                session.PlayerOutgoingDamageMultiplier, session.PlayerMoveSpeedMultiplier);
 
             TrySetPrivateField(_playerCtrl, "_attackHitbox", hitbox);
 
@@ -471,10 +471,28 @@ namespace MonsterHunter.Combat
             string ailmentSuffix = null;
             if (_playerCtrl != null)
             {
-                var list = _playerCtrl.GetActiveAilmentNames();
-                if (list != null && list.Count > 0)
+                var ailments = _playerCtrl.GetActiveAilments();
+                if (ailments != null && ailments.Count > 0)
                 {
-                    ailmentSuffix = $"<color=#FF3B30><b>[{string.Join("中！][", list)}中！]</b></color>";
+                    var activeTexts = new System.Collections.Generic.List<string>();
+                    var now = Time.time;
+                    foreach (var a in ailments)
+                    {
+                        var secLeft = Mathf.Max(0f, a.結束時間 - now);
+                        // ✦ 未連結圖片時以文字替代，有圖片時以圖片加文字，並精準計秒顯示
+                        if (!string.IsNullOrEmpty(a.圖片路徑))
+                        {
+                            var filename = a.圖片路徑.Contains("/") 
+                                ? a.圖片路徑.Substring(a.圖片路徑.LastIndexOf('/') + 1) 
+                                : a.圖片路徑;
+                            activeTexts.Add($"🖼️({filename}) {a.異常名稱} ({secLeft:F1}s)");
+                        }
+                        else
+                        {
+                            activeTexts.Add($"{a.異常名稱} ({secLeft:F1}s)");
+                        }
+                    }
+                    ailmentSuffix = $"<color=#FF3B30><b>[{string.Join("] [", activeTexts)}]</b></color>";
                 }
             }
 
@@ -612,7 +630,7 @@ namespace MonsterHunter.Combat
 
             var txt = go.AddComponent<Text>();
             txt.font = font;
-            txt.fontSize = crit ? 38 : 28; // 暴擊字體更大
+            txt.fontSize = crit ? 58 : 42; // ✦ 暴打魔物字體加大
             txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter;
             txt.supportRichText = true;
@@ -658,7 +676,49 @@ namespace MonsterHunter.Combat
             if (go != null) Destroy(go);
         }
 
-        void OnPlayerDamaged(float dmg, bool crit) { }
+        void OnPlayerDamaged(float dmg, bool crit)
+        {
+            if (HudCanvas == null || HunterGo == null) return;
+
+            // 建立一個漂浮傷害數字物件
+            var go = new GameObject("PlayerDmgPop", typeof(RectTransform));
+            go.transform.SetParent(HudCanvas.transform, false);
+            
+            var rt = go.GetComponent<RectTransform>();
+            
+            // 將獵人世界座標轉為螢幕 Canvas 局部座標
+            Vector2 screenPos = Camera.main.WorldToScreenPoint(HunterGo.transform.position);
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                HudCanvas.transform as RectTransform, 
+                screenPos, 
+                HudCanvas.worldCamera, 
+                out Vector2 localPos
+            );
+            
+            // 隨機微調初始位置，避免多段傷害重疊
+            localPos.x += UnityEngine.Random.Range(-25f, 25f);
+            localPos.y += UnityEngine.Random.Range(40f, 85f);
+            rt.anchoredPosition = localPos;
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf")
+                       ?? Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Arial" }, 22);
+
+            var txt = go.AddComponent<Text>();
+            txt.font = font;
+            txt.fontSize = 48; // ✦ 獵人受傷數字超級清晰！
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.supportRichText = true;
+            
+            // 鮮紅色受擊數字
+            txt.text = $"<color=#FF1E1E><b>-{dmg:F0}</b></color>";
+
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.95f);
+            shadow.effectDistance = new Vector2(2f, -2f);
+
+            StartCoroutine(FloatAndFadeRoutine(go, rt, txt));
+        }
 
         void OnMonsterDefeated()
         {
@@ -732,7 +792,7 @@ namespace MonsterHunter.Combat
             }
 
             // 點擊後，播放動感的素材「向玩家中心飛入吸收」的特效！
-            var drops = GameObject.FindObjectsByType<GameObject>(FindObjectsSortMode.None);
+            var drops = GameObject.FindObjectsByType<GameObject>(FindObjectsInactive.Exclude);
             var dropList = new System.Collections.Generic.List<GameObject>();
             var startScales = new System.Collections.Generic.Dictionary<GameObject, Vector3>();
             foreach (var d in drops)

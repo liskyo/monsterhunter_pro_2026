@@ -33,6 +33,19 @@ namespace MonsterHunter.Combat
 
             var speed = spec.投射物速度 > 0.65f ? spec.投射物速度 : 7.2f;
             var radius = spec.投射物半徑 > 0.06f ? spec.投射物半徑 : 0.28f;
+
+            // ✦ 必殺大招「落雷角」與「岩塊投擲」投射物史詩級加強：速度與半徑大幅區分！
+            if (spec.名稱 == "落雷角")
+            {
+                speed *= 1.8f;   // 極速！(達到 15.3 速度)
+                radius *= 2.5f;  // 超大閃電！
+            }
+            else if (spec.名稱 == "岩塊投擲")
+            {
+                speed *= 1.3f;
+                radius *= 1.7f;
+            }
+
             var range = Mathf.Max(1f, spec.攻擊距離);
             var lifetime = Mathf.Clamp(range / speed + 1.05f, 1.05f, 9f);
 

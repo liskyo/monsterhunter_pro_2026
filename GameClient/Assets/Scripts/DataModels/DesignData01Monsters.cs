@@ -71,6 +71,7 @@ namespace MonsterHunter.DataModels
         public int 每秒傷害;
         public float 觸發機率;
         public float 持續時間秒;
+        public string 圖片路徑; // ✦ 新增：支援被動屬性的圖示路徑
     }
 
     /// <summary>對應 DesignData/01_Monsters/drop_rates.json（根為陣列）。</summary>

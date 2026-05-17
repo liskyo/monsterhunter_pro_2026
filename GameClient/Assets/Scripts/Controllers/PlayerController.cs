@@ -28,11 +28,12 @@ namespace MonsterHunter.Controllers
         Vector2 _dodgeVelocity;
         readonly System.Random _rng = new System.Random();
 
-        struct 獵人持續傷害狀態
+        public struct 獵人持續傷害狀態
         {
             public string 異常名稱;
             public float 每秒傷害;
             public float 結束時間;
+            public string 圖片路徑; // ✦ 新增圖片路徑關聯
         }
 
         readonly List<獵人持續傷害狀態> _ailments = new List<獵人持續傷害狀態>(4);
@@ -378,6 +379,10 @@ namespace MonsterHunter.Controllers
 
             _skillCd = Mathf.Max(1f, sk.冷卻秒);
 
+            // ✦ 視覺回饋：播放獵人發招閃爍與魔物處的大型青藍色能量衝擊波！
+            StartCoroutine(AnimatePlayerSkillCast());
+            SpawnSkillVisualEffect(tgt.transform.position, step.攻擊距離);
+
             StartCoroutine(StrikeCoroutine(tuning, tgt, step,
                 Mathf.Max(tuning.玩家攻擊冷卻秒 * 1.05f, 0.35f),
                 Mathf.Max(tuning.多段命中間隔秒, 0.04f)));
@@ -519,8 +524,22 @@ namespace MonsterHunter.Controllers
             OnDamageReceived?.Invoke(amount, isCrit);
             Debug.Log($"[Player] 受傷 {amount:F1} 會心={isCrit} → HP {CurrentHp:F0}/{MaxHp:F0}");
 
+            // ✦ 觸發獵人受擊視覺紅光閃爍
+            StartCoroutine(PlayerHitFlashRoutine());
+
             if (CurrentHp <= 0f)
                 OnDefeated?.Invoke();
+        }
+
+        IEnumerator PlayerHitFlashRoutine()
+        {
+            var sr = GetComponent<SpriteRenderer>();
+            if (sr == null) yield break;
+            
+            Color orig = sr.color;
+            sr.color = new Color(1f, 0.2f, 0.2f, 1f); // 閃爍紅光
+            yield return new WaitForSeconds(0.12f);
+            if (sr != null) sr.color = orig;
         }
 
         public void ApplyMonsterSpecialAttack(魔物特殊攻擊項 row)
@@ -531,6 +550,7 @@ namespace MonsterHunter.Controllers
             var end = Time.time + Mathf.Max(0.05f, row.持續時間秒);
             // 削弱 DoT 傷害：將每秒異常狀態傷害限制在最大 2.0 點，避免玩家快速大扣血
             var dps = Mathf.Clamp(row.每秒傷害, 0f, 2f);
+            var pic = row.圖片路徑;
 
             for (var i = 0; i < _ailments.Count; i++)
             {
@@ -540,12 +560,12 @@ namespace MonsterHunter.Controllers
 
                 _ailments[i] = new 獵人持續傷害狀態
                 {
-                    異常名稱 = tag, 每秒傷害 = dps, 結束時間 = mergedEnd,
+                    異常名稱 = tag, 每秒傷害 = dps, 結束時間 = mergedEnd, 圖片路徑 = pic
                 };
                 return;
             }
 
-            _ailments.Add(new 獵人持續傷害狀態 { 異常名稱 = tag, 每秒傷害 = dps, 結束時間 = end });
+            _ailments.Add(new 獵人持續傷害狀態 { 異常名稱 = tag, 每秒傷害 = dps, 結束時間 = end, 圖片路徑 = pic });
             Debug.Log($"[Player] 特殊攻擊「{tag}」{row.持續時間秒:F1}s（{dps}/秒 DoT）");
         }
 
@@ -606,6 +626,120 @@ namespace MonsterHunter.Controllers
                     list.Add(_ailments[i].異常名稱);
             }
             return list;
+        }
+
+        public List<獵人持續傷害狀態> GetActiveAilments()
+        {
+            var list = new List<獵人持續傷害狀態>();
+            var now = Time.time;
+            for (var i = 0; i < _ailments.Count; i++)
+            {
+                if (now < _ailments[i].結束時間)
+                    list.Add(_ailments[i]);
+            }
+            return list;
+        }
+
+        // ✦ 新增：動態生成技能衝擊波
+        void SpawnSkillVisualEffect(Vector2 position, float range)
+        {
+            var wave = new GameObject("SkillShockwave");
+            wave.transform.position = position;
+            
+            var sr = wave.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = 2200; // 高於角色和魔物
+            
+            // 動態生成 32x32 的能量圓環 Sprite
+            var tex = new Texture2D(32, 32);
+            for (int y = 0; y < 32; y++)
+            {
+                for (int x = 0; x < 32; x++)
+                {
+                    float dx = x - 15.5f;
+                    float dy = y - 15.5f;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    // 建立一個青藍色發光圓環
+                    if (dist >= 11f && dist <= 15.5f)
+                    {
+                        float alpha = Mathf.Clamp01((15.5f - dist) / 4.5f);
+                        tex.SetPixel(x, y, new Color(0f, 0.95f, 1f, alpha));
+                    }
+                    else if (dist < 11f)
+                    {
+                        float alpha = Mathf.Clamp01(dist / 11f) * 0.28f;
+                        tex.SetPixel(x, y, new Color(0f, 0.8f, 1f, alpha));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            sr.sprite = Sprite.Create(tex, new Rect(0, 0, 32, 32), new Vector2(0.5f, 0.5f));
+            wave.transform.localScale = Vector3.zero;
+
+            StartCoroutine(AnimateSkillWave(wave, sr, range));
+        }
+
+        IEnumerator AnimateSkillWave(GameObject go, SpriteRenderer sr, float targetRange)
+        {
+            float elapsed = 0f;
+            float duration = 0.38f;
+            // 衝擊波大小取決於武器攻擊距離，極具魄力！
+            float finalScaleSize = Mathf.Max(1.5f, targetRange * 1.6f);
+            Vector3 targetScale = new Vector3(finalScaleSize, finalScaleSize, 1f);
+
+            while (elapsed < duration)
+            {
+                if (go == null) yield break;
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                // 緩動展開
+                float tEase = Mathf.Sin(t * Mathf.PI * 0.5f);
+                go.transform.localScale = Vector3.Lerp(Vector3.zero, targetScale, tEase);
+                
+                // 漸變淡出
+                var c = sr.color;
+                c.a = Mathf.Clamp01(1f - t * t);
+                sr.color = c;
+                
+                yield return null;
+            }
+            if (go != null) Destroy(go);
+        }
+
+        IEnumerator AnimatePlayerSkillCast()
+        {
+            var sr = GetComponentInChildren<SpriteRenderer>();
+            var originalColor = sr != null ? sr.color : Color.white;
+            var originalScale = transform.localScale;
+
+            float elapsed = 0f;
+            float duration = 0.32f;
+            var skillColor = new Color(0f, 0.95f, 1f, 1f);
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                if (sr != null)
+                {
+                    // 青藍色耀眼閃光
+                    sr.color = Color.Lerp(skillColor, originalColor, t);
+                }
+                
+                // 帥氣的發招微微擴張震動
+                float scaleMul = 1f + Mathf.Sin(t * Mathf.PI) * 0.22f;
+                transform.localScale = originalScale * scaleMul;
+                
+                yield return null;
+            }
+
+            if (sr != null) sr.color = originalColor;
+            transform.localScale = originalScale;
         }
     }
 }
