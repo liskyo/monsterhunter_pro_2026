@@ -104,6 +104,9 @@ namespace MonsterHunter.UI
                 RefreshWarehouseUi();
             if (keep == _goWorkshop && _workshop != null)
                 _workshop.Show();
+
+            // ✦ 每次切換面板時，全域強制同步右上角的高清金幣顯示
+            RefreshAllZennyDisplays();
         }
 
         void BuildTitle()
@@ -321,19 +324,65 @@ namespace MonsterHunter.UI
             _prepPickPaint = (ledger.PreviewPaintballItemId ?? "").Trim();
             _prepPickTrace = (ledger.PreviewTraceId ?? "").Trim();
 
-            var info = new GameObject("PrepInfo", typeof(RectTransform));
+            // ✦ 玻璃擬態科技感任務目標卡片背景 (Quest Card)
+            var info = new GameObject("PrepInfo", typeof(RectTransform), typeof(Image));
             info.transform.SetParent(body.transform, false);
             var irt = info.GetComponent<RectTransform>();
-            irt.anchorMin = new Vector2(0.06f, 0.72f);
-            irt.anchorMax = new Vector2(0.94f, 0.92f);
+            irt.anchorMin = new Vector2(0.08f, 0.69f);
+            irt.anchorMax = new Vector2(0.92f, 0.91f);
             irt.offsetMin = irt.offsetMax = Vector2.zero;
-            _prepStatus = info.AddComponent<Text>();
+            
+            var cardImg = info.GetComponent<Image>();
+            cardImg.color = new Color(0.1f, 0.12f, 0.16f, 0.9f); // 透黑鋼底色
+            
+            var cardOutl = info.AddComponent<Outline>();
+            cardOutl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.45f); // 黃金外框邊界
+            cardOutl.effectDistance = new Vector2(1.5f, -1.5f);
+            
+            var cardShad = info.AddComponent<Shadow>();
+            cardShad.effectColor = new Color(0f, 0f, 0f, 0.6f);
+            cardShad.effectDistance = new Vector2(3f, -3f);
+
+            var hgCard = info.AddComponent<HorizontalLayoutGroup>();
+            hgCard.padding = new RectOffset(24, 24, 12, 12);
+            hgCard.spacing = 24f;
+            hgCard.childAlignment = TextAnchor.MiddleLeft;
+            hgCard.childControlWidth = true;
+            hgCard.childControlHeight = true;
+            hgCard.childForceExpandWidth = false;
+            hgCard.childForceExpandHeight = false;
+
+            // ✦ 左側魔物高清圓形圖示卡
+            var questIconGo = new GameObject("QuestMonsterIcon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            questIconGo.transform.SetParent(info.transform, false);
+            var qRt = questIconGo.GetComponent<RectTransform>();
+            qRt.sizeDelta = new Vector2(100f, 100f);
+            var qLe = questIconGo.GetComponent<LayoutElement>();
+            qLe.preferredWidth = 100f;
+            qLe.preferredHeight = 100f;
+            var qImg = questIconGo.GetComponent<Image>();
+            qImg.color = Color.white;
+            qImg.preserveAspect = true;
+            
+            var qiOutl = questIconGo.AddComponent<Outline>();
+            qiOutl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.5f);
+            qiOutl.effectDistance = new Vector2(1.2f, -1.2f);
+
+            // ✦ 右側 Rich-Text 文字容器
+            var textGo = new GameObject("Text", typeof(RectTransform), typeof(LayoutElement));
+            textGo.transform.SetParent(info.transform, false);
+            textGo.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            _prepStatus = textGo.AddComponent<Text>();
             _prepStatus.font = _font;
             _prepStatus.fontSize = 22;
-            _prepStatus.color = new Color(1f, 0.92f, 0.7f);
-            _prepStatus.alignment = TextAnchor.UpperLeft;
+            _prepStatus.color = new Color(0.96f, 0.97f, 1f);
+            _prepStatus.alignment = TextAnchor.MiddleLeft;
             _prepStatus.horizontalOverflow = HorizontalWrapMode.Wrap;
             _prepStatus.verticalOverflow = VerticalWrapMode.Overflow;
+
+            var textShad = textGo.AddComponent<Shadow>();
+            textShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            textShad.effectDistance = new Vector2(1.2f, -1.2f);
 
             CreateSectionLabel(body.transform, "持有染色球（點選）", new Vector2(0.04f, 0.58f), new Vector2(0.48f, 0.63f));
             var scrollPaint = CreateScrollAreaAnchored(body.transform, new Vector2(0.04f, 0.12f), new Vector2(0.48f, 0.56f));
@@ -347,8 +396,8 @@ namespace MonsterHunter.UI
             var foot = new GameObject("PrepFoot", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             foot.transform.SetParent(body.transform, false);
             var fr = foot.GetComponent<RectTransform>();
-            fr.anchorMin = new Vector2(0.1f, 0.02f);
-            fr.anchorMax = new Vector2(0.9f, 0.1f);
+            fr.anchorMin = new Vector2(0.15f, 0.02f);
+            fr.anchorMax = new Vector2(0.85f, 0.1f);
             fr.offsetMin = fr.offsetMax = Vector2.zero;
             var hg = foot.GetComponent<HorizontalLayoutGroup>();
             hg.spacing = 20f;
@@ -356,28 +405,20 @@ namespace MonsterHunter.UI
             hg.childForceExpandHeight = true;
             hg.childForceExpandWidth = true;
 
-            CreateMhSecondaryButton(foot.transform, "套用選擇", () =>
-            {
-                var led = LocalHunterLedger.LoadOrCreate();
-                led.PreviewPaintballItemId = _prepPickPaint ?? "";
-                led.PreviewTraceId = _prepPickTrace ?? "";
-                led.Save();
-                RefreshBattlePrepUi();
-            }, anchored: Vector2.zero, size: new Vector2(240f, 64f), flexible: true);
-
-            CreateMhPrimaryButton(foot.transform, "整備完成・出發討伐", Vector2.zero, new Vector2(340f, 72f), () =>
+            // ✦ 刪除過時的「套用選擇」，僅提供最霸氣的「出發討伐」按鈕
+            CreateMhPrimaryButton(foot.transform, "整備完成・出發討伐", Vector2.zero, new Vector2(500f, 76f), () =>
             {
                 var led = LocalHunterLedger.LoadOrCreate();
                 if (!VillageBattlePrepRules.TryValidate(led, out var err))
                 {
-                    _prepStatus.text = err;
+                    RefreshBattlePrepUi(); // 強制刷新顯示阻擋資訊
                     return;
                 }
 
                 var q = VillageBattlePrepRules.FindQuestRow(led.ActiveQuestId.Trim());
                 HuntSessionContext.PendingQuest = q;
                 SceneManager.LoadScene(string.IsNullOrWhiteSpace(_battleSceneName) ? "Bootstrap" : _battleSceneName.Trim());
-            }, fillLayout: true);
+            }, fillLayout: true, overrideFontSize: 32);
 
             _goBattlePrep.SetActive(false);
         }
@@ -385,17 +426,69 @@ namespace MonsterHunter.UI
         internal void RefreshBattlePrepUi()
         {
             if (_prepStatus == null) return;
-            var led = LocalHunterLedger.LoadOrCreate();
-            _prepPickPaint = (led.PreviewPaintballItemId ?? "").Trim();
-            _prepPickTrace = (led.PreviewTraceId ?? "").Trim();
-            var q = VillageBattlePrepRules.FindQuestRow(led.ActiveQuestId);
-            var qline = q != null
-                ? $"進行中任務：{q.標題}（{led.ActiveQuestId}）"
-                : "尚未承接任務";
-            var paintLine = string.IsNullOrEmpty(_prepPickPaint) ? "染色球：（未選）" : $"染色球：{_prepPickPaint}";
-            var traceLine = string.IsNullOrEmpty(_prepPickTrace) ? "痕跡：（未選）" : $"痕跡：{_prepPickTrace}";
-            _prepStatus.text =
-                $"{qline}\n{paintLine}　｜　{traceLine}\n（痕跡星級須落在染色球吸引範圍內，且痕跡魔物須為任務目標。）";
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            _prepPickPaint = (ledger.PreviewPaintballItemId ?? "").Trim();
+            _prepPickTrace = (ledger.PreviewTraceId ?? "").Trim();
+            
+            var q = VillageBattlePrepRules.FindQuestRow(ledger.ActiveQuestId);
+            
+            // ✦ 1. 動態更新頂部魔物大頭貼
+            var qImg = _prepStatus.transform.parent.Find("QuestMonsterIcon")?.GetComponent<Image>();
+            if (qImg != null)
+            {
+                if (q != null && q.目標魔物 != null && q.目標魔物.Length > 0 && q.目標魔物[0] != null)
+                {
+                    var mid = (q.目標魔物[0].魔物編號 ?? "").Trim();
+                    var sp = SafeSpriteLoader.TryLoadSprite("Textures/Monsters/" + mid);
+                    qImg.sprite = sp ?? PlaceholderSpriteFactory.GetSharedPlaceholder();
+                    qImg.gameObject.SetActive(true);
+                }
+                else
+                {
+                    qImg.gameObject.SetActive(false);
+                }
+            }
+
+            // ✦ 2. 高階反應式 Rich-Text 文字更新
+            var targetMonsterName = "";
+            var questStar = 1;
+            if (q != null)
+            {
+                questStar = q.星級;
+                if (q.目標魔物 != null && q.目標魔物.Length > 0 && q.目標魔物[0] != null)
+                    targetMonsterName = q.目標魔物[0].魔物名稱 ?? q.目標魔物[0].魔物編號;
+            }
+
+            var pbName = "未選擇";
+            if (!string.IsNullOrEmpty(_prepPickPaint))
+            {
+                var rows = PaintPickHolder.LoadPaintRows();
+                var match = rows.FirstOrDefault(r => r != null && r.道具編號 == _prepPickPaint);
+                if (match != null) pbName = $"{match.名稱} ({match.吸引星級_最低}~{match.吸引星級_最高}★)";
+            }
+
+            var trName = "未選擇";
+            if (!string.IsNullOrEmpty(_prepPickTrace))
+            {
+                var rows = TracePickHolder.LoadTraceRows();
+                var match = rows.FirstOrDefault(r => r != null && r.痕跡編號 == _prepPickTrace);
+                if (match != null) trName = $"{match.名稱} (★{match.魔物星級})";
+            }
+
+            var qName = q != null ? q.標題 : "尚未承接任務";
+            var validationError = "";
+            var isValid = VillageBattlePrepRules.TryValidate(ledger, out validationError);
+
+            var statusHint = isValid
+                ? "<color=#27AE60><b>✔ 討伐準備就緒！點擊下方按鈕出發</b></color>"
+                : $"<color=#EB5757><b>⚠ 整備條件未滿足：{validationError}</b></color>";
+
+            _prepStatus.text = q != null
+                ? $"<b>進行中任務：</b><color=#F2C94C>★{questStar} {qName}</color>\n" +
+                  $"<b>已選染色球：</b><color=#56CCF2>{pbName}</color>　｜　" +
+                  $"<b>已選魔物痕跡：</b><color=#BB6BD9>{trName}</color>\n" +
+                  $"{statusHint}"
+                : $"<b>進行中任務：</b><color=#EB5757>尚未承接任務，請先前往任務板接取！</color>";
 
             PaintPickHolder.Refresh(_goBattlePrep);
             TracePickHolder.Refresh(_goBattlePrep);
@@ -404,12 +497,18 @@ namespace MonsterHunter.UI
         internal void SetPrepPaint(string id)
         {
             _prepPickPaint = id ?? "";
+            var led = LocalHunterLedger.LoadOrCreate();
+            led.PreviewPaintballItemId = _prepPickPaint;
+            led.Save();
             RefreshBattlePrepUi();
         }
 
         internal void SetPrepTrace(string id)
         {
             _prepPickTrace = id ?? "";
+            var led = LocalHunterLedger.LoadOrCreate();
+            led.PreviewTraceId = _prepPickTrace;
+            led.Save();
             RefreshBattlePrepUi();
         }
 
@@ -419,22 +518,14 @@ namespace MonsterHunter.UI
 
         GameObject CreateFullScreenPanel(string name, string bgPath, out RectTransform contentArea)
         {
-            var go = new GameObject(name, typeof(RectTransform));
+            var go = new GameObject(name, typeof(RectTransform), typeof(Image));
             go.transform.SetParent(transform, false);
-            StretchFull(go.GetComponent<RectTransform>());
-
-            var bgGo = new GameObject("Bg", typeof(RectTransform), typeof(Image));
-            bgGo.transform.SetParent(go.transform, false);
-            StretchFull(bgGo.GetComponent<RectTransform>());
-            var img = bgGo.GetComponent<Image>();
+            var rt = go.GetComponent<RectTransform>();
+            StretchFull(rt);
+            var img = go.GetComponent<Image>();
             img.sprite = SafeSpriteLoader.TryLoadSprite(bgPath);
-            img.type = Image.Type.Simple;
-            img.color = img.sprite != null ? Color.white : new Color(0.04f, 0.05f, 0.08f, 1f);
-
-            var dim = new GameObject("Dim", typeof(RectTransform), typeof(Image));
-            dim.transform.SetParent(go.transform, false);
-            StretchFull(dim.GetComponent<RectTransform>());
-            dim.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.2f);
+            img.color = Color.white;
+            img.raycastTarget = true;
 
             var content = new GameObject("Content", typeof(RectTransform));
             content.transform.SetParent(go.transform, false);
@@ -446,7 +537,7 @@ namespace MonsterHunter.UI
 
         void AddHubHeader(Transform parent, string title, Action onBack)
         {
-            var bar = new GameObject("TopBar", typeof(RectTransform));
+            var bar = new GameObject("TopBar", typeof(RectTransform), typeof(Image));
             bar.transform.SetParent(parent, false);
             var br = bar.GetComponent<RectTransform>();
             br.anchorMin = new Vector2(0f, 1f);
@@ -454,7 +545,7 @@ namespace MonsterHunter.UI
             br.pivot = new Vector2(0.5f, 1f);
             br.offsetMin = new Vector2(0f, -110f);
             br.offsetMax = new Vector2(0f, 0f);
-            bar.AddComponent<Image>().color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // MHN 招牌深灰色頂部
+            bar.GetComponent<Image>().color = new Color(0.12f, 0.13f, 0.16f, 0.95f);
 
             var titleGo = new GameObject("Title", typeof(RectTransform));
             titleGo.transform.SetParent(bar.transform, false);
@@ -462,10 +553,39 @@ namespace MonsterHunter.UI
             trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0.5f);
             trt.sizeDelta = new Vector2(800f, 64f);
             var tt = titleGo.AddComponent<Text>();
-            SetSharpText(tt, title, 48, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold); // 48 超級高清！
+            SetSharpText(tt, title, 48, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
 
             CreateMhSecondaryButton(bar.transform, "← 村莊", () => onBack?.Invoke(),
                 anchored: new Vector2(-430f, 0f), size: new Vector2(200f, 56f));
+
+            var zennyGo = new GameObject("ZennyText", typeof(RectTransform));
+            zennyGo.transform.SetParent(bar.transform, false);
+            var zrt = zennyGo.GetComponent<RectTransform>();
+            zrt.anchorMin = zrt.anchorMax = new Vector2(1f, 0.5f);
+            zrt.pivot = new Vector2(1f, 0.5f);
+            zrt.anchoredPosition = new Vector2(-28f, 0f);
+            zrt.sizeDelta = new Vector2(300f, 64f);
+            var zt = zennyGo.AddComponent<Text>();
+            
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            SetSharpText(zt, $"金幣: <color=#F2C94C>{ledger.Zenny} z</color>", 32, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleRight, FontStyle.Bold);
+            
+            var textShad = zennyGo.AddComponent<Shadow>();
+            textShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            textShad.effectDistance = new Vector2(1.2f, -1.2f);
+        }
+
+        public void RefreshAllZennyDisplays()
+        {
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            var zTexts = FindObjectsByType<Text>();
+            foreach (var zt in zTexts)
+            {
+                if (zt != null && zt.gameObject.name == "ZennyText")
+                {
+                    zt.text = $"金幣: <color=#F2C94C>{ledger.Zenny} z</color>";
+                }
+            }
         }
 
         void CreateSectionLabel(Transform parent, string msg, Vector2 anchorMin, Vector2 anchorMax)
@@ -768,12 +888,54 @@ namespace MonsterHunter.UI
                 var go = new GameObject(row.料理編號, typeof(RectTransform), typeof(Image),
                     typeof(HorizontalLayoutGroup));
                 go.transform.SetParent(list, false);
-                go.GetComponent<Image>().color = new Color(0.1f, 0.11f, 0.14f, 0.92f);
+                
+                // ✦ 貓飯卡片背景：黑鋼底色、細緻白銀外框與立體投影
+                var img = go.GetComponent<Image>();
+                img.color = new Color(0.12f, 0.13f, 0.16f, 0.95f);
+                
+                var outl = go.AddComponent<Outline>();
+                outl.effectColor = new Color(1f, 1f, 1f, 0.15f);
+                outl.effectDistance = new Vector2(1.2f, -1.2f);
+                
+                var shad = go.AddComponent<Shadow>();
+                shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+                shad.effectDistance = new Vector2(2f, -2f);
+
                 var h = go.GetComponent<HorizontalLayoutGroup>();
-                h.padding = new RectOffset(12, 12, 10, 10);
-                h.spacing = 12f;
+                h.padding = new RectOffset(16, 16, 10, 10);
+                h.spacing = 16f;
+                h.childAlignment = TextAnchor.MiddleLeft;
+                
+                // ✦ 核心排版控制：依據子物件 Layout 屬性計算，且不強行拉伸
+                h.childControlWidth = true;
+                h.childControlHeight = true;
+                h.childForceExpandWidth = false;
+                h.childForceExpandHeight = false;
+
                 go.AddComponent<LayoutElement>().minHeight = 96f;
 
+                // ✦ 1. 貓飯圖片 (解決 icon 沒出現問題)
+                var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                iconGo.transform.SetParent(go.transform, false);
+                var iconRt = iconGo.GetComponent<RectTransform>();
+                iconRt.sizeDelta = new Vector2(68f, 68f);
+                
+                var iconLe = iconGo.GetComponent<LayoutElement>();
+                iconLe.preferredWidth = 68f;
+                iconLe.preferredHeight = 68f;
+                
+                var iconImg = iconGo.GetComponent<Image>();
+                var path = string.IsNullOrWhiteSpace(row.圖片路徑) ? $"Assets/Textures/Canteen/{row.料理編號}.png" : row.圖片路徑.Trim();
+                var sp = SafeSpriteLoader.TryLoadSprite(path);
+                iconImg.sprite = sp ?? PlaceholderSpriteFactory.GetSharedPlaceholder();
+                iconImg.color = Color.white;
+                iconImg.preserveAspect = true; // 鎖定比例，防止圖片壓扁
+
+                var iconOutl = iconGo.AddComponent<Outline>();
+                iconOutl.effectColor = new Color(0.85f, 0.65f, 0.3f, 0.4f);
+                iconOutl.effectDistance = new Vector2(1f, -1f);
+
+                // ✦ 2. 貓飯料理名稱與花費
                 var tgo = new GameObject("Tx", typeof(RectTransform));
                 tgo.transform.SetParent(go.transform, false);
                 tgo.AddComponent<LayoutElement>().flexibleWidth = 1f;
@@ -786,10 +948,26 @@ namespace MonsterHunter.UI
                 textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
                 textShad.effectDistance = new Vector2(1.2f, -1.2f);
 
-                var btnGo = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button));
+                // ✦ 3. 購買按鈕 (解決按鈕被壓扁擠歪的排版問題)
+                var btnGo = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
                 btnGo.transform.SetParent(go.transform, false);
+                
+                var btnLe = btnGo.GetComponent<LayoutElement>();
+                btnLe.preferredWidth = 160f; // 強制固定購買按鈕寬度
+                btnLe.preferredHeight = 56f;
                 btnGo.GetComponent<RectTransform>().sizeDelta = new Vector2(160f, 56f);
-                btnGo.GetComponent<Image>().color = new Color(0.55f, 0.32f, 0.1f, 1f);
+                
+                var btnImg = btnGo.GetComponent<Image>();
+                btnImg.color = new Color(0.12f, 0.48f, 0.85f, 0.95f); // 奢華寶藍底色
+                
+                var btnOutl = btnGo.AddComponent<Outline>();
+                btnOutl.effectColor = new Color(0.5f, 0.78f, 1f, 0.8f); // 亮藍霓虹外邊框
+                btnOutl.effectDistance = new Vector2(1.5f, -1.5f);
+                
+                var btnShad = btnGo.AddComponent<Shadow>();
+                btnShad.effectColor = new Color(0f, 0f, 0f, 0.5f);
+                btnShad.effectDistance = new Vector2(2f, -2f);
+
                 var btn = btnGo.GetComponent<Button>();
                 btn.onClick.AddListener(() =>
                 {
@@ -800,7 +978,11 @@ namespace MonsterHunter.UI
                     }
 
                     var flow = FindAnyObjectByType<VillageGameFlow>();
-                    if (flow != null) flow.RefreshCanteenStatus();
+                    if (flow != null)
+                    {
+                        flow.RefreshCanteenStatus();
+                        flow.RefreshAllZennyDisplays(); // ✦ 即時刷新金幣顯示！
+                    }
                 });
                 var bt = new GameObject("L", typeof(RectTransform));
                 bt.transform.SetParent(btnGo.transform, false);
@@ -1061,25 +1243,102 @@ namespace MonsterHunter.UI
                 var ledger = LocalHunterLedger.LoadOrCreate();
                 var pick = Holder.GetPrepPickPaint();
                 var rows = LoadPaintRows();
+
+                // ✦ 智慧適應排序：如果當前任務的星級落在染色球吸引星級內，優先排在最頂端
+                var activeQuest = VillageBattlePrepRules.FindQuestRow(ledger.ActiveQuestId);
+                var questStar = activeQuest != null ? activeQuest.星級 : 1;
+                var sortedRows = rows.Where(r => r != null && ledger.GetWarehouseQuantity(r.道具編號) > 0)
+                    .OrderByDescending(r =>
+                    {
+                        return (questStar >= r.吸引星級_最低 && questStar <= r.吸引星級_最高);
+                    })
+                    .ThenBy(r => r.道具編號)
+                    .ToList();
+
                 var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                foreach (var r in rows)
+                foreach (var r in sortedRows)
                 {
-                    if (r == null) continue;
-                    if (ledger.GetWarehouseQuantity(r.道具編號) <= 0) continue;
                     var id = r.道具編號;
-                    var go = new GameObject(id, typeof(RectTransform), typeof(Image), typeof(Button));
+                    // ✦ 改為帶有水平佈局的卡片
+                    var go = new GameObject(id, typeof(RectTransform), typeof(Image), typeof(Button), typeof(HorizontalLayoutGroup));
                     go.transform.SetParent(content, false);
-                    go.GetComponent<Image>().color = pick == id
-                        ? new Color(0.35f, 0.42f, 0.55f, 1f)
-                        : new Color(0.12f, 0.13f, 0.16f, 1f);
-                    go.AddComponent<LayoutElement>().minHeight = 64f;
+
+                    var isPick = (pick == id);
+                    var matchesQuest = (questStar >= r.吸引星級_最低 && questStar <= r.吸引星級_最高);
+
+                    var goImg = go.GetComponent<Image>();
+                    goImg.color = isPick
+                        ? new Color(0.08f, 0.28f, 0.52f, 0.95f) // 亮藍選定底色
+                        : (matchesQuest 
+                            ? new Color(0.15f, 0.16f, 0.2f, 0.95f) // 推薦底色
+                            : new Color(0.1f, 0.11f, 0.13f, 0.85f)); // 正常底色
+
+                    // ✦ 炫酷霓虹邊框
+                    if (isPick)
+                    {
+                        var outl = go.AddComponent<Outline>();
+                        outl.effectColor = new Color(0.15f, 0.75f, 1f, 0.95f); // 亮藍霓虹邊框
+                        outl.effectDistance = new Vector2(1.5f, -1.5f);
+                    }
+                    else if (matchesQuest)
+                    {
+                        var outl = go.AddComponent<Outline>();
+                        outl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.6f); // 黃金推薦框
+                        outl.effectDistance = new Vector2(1.2f, -1.2f);
+                    }
+                    else
+                    {
+                        var outl = go.AddComponent<Outline>();
+                        outl.effectColor = new Color(1f, 1f, 1f, 0.08f); // 極細暗白邊
+                        outl.effectDistance = new Vector2(1f, -1f);
+                    }
+
+                    var shad = go.AddComponent<Shadow>();
+                    shad.effectColor = new Color(0f, 0f, 0f, 0.5f);
+                    shad.effectDistance = new Vector2(2f, -2f);
+
+                    var hg = go.GetComponent<HorizontalLayoutGroup>();
+                    hg.padding = new RectOffset(16, 16, 8, 8);
+                    hg.spacing = 16f;
+                    hg.childAlignment = TextAnchor.MiddleLeft;
+                    hg.childControlWidth = true;
+                    hg.childControlHeight = true;
+                    hg.childForceExpandWidth = false;
+                    hg.childForceExpandHeight = false;
+
+                    go.AddComponent<LayoutElement>().minHeight = 86f;
                     go.GetComponent<Button>().onClick.AddListener(() => Holder.SetPrepPaint(id));
-                    PickRowText(go.transform, font,
-                        $"{r.名稱}　吸引 {r.吸引星級_最低}～{r.吸引星級_最高} 星　持有×{ledger.GetWarehouseQuantity(id)}");
+
+                    // ✦ 1. 染色球左側精緻 Icon
+                    var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                    iconGo.transform.SetParent(go.transform, false);
+                    var iconRt = iconGo.GetComponent<RectTransform>();
+                    iconRt.sizeDelta = new Vector2(56f, 56f);
+                    var iconLe = iconGo.GetComponent<LayoutElement>();
+                    iconLe.preferredWidth = 56f;
+                    iconLe.preferredHeight = 56f;
+                    var iconImg = iconGo.GetComponent<Image>();
+                    iconImg.sprite = SafeSpriteLoader.TryLoadSprite("Textures/Items/" + r.道具編號) ?? PlaceholderSpriteFactory.GetSharedPlaceholder();
+                    iconImg.color = Color.white;
+                    iconImg.preserveAspect = true;
+                    iconGo.AddComponent<Outline>().effectColor = new Color(1f, 1f, 1f, 0.15f);
+
+                    // ✦ 2. 右側文字 Rich-Text
+                    var tgo = new GameObject("TextContainer", typeof(RectTransform), typeof(LayoutElement));
+                    tgo.transform.SetParent(go.transform, false);
+                    tgo.GetComponent<LayoutElement>().flexibleWidth = 1f;
+                    var tx = tgo.AddComponent<Text>();
+                    
+                    var prefix = matchesQuest ? "<color=#27AE60>[推薦]</color> " : "";
+                    SetSharpText(tx, $"<b>{prefix}{r.名稱}</b>\n<size=20>吸引：{r.吸引星級_最低}～{r.吸引星級_最高} ★　持有×{ledger.GetWarehouseQuantity(id)}</size>", 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                    
+                    var tShad = tgo.AddComponent<Shadow>();
+                    tShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+                    tShad.effectDistance = new Vector2(1f, -1f);
                 }
             }
 
-            static 染色球資料列[] LoadPaintRows()
+            public static 染色球資料列[] LoadPaintRows()
             {
                 if (!DesignDataReader.TryLoadDesignDataText(out var j, "04_Items", "paintballs.json"))
                     return Array.Empty<染色球資料列>();
@@ -1091,18 +1350,6 @@ namespace MonsterHunter.UI
                 {
                     return Array.Empty<染色球資料列>();
                 }
-            }
-
-            static void PickRowText(Transform p, Font font, string s)
-            {
-                var t = new GameObject("t", typeof(RectTransform));
-                t.transform.SetParent(p, false);
-                StretchFull(t.GetComponent<RectTransform>());
-                var tx = t.AddComponent<Text>();
-                SetSharpText(tx, s, 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
-                var textShad = t.AddComponent<Shadow>();
-                textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
-                textShad.effectDistance = new Vector2(1.2f, -1.2f);
             }
         }
 
@@ -1127,47 +1374,118 @@ namespace MonsterHunter.UI
 
                 var ledger = LocalHunterLedger.LoadOrCreate();
                 var pick = Holder.GetPrepPickTrace();
-                魔物痕跡資料列[] rows;
-                if (!DesignDataReader.TryLoadDesignDataText(out var j, "04_Items", "monster_traces.json"))
-                    rows = Array.Empty<魔物痕跡資料列>();
-                else
-                    try
+                var rows = LoadTraceRows();
+
+                // ✦ 智慧適應排序：如果該痕跡對應的魔物在當前任務目標清單中，優先排在最頂端（第一項）
+                var activeQuest = VillageBattlePrepRules.FindQuestRow(ledger.ActiveQuestId);
+                var sortedRows = rows.Where(r => r != null && ledger.GetWarehouseQuantity(r.痕跡編號) > 0)
+                    .OrderByDescending(r =>
                     {
-                        rows = JsonConvert.DeserializeObject<魔物痕跡資料列[]>(j) ?? Array.Empty<魔物痕跡資料列>();
-                    }
-                    catch
-                    {
-                        rows = Array.Empty<魔物痕跡資料列>();
-                    }
+                        if (activeQuest == null || activeQuest.目標魔物 == null) return false;
+                        return activeQuest.目標魔物.Any(t => t != null && (t.魔物編號 ?? "").Trim() == (r.對應魔物編號 ?? "").Trim());
+                    })
+                    .ThenBy(r => r.痕跡編號)
+                    .ToList();
 
                 var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-                foreach (var r in rows)
+                foreach (var r in sortedRows)
                 {
-                    if (r == null) continue;
-                    if (ledger.GetWarehouseQuantity(r.痕跡編號) <= 0) continue;
                     var id = r.痕跡編號;
-                    var go = new GameObject(id, typeof(RectTransform), typeof(Image), typeof(Button));
+                    // ✦ 改為帶有水平佈局的卡片
+                    var go = new GameObject(id, typeof(RectTransform), typeof(Image), typeof(Button), typeof(HorizontalLayoutGroup));
                     go.transform.SetParent(content, false);
-                    go.GetComponent<Image>().color = pick == id
-                        ? new Color(0.35f, 0.42f, 0.55f, 1f)
-                        : new Color(0.12f, 0.13f, 0.16f, 1f);
-                    go.AddComponent<LayoutElement>().minHeight = 64f;
+
+                    var isPick = (pick == id);
+                    var matchesQuest = activeQuest != null && activeQuest.目標魔物 != null &&
+                                       activeQuest.目標魔物.Any(t => t != null && (t.魔物編號 ?? "").Trim() == (r.對應魔物編號 ?? "").Trim());
+
+                    var goImg = go.GetComponent<Image>();
+                    goImg.color = isPick
+                        ? new Color(0.08f, 0.28f, 0.52f, 0.95f) // 亮藍選定底色
+                        : (matchesQuest 
+                            ? new Color(0.15f, 0.16f, 0.2f, 0.95f) // 推薦底色
+                            : new Color(0.1f, 0.11f, 0.13f, 0.85f)); // 正常底色
+
+                    // ✦ 炫酷霓霓虹邊框
+                    if (isPick)
+                    {
+                        var outl = go.AddComponent<Outline>();
+                        outl.effectColor = new Color(0.15f, 0.75f, 1f, 0.95f); // 亮藍高光邊框
+                        outl.effectDistance = new Vector2(1.5f, -1.5f);
+                    }
+                    else if (matchesQuest)
+                    {
+                        var outl = go.AddComponent<Outline>();
+                        outl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.6f); // 黃金推薦邊框
+                        outl.effectDistance = new Vector2(1.2f, -1.2f);
+                    }
+                    else
+                    {
+                        var outl = go.AddComponent<Outline>();
+                        outl.effectColor = new Color(1f, 1f, 1f, 0.08f); // 極細暗白邊
+                        outl.effectDistance = new Vector2(1f, -1f);
+                    }
+
+                    var shad = go.AddComponent<Shadow>();
+                    shad.effectColor = new Color(0f, 0f, 0f, 0.5f);
+                    shad.effectDistance = new Vector2(2f, -2f);
+
+                    var hg = go.GetComponent<HorizontalLayoutGroup>();
+                    hg.padding = new RectOffset(16, 16, 8, 8);
+                    hg.spacing = 16f;
+                    hg.childAlignment = TextAnchor.MiddleLeft;
+                    hg.childControlWidth = true;
+                    hg.childControlHeight = true;
+                    hg.childForceExpandWidth = false;
+                    hg.childForceExpandHeight = false;
+
+                    go.AddComponent<LayoutElement>().minHeight = 86f;
                     go.GetComponent<Button>().onClick.AddListener(() => Holder.SetPrepTrace(id));
-                    PickRowText(go.transform, font,
-                        $"{r.名稱}　星級 {r.魔物星級}　對應 {r.對應魔物編號}　×{ledger.GetWarehouseQuantity(id)}");
+
+                    // ✦ 1. 痕跡左側直接載入該魔物的超高清圓頭像！
+                    var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+                    iconGo.transform.SetParent(go.transform, false);
+                    var iconRt = iconGo.GetComponent<RectTransform>();
+                    iconRt.sizeDelta = new Vector2(56f, 56f);
+                    var iconLe = iconGo.GetComponent<LayoutElement>();
+                    iconLe.preferredWidth = 56f;
+                    iconLe.preferredHeight = 56f;
+                    var iconImg = iconGo.GetComponent<Image>();
+                    iconImg.sprite = SafeSpriteLoader.TryLoadSprite("Textures/Monsters/" + r.對應魔物編號) ?? PlaceholderSpriteFactory.GetSharedPlaceholder();
+                    iconImg.color = Color.white;
+                    iconImg.preserveAspect = true;
+
+                    var icoOutl = iconGo.AddComponent<Outline>();
+                    icoOutl.effectColor = matchesQuest ? new Color(0.85f, 0.65f, 0.2f, 0.5f) : new Color(1f, 1f, 1f, 0.15f);
+                    icoOutl.effectDistance = new Vector2(1.2f, -1.2f);
+
+                    // ✦ 2. 右側文字 Rich-Text
+                    var tgo = new GameObject("TextContainer", typeof(RectTransform), typeof(LayoutElement));
+                    tgo.transform.SetParent(go.transform, false);
+                    tgo.GetComponent<LayoutElement>().flexibleWidth = 1f;
+                    var tx = tgo.AddComponent<Text>();
+
+                    var prefix = matchesQuest ? "<color=#E2B93C>[任務目標]</color> " : "";
+                    SetSharpText(tx, $"<b>{prefix}{r.名稱}</b>\n<size=20>星級：{r.魔物星級}★　魔物：{r.對應魔物編號}　持有×{ledger.GetWarehouseQuantity(id)}</size>", 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+
+                    var tShad = tgo.AddComponent<Shadow>();
+                    tShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+                    tShad.effectDistance = new Vector2(1f, -1f);
                 }
             }
 
-            static void PickRowText(Transform p, Font font, string s)
+            public static 魔物痕跡資料列[] LoadTraceRows()
             {
-                var t = new GameObject("t", typeof(RectTransform));
-                t.transform.SetParent(p, false);
-                StretchFull(t.GetComponent<RectTransform>());
-                var tx = t.AddComponent<Text>();
-                SetSharpText(tx, s, 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
-                var textShad = t.AddComponent<Shadow>();
-                textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
-                textShad.effectDistance = new Vector2(1.2f, -1.2f);
+                if (!DesignDataReader.TryLoadDesignDataText(out var j, "04_Items", "monster_traces.json"))
+                    return Array.Empty<魔物痕跡資料列>();
+                try
+                {
+                    return JsonConvert.DeserializeObject<魔物痕跡資料列[]>(j) ?? Array.Empty<魔物痕跡資料列>();
+                }
+                catch
+                {
+                    return Array.Empty<魔物痕跡資料列>();
+                }
             }
         }
 

@@ -1,3 +1,5 @@
+#pragma warning disable 0414 // 關閉欄位已指派但從未使用警告以保持 Prefab 序列化相容
+
 using UnityEngine;
 
 namespace MonsterHunter.UI

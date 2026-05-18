@@ -79,6 +79,23 @@ namespace MonsterHunter.UI
             var title = titleGo.AddComponent<Text>();
             VillageGameFlow.SetSharpText(title, "裝備與技能", 36, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
 
+            // ✦ 頂部右側生成金幣顯示欄 (獵人預設值要有貨幣 99999 並顯示於各分頁)
+            var zennyGo = new GameObject("ZennyText", typeof(RectTransform));
+            zennyGo.transform.SetParent(header.transform, false);
+            var zrt = zennyGo.GetComponent<RectTransform>();
+            zrt.anchorMin = zrt.anchorMax = new Vector2(1f, 0.5f);
+            zrt.pivot = new Vector2(1f, 0.5f);
+            zrt.anchoredPosition = new Vector2(-28f, 0f);
+            zrt.sizeDelta = new Vector2(300f, 64f);
+            var zt = zennyGo.AddComponent<Text>();
+            
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            VillageGameFlow.SetSharpText(zt, $"金幣: <color=#F2C94C>{ledger.Zenny} z</color>", 32, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleRight, FontStyle.Bold);
+            
+            var textShad = zennyGo.AddComponent<Shadow>();
+            textShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            textShad.effectDistance = new Vector2(1.2f, -1.2f);
+
             var closeBtn = CreateHeaderButton(header.transform, "返回村莊",
                 new Vector2(0f, -90f), new Vector2(260f, 54f), () =>
                 {
@@ -183,6 +200,18 @@ namespace MonsterHunter.UI
                 Destroy(_skillsContent.GetChild(i).gameObject);
 
             var ledger = LocalHunterLedger.LoadOrCreate();
+            
+            // ✦ 重新載入金幣顯示，以防在其他分頁消費後，回到此處沒更新
+            var zennyGo = transform.Find("Header/ZennyText");
+            if (zennyGo != null)
+            {
+                var zt = zennyGo.GetComponent<Text>();
+                if (zt != null)
+                {
+                    zt.text = $"金幣: <color=#F2C94C>{ledger.Zenny} z</color>";
+                }
+            }
+
             ledger.NormalizeEquippedArmorSlots();
 
             var wId = string.IsNullOrWhiteSpace(ledger.EquippedWeaponEquipmentId)

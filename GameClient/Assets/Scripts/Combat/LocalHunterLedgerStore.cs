@@ -15,7 +15,7 @@ namespace MonsterHunter.Combat
     public sealed class LocalHunterLedger
     {
         /// <summary>本機試玩用金幣（未登入 Supabase 時與商店／結算共用）。</summary>
-        public long Zenny = 20000;
+        public long Zenny = 99999;
 
         public string PreviewPaintballItemId = "";
         public string PreviewTraceId = "";
@@ -55,26 +55,14 @@ namespace MonsterHunter.Combat
 
         public static LocalHunterLedger LoadOrCreate()
         {
+            LocalHunterLedger dto = null;
             try
             {
                 var p = FilePath;
                 if (File.Exists(p))
                 {
                     var txt = File.ReadAllText(p);
-                    var dto = JsonConvert.DeserializeObject<LocalHunterLedger>(txt);
-                    if (dto != null)
-                    {
-                        dto.Warehouse ??= new Dictionary<string, int>(StringComparer.Ordinal);
-                        dto.EquipmentLevels ??= new Dictionary<string, int>(StringComparer.Ordinal);
-                        if (dto.Zenny <= 0 &&
-                            (dto.Warehouse == null || dto.Warehouse.Count == 0) &&
-                            string.IsNullOrEmpty(dto.PreviewPaintballItemId) &&
-                            string.IsNullOrEmpty(dto.PreviewTraceId))
-                            dto.Zenny = 20000;
-                        dto.NormalizeEquippedArmorSlots();
-                        dto.NormalizeQuestTrackingFields();
-                        return dto;
-                    }
+                    dto = JsonConvert.DeserializeObject<LocalHunterLedger>(txt);
                 }
             }
             catch (Exception e)
@@ -82,7 +70,100 @@ namespace MonsterHunter.Combat
                 Debug.LogWarning("[LocalHunterLedger] 讀取失敗：" + e.Message);
             }
 
-            return new LocalHunterLedger();
+            if (dto == null)
+            {
+                dto = new LocalHunterLedger();
+            }
+
+            dto.Warehouse ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            dto.EquipmentLevels ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            
+            // ✦ 測試環境：保證金幣至少為 99999，讓玩家永遠免於金幣不足
+            if (dto.Zenny < 99999)
+            {
+                dto.Zenny = 99999;
+            }
+
+            dto.NormalizeEquippedArmorSlots();
+            dto.NormalizeQuestTrackingFields();
+            dto.InjectFreeTestItems(); // ✦ 自動贈送/補滿測試道具
+            return dto;
+        }
+
+        /// <summary>
+        /// 自動補發測試用染色球與魔物痕跡（每個種類各 10 個），方便戰鬥整備測試。
+        /// </summary>
+        public void InjectFreeTestItems()
+        {
+            Warehouse ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            bool modified = false;
+
+            // 1. 贈送染色球：使用通用 dynamic/dictionary 解析以 100% 預防任何 schema 類型拋錯
+            if (MonsterHunter.Data.DesignDataReader.TryLoadDesignDataText(out var pj, "04_Items", "paintballs.json"))
+            {
+                try
+                {
+                    var rows = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(pj);
+                    if (rows != null)
+                    {
+                        foreach (var r in rows)
+                        {
+                            if (r != null && r.TryGetValue("道具編號", out var valObj) && valObj != null)
+                            {
+                                var id = valObj.ToString().Trim();
+                                if (!string.IsNullOrEmpty(id))
+                                {
+                                    if (!Warehouse.TryGetValue(id, out var qty) || qty < 10)
+                                    {
+                                        Warehouse[id] = 10;
+                                        modified = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[LocalHunterLedger] 解析 paintballs.json 失敗：" + ex.Message);
+                }
+            }
+
+            // 2. 贈送魔物痕跡：使用通用 dynamic/dictionary 解析以 100% 預防任何 schema 類型拋錯
+            if (MonsterHunter.Data.DesignDataReader.TryLoadDesignDataText(out var tj, "04_Items", "monster_traces.json"))
+            {
+                try
+                {
+                    var rows = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(tj);
+                    if (rows != null)
+                    {
+                        foreach (var r in rows)
+                        {
+                            if (r != null && r.TryGetValue("痕跡編號", out var valObj) && valObj != null)
+                            {
+                                var id = valObj.ToString().Trim();
+                                if (!string.IsNullOrEmpty(id))
+                                {
+                                    if (!Warehouse.TryGetValue(id, out var qty) || qty < 10)
+                                    {
+                                        Warehouse[id] = 10;
+                                        modified = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning("[LocalHunterLedger] 解析 monster_traces.json 失敗：" + ex.Message);
+                }
+            }
+
+            if (modified)
+            {
+                Save();
+            }
         }
 
         public void Save()
