@@ -137,6 +137,12 @@ namespace MonsterHunter.Controllers
 
         public void SetDirectTarget(MonsterAiController monster) => _directTarget = monster;
 
+        public void Heal(float amount)
+        {
+            if (CurrentHp <= 0f || amount <= 0f) return;
+            CurrentHp = Mathf.Min(MaxHp, CurrentHp + amount);
+        }
+
         /// <summary>割草軌道：攻擊框離獵人中心的半徑。</summary>
         public void SetMeleeOrbitRadius(float worldRadius) => _meleeOrbitRadius = Mathf.Max(0f, worldRadius);
 
@@ -187,8 +193,9 @@ namespace MonsterHunter.Controllers
             }
 
             var moving = _move.sqrMagnitude > tuning.移動歸零閾值 * tuning.移動歸零閾值;
+            // ✦ 戰鬥時玩家移動速度減半！提供優質的戰鬥拉扯與閃避體驗
             _rb.linearVelocity = moving
-                ? _move.normalized * (tuning.玩家移動速度 * _playerMoveSpeedMul)
+                ? _move.normalized * (tuning.玩家移動速度 * _playerMoveSpeedMul * 0.5f)
                 : Vector2.zero;
 
             if (_attackHitbox != null && !_strikeCoroutineActive)

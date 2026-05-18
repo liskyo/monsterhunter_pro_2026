@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using MonsterHunter.Combat;
 using MonsterHunter.Data;
 using MonsterHunter.DataModels;
@@ -53,6 +55,8 @@ namespace MonsterHunter.UI
         // 戰鬥用：記錄精靈物件與魔物資料
         GameObject _monsterGo;
         GameObject _hunterGo;
+        GameObject _petGo;
+        寵物資料列 _petDataRow;
         魔物資料列 _currentMonsterRow;
         Canvas _hudCanvas;
 
@@ -95,6 +99,7 @@ namespace MonsterHunter.UI
             var foodRowForHud   = LookupCanteenRow(foodIdForHud);
             _combatModifiers    = BuildBattleSessionModifiers(quest, ledgerSnapshot);
             ConsumePreviewCanteenInLedger(ledgerSnapshot);
+            ConsumePreviewItemsInLedger(ledgerSnapshot);
 
             var monsterId  = ResolveTargetMonsterId(quest, ledgerSnapshot);
             var monsterRow = LoadMonsterRow(monsterId);
@@ -106,7 +111,10 @@ namespace MonsterHunter.UI
                 CreateMonsterWorldPortrait(main, monsterRow);
 
             if (_showHunterPlaceholder)
+            {
                 CreateHunterPlaceholder(main);
+                CreatePetPlaceholder(ledgerSnapshot);
+            }
 
             if (_showHudLabel)
                 CreateHudAndBars(quest, monsterRow, ledgerSnapshot, foodRowForHud);
@@ -166,6 +174,8 @@ namespace MonsterHunter.UI
             var mgr = mgrGo.AddComponent<BattleCombatManager>();
             mgr.HunterGo      = _hunterGo;
             mgr.MonsterGo     = _monsterGo;
+            mgr.PetGo         = _petGo;
+            mgr.PetDataRow    = _petDataRow;
             mgr.MonsterDataRow = _currentMonsterRow;
             mgr.HudCanvas     = _hudCanvas;
             mgr.DemoWeaponType = string.IsNullOrWhiteSpace(_demoWeaponType) ? "大劍" : _demoWeaponType.Trim();
@@ -242,6 +252,37 @@ namespace MonsterHunter.UI
             if (ledger == null) return;
             if (string.IsNullOrWhiteSpace(ledger.PreviewCanteenFoodId)) return;
             ledger.PreviewCanteenFoodId = "";
+            ledger.Save();
+        }
+
+        static void ConsumePreviewItemsInLedger(LocalHunterLedger ledger)
+        {
+            if (ledger == null) return;
+            // ✦ 自由討伐模式：扣除消耗的 1 個染色球與 1 個特定魔物痕跡
+            if (string.IsNullOrWhiteSpace(ledger.ActiveQuestId))
+            {
+                var paintId = (ledger.PreviewPaintballItemId ?? "").Trim();
+                var traceId = (ledger.PreviewTraceId ?? "").Trim();
+
+                if (!string.IsNullOrEmpty(paintId))
+                {
+                    if (ledger.Warehouse != null && ledger.Warehouse.TryGetValue(paintId, out var qty))
+                    {
+                        ledger.Warehouse[paintId] = Mathf.Max(0, qty - 1);
+                    }
+                }
+                if (!string.IsNullOrEmpty(traceId))
+                {
+                    if (ledger.Warehouse != null && ledger.Warehouse.TryGetValue(traceId, out var qty))
+                    {
+                        ledger.Warehouse[traceId] = Mathf.Max(0, qty - 1);
+                    }
+                }
+            }
+
+            // 出戰後清除選取的染色球與痕跡以供下一次出戰重新整備
+            ledger.PreviewPaintballItemId = "";
+            ledger.PreviewTraceId = "";
             ledger.Save();
         }
 
@@ -596,6 +637,53 @@ namespace MonsterHunter.UI
                 battleCam.transform.position.x - halfW * 0.62f,
                 battleCam.transform.position.y - halfH * 0.28f,
                 0f);
+        }
+
+        void CreatePetPlaceholder(LocalHunterLedger ledger)
+        {
+            if (_hunterGo == null) return;
+
+            var owned = OwnedPetBattleBuffs.ListOwnedPetIds(ledger);
+            if (owned == null || owned.Count == 0) return;
+
+            var chosen = ledger?.SelectedBattlePetId?.Trim() ?? "";
+            if (string.IsNullOrEmpty(chosen) || !owned.Contains(chosen))
+            {
+                // 隨機挑選一隻已擁有的寵物，確保一定能看到寵物身影出戰！
+                chosen = owned[UnityEngine.Random.Range(0, owned.Count)];
+            }
+
+            var pets = OwnedPetBattleBuffs.LoadAllPets();
+            var row = pets?.FirstOrDefault(p => p != null && p.寵物編號 == chosen);
+            if (row == null) return;
+
+            var path = !string.IsNullOrWhiteSpace(row.圖片路徑) 
+                ? row.圖片路徑.Trim() 
+                : $"Assets/Textures/Pets/{row.寵物編號}.png";
+            if (string.IsNullOrEmpty(path)) return;
+
+            var sp = SafeSpriteLoader.TryLoadSprite(path);
+            if (sp == null) return;
+
+            var go = new GameObject("PetPreview");
+            // ✦ 改為 root 物件，避免跟隨獵人做翻滾/攻擊動作時被壓縮或旋轉，行動更優雅
+            go.transform.SetParent(null);
+            go.transform.position = _hunterGo.transform.position + new Vector3(0.65f, -0.15f, 0f);
+            
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sortingOrder = _hunterGo.GetComponent<SpriteRenderer>().sortingOrder - 1; // Render slightly behind hunter
+            sr.sprite = sp;
+            sr.color = Color.white;
+
+            // 縮放比例與獵人完美匹配
+            var hScale = _hunterGo.transform.localScale;
+            go.transform.localScale = hScale * 0.65f; 
+
+            _petGo = go;
+            _petDataRow = row;
+
+            // ✦ 動態為隨行寵物掛載 CompanionPetController 腳本，實現豐富的輔助、攻擊與吸引魔物戰鬥行為！
+            go.AddComponent<CompanionPetController>();
         }
 
         void CreateHudAndBars(任務資料列 quest, 魔物資料列 monster, LocalHunterLedger ledgerSnapshot,

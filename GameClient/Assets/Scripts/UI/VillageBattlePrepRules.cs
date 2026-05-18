@@ -22,30 +22,32 @@ namespace MonsterHunter.UI
                 return false;
             }
 
-            if (string.IsNullOrWhiteSpace(ledger.ActiveQuestId))
+            // ✦ 兩種出戰方式 ✦
+            // 方式一：承接任務。此時不需要染色球或痕跡，同任務一天一次限制由任務接取端防重覆控制。
+            if (!string.IsNullOrWhiteSpace(ledger.ActiveQuestId))
             {
-                error = "請先在「任務板」承接一項任務。";
-                return false;
+                var quest = FindQuestRow(ledger.ActiveQuestId.Trim());
+                if (quest == null)
+                {
+                    error = "找不到進行中的任務資料，請回任務板重新承接。";
+                    return false;
+                }
+                return true;
             }
 
-            var quest = FindQuestRow(ledger.ActiveQuestId.Trim());
-            if (quest == null)
-            {
-                error = "找不到進行中的任務資料，請回任務板重新承接。";
-                return false;
-            }
-
+            // 方式二：使用染色球(隨機魔物) + 痕跡(特定魔物)進行自由討伐。
             var paintId = (ledger.PreviewPaintballItemId ?? "").Trim();
             var traceId = (ledger.PreviewTraceId ?? "").Trim();
+
             if (string.IsNullOrEmpty(paintId))
             {
-                error = "請在「出戰整備」選擇染色球（須持有至少 1 個）。";
+                error = "自由討伐模式：請在「出戰整備」選擇染色球（出發將消耗 1 個）。";
                 return false;
             }
 
             if (string.IsNullOrEmpty(traceId))
             {
-                error = "請在「出戰整備」選擇魔物痕跡（須持有至少 1 個）。";
+                error = "自由討伐模式：請在「出戰整備」選擇魔物痕跡（出發將消耗 1 個）。";
                 return false;
             }
 
@@ -82,15 +84,6 @@ namespace MonsterHunter.UI
             {
                 error =
                     $"痕跡「{trace.名稱}」魔物星級為 {star}，與染色球「{paint.名稱}」可吸引範圍 {lo}～{hi} 不符。請更換組合。";
-                return false;
-            }
-
-            var mid = (trace.對應魔物編號 ?? "").Trim();
-            if (quest.目標魔物 == null ||
-                !quest.目標魔物.Any(t => t != null && (t.魔物編號 ?? "").Trim() == mid))
-            {
-                error =
-                    $"痕跡對應魔物（{mid}）不在此任務目標內。請選擇與「{quest.標題}」相符的痕跡。";
                 return false;
             }
 

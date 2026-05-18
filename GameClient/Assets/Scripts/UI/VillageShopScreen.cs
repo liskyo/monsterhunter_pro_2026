@@ -461,7 +461,7 @@ namespace MonsterHunter.UI
             nameShad.effectDistance = new Vector2(1f, -1f);
             
             // 商品細節與價格
-            var sub = string.IsNullOrEmpty(extra) ? $"{id} ｜ ${price}" : $"{id} ｜ ${price} ｜ {extra}";
+            var sub = string.IsNullOrEmpty(extra) ? $"價格：<color=#F2C94C>{price} z</color>" : $"價格：<color=#F2C94C>{price} z</color> ｜ {extra}";
             var subLbl = AddBareText(textCol.transform, sub, 20, TextAnchor.MiddleLeft, new Color(0.72f, 0.76f, 0.82f));
             var subShad = subLbl.gameObject.AddComponent<Shadow>();
             subShad.effectColor = new Color(0f, 0f, 0f, 0.8f);
@@ -478,7 +478,7 @@ namespace MonsterHunter.UI
             var t = go.AddComponent<Text>();
             VillageGameFlow.SetSharpText(t, msg, size, c, align, FontStyle.Bold);
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Truncate;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
             var le = go.AddComponent<LayoutElement>();
             le.minHeight = size + 8;
             return t;

@@ -26,6 +26,15 @@ namespace MonsterHunter.Controllers
         [SerializeField] Transform _player;
         [SerializeField] HuntSettlementService _settlement;
 
+        Transform _overrideTarget;
+        float _overrideTargetTimer;
+
+        public void SetOverrideTarget(Transform target, float duration)
+        {
+            _overrideTarget = target;
+            _overrideTargetTimer = duration;
+        }
+
         魔物資料列 _data;
         readonly MonsterBreakState _breakState = new MonsterBreakState();
         Rigidbody2D _rb;
@@ -139,8 +148,20 @@ namespace MonsterHunter.Controllers
                 return;
             }
 
+            // ✦ 寵物挑釁仇恨覆蓋目標邏輯
+            Transform currentTarget = _player;
+            if (_overrideTarget != null && _overrideTargetTimer > 0f)
+            {
+                _overrideTargetTimer -= Time.deltaTime;
+                currentTarget = _overrideTarget;
+                if (_overrideTargetTimer <= 0f)
+                {
+                    _overrideTarget = null;
+                }
+            }
+
             var self = (Vector2)transform.position;
-            var pl = (Vector2)_player.position;
+            var pl = (Vector2)currentTarget.position;
             var dist = Vector2.Distance(self, pl);
             var detect = tuning.待機偵測半徑;
             var atkDist = BuildApproachMeleeDistance(out _);
@@ -155,7 +176,8 @@ namespace MonsterHunter.Controllers
                         break;
                     }
 
-                    var stalkSpd = tuning.魔物踱步速度 > 1e-3f ? tuning.魔物踱步速度 : 1.25f;
+                    // ✦ 戰鬥時踱步速度減半！
+                    var stalkSpd = (tuning.魔物踱步速度 > 1e-3f ? tuning.魔物踱步速度 : 1.25f) * 0.5f;
                     var toPl = dist > 0.05f ? (pl - self).normalized : Vector2.zero;
                     _rb.linearVelocity = toPl * stalkSpd;
                     break;
@@ -176,11 +198,12 @@ namespace MonsterHunter.Controllers
                     }
 
                     var dir = dist > 0.05f ? (pl - self).normalized : Vector2.zero;
+                    // ✦ 戰鬥時魔物追擊速度減半！提供極致拉扯與閃避空間
                     var baseChase = tuning.玩家移動速度 *
-                                    Mathf.Max(0.1f, tuning.魔物追擊速度比例);
+                                    Mathf.Max(0.1f, tuning.魔物追擊速度比例) * 0.5f;
                     var chaseMag = baseChase;
                     if (tuning.魔物追擊低速底線 > 1e-3f)
-                        chaseMag = Mathf.Max(tuning.魔物追擊低速底線, baseChase);
+                        chaseMag = Mathf.Max(tuning.魔物追擊低速底線 * 0.5f, baseChase);
 
                     // ✦ 加入蛇行 / 側步偏移量
                     var perp = new Vector2(-dir.y, dir.x);
@@ -198,19 +221,17 @@ namespace MonsterHunter.Controllers
 
                     if (!_telegraphing)
                     {
-                        // ✦ 已經提早選好招式了，不須再 PickNextMeleePlan()
                         _telegraphing = true;
                         
-                        // ✦ 招式釋放時間快慢區別！技能越強 (傷害倍率越高)，速度越快！
+                        // ✦ 配合使用者要求，閃光後至少延遲 2.0s ~ 4.0s 才能發招，否則根本無法閃！
                         float baseTelegraph = tuning.魔物攻擊前搖秒 > 0f ? tuning.魔物攻擊前搖秒 : 0.42f;
-                        float telegraph = baseTelegraph;
+                        float telegraph = baseTelegraph * 5.0f;
                         if (_currentSkill != null)
                         {
                             float strength = _currentSkill.傷害對普攻倍率 > 0f ? _currentSkill.傷害對普攻倍率 : 1f;
-                            telegraph = baseTelegraph / strength;
-                            // 防呆：前搖不低於 0.15s，不高於 1.2s
-                            telegraph = Mathf.Clamp(telegraph, 0.15f, 1.2f);
+                            telegraph = (baseTelegraph * 5.0f) / strength;
                         }
+                        telegraph = Mathf.Clamp(telegraph, 2.0f, 4.0f);
                         
                         var postStun  = tuning.魔物招式後僵直秒 > 0f ? tuning.魔物招式後僵直秒 : 1.5f;
                         // 前搖 + 後搖都透過 _stun 凍結移動
@@ -232,8 +253,28 @@ namespace MonsterHunter.Controllers
             if (delay > 0f)
             {
                 var elapsed = 0f;
-                // MHN 經典紅色預警：極高對比的純粹猩紅色 (Monster Hunter Now Style)
-                Color mhnRed = new Color(1f, 0.12f, 0.12f, 1f);
+                
+                // ✦ 根據不同招式類型，給予截然不同的炫麗警示光芒，區別招式！
+                Color mhnFlashColor = new Color(1f, 0.12f, 0.12f, 1f); // 預設猩紅
+                if (_currentSkill != null)
+                {
+                    if (!string.IsNullOrEmpty(_currentSkill.投射物型別))
+                    {
+                        mhnFlashColor = new Color(0.85f, 0.12f, 0.95f, 1f); // 遠程投射：霓虹幻魅紫
+                    }
+                    else if (_currentSkill.傷害對普攻倍率 >= 1.5f)
+                    {
+                        mhnFlashColor = new Color(1f, 0.05f, 0.05f, 1f); // 高額重擊：致命深猩紅
+                    }
+                    else
+                    {
+                        mhnFlashColor = new Color(1f, 0.82f, 0.0f, 1f); // 快速連段：璀璨金黃
+                    }
+                }
+                else
+                {
+                    mhnFlashColor = new Color(1f, 0.5f, 0f, 1f); // 普通攻擊：熔岩暖橘色
+                }
 
                 // 建立魔物背後的預警光暈 (Aura)
                 var auraGo = new GameObject("TelegraphAura");
@@ -250,22 +291,20 @@ namespace MonsterHunter.Controllers
                     if (sr != null)
                     {
                         // MHN 風格：優雅且具威脅性的紅色呼吸脈動 (Smooth Red Pulse)
-                        // 摒棄極端刺眼的硬閃爍與突兀的「！」標記，改為平滑漸變至純紅色
                         // 越接近攻擊，紅色閃爍頻率越快，給予玩家極致的壓迫感！
                         float pulseFreq = Mathf.Lerp(12f, 25f, ratio);
                         float t = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f; 
                         
-                        // 保持最少 25% 紅色覆蓋，最高 95% 純紅
+                        // 保持最少 25% 覆蓋，最高 95%
                         float redAmount = Mathf.Lerp(0.25f, 0.95f, t);
-                        sr.color = Color.Lerp(originalColor, mhnRed, redAmount); 
+                        sr.color = Color.Lerp(originalColor, mhnFlashColor, redAmount); 
                     }
 
                     if (auraSr != null)
                     {
-                        // 光環同樣使用 MHN 的高對比血紅色
                         float pulseFreq = Mathf.Lerp(8f, 20f, ratio);
                         float auraT = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f;
-                        auraSr.color = new Color(1f, 0f, 0f, auraT * 0.5f + 0.15f); 
+                        auraSr.color = new Color(mhnFlashColor.r, mhnFlashColor.g, mhnFlashColor.b, auraT * 0.5f + 0.15f); 
                         
                         // 氣場大小隨脈動變化，營造強大的蓄力感
                         float auraScale = 1.6f + auraT * 0.6f;
@@ -286,16 +325,23 @@ namespace MonsterHunter.Controllers
                 transform.localScale = originalScale;
             }
 
+            // ✦ 確定本輪攻擊的主目標（支援挑釁覆蓋）
+            Transform activeTarget = _player;
+            if (_overrideTarget != null && _overrideTargetTimer > 0f)
+                activeTarget = _overrideTarget;
+
+            if (activeTarget == null) yield break;
+
             // ✦ 招式發放瞬間物理動畫統一簡化
             bool isProjectile = _pendingProjectileMove != null && !string.IsNullOrWhiteSpace(_pendingProjectileMove.投射物型別);
             
-            if (_player != null && !BattleCombatManager.IsBattleConcluded)
+            if (!BattleCombatManager.IsBattleConcluded)
             {
                 if (!isProjectile)
                 {
                     // 近戰攻擊：統一的突進攻擊效果
                     Vector3 startPos = transform.position;
-                    Vector3 dashPos = Vector3.Lerp(startPos, _player.position, 0.35f);
+                    Vector3 dashPos = Vector3.Lerp(startPos, activeTarget.position, 0.35f);
                     
                     float dashElapsed = 0f;
                     float dashDur = 0.12f;
@@ -324,7 +370,7 @@ namespace MonsterHunter.Controllers
                 {
                     // 遠程施法類：統一的簡單點頭施法姿勢
                     Vector3 startPos = transform.position;
-                    Vector3 nodPos = startPos + (Vector3)(_player.position - startPos).normalized * 0.25f;
+                    Vector3 nodPos = startPos + (Vector3)(activeTarget.position - startPos).normalized * 0.25f;
 
                     float nodElapsed = 0f;
                     while (nodElapsed < 0.08f)
@@ -346,7 +392,7 @@ namespace MonsterHunter.Controllers
 
             _telegraphing = false;
 
-            if (_player == null) yield break;
+            if (activeTarget == null) yield break;
 
             if (BattleCombatManager.IsBattleConcluded)
                 yield break;
@@ -354,17 +400,26 @@ namespace MonsterHunter.Controllers
             if (_pendingProjectileMove != null &&
                 !string.IsNullOrWhiteSpace(_pendingProjectileMove.投射物型別))
             {
-                MonsterProjectile2D.Fire(transform, _player, _pendingProjectileMove,
+                MonsterProjectile2D.Fire(transform, activeTarget, _pendingProjectileMove,
                     _plannedDirectDamageFlat);
                 _pendingProjectileMove = null;
                 yield break;
             }
 
-            var dist = Vector2.Distance(transform.position, _player.position);
+            var dist = Vector2.Distance(transform.position, activeTarget.position);
             // ✦ 針對近戰與橫掃特別技給予合理的大範圍判定（例如 1.35 倍半徑），普通攻擊為 0.8 倍，使大招極難站樁硬吃
             float checkMul = _isExecutingSpecialMove ? 1.35f : 0.8f;
             if (dist <= _plannedHitRadius * checkMul)
-                PerformAttackOnPlayer();
+            {
+                if (activeTarget == _player)
+                {
+                    PerformAttackOnPlayer();
+                }
+                else
+                {
+                    Debug.Log($"[Monster] 攻擊擊中了隨行寵物！");
+                }
+            }
             _pendingProjectileMove = null;
 
             // ✦ 當前攻擊結束，立刻「心裡想好下一招」！

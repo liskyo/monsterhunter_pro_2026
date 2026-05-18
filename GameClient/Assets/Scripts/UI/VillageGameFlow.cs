@@ -483,12 +483,14 @@ namespace MonsterHunter.UI
                 ? "<color=#27AE60><b>✔ 討伐準備就緒！點擊下方按鈕出發</b></color>"
                 : $"<color=#EB5757><b>⚠ 整備條件未滿足：{validationError}</b></color>";
 
-            _prepStatus.text = q != null
-                ? $"<b>進行中任務：</b><color=#F2C94C>★{questStar} {qName}</color>\n" +
-                  $"<b>已選染色球：</b><color=#56CCF2>{pbName}</color>　｜　" +
-                  $"<b>已選魔物痕跡：</b><color=#BB6BD9>{trName}</color>\n" +
-                  $"{statusHint}"
-                : $"<b>進行中任務：</b><color=#EB5757>尚未承接任務，請先前往任務板接取！</color>";
+            var questText = q != null
+                ? $"<color=#F2C94C>★{questStar} {qName}</color>"
+                : "<color=#56CCF2>無（自由討伐模式，將消耗物品）</color>";
+
+            _prepStatus.text = $"<b>進行中任務：</b>{questText}\n" +
+                               $"<b>已選染色球：</b><color=#56CCF2>{pbName}</color>　｜　" +
+                               $"<b>已選魔物痕跡：</b><color=#BB6BD9>{trName}</color>\n" +
+                               $"{statusHint}";
 
             PaintPickHolder.Refresh(_goBattlePrep);
             TracePickHolder.Refresh(_goBattlePrep);
@@ -935,33 +937,31 @@ namespace MonsterHunter.UI
                 iconOutl.effectColor = new Color(0.85f, 0.65f, 0.3f, 0.4f);
                 iconOutl.effectDistance = new Vector2(1f, -1f);
 
-                // ✦ 2. 貓飯料理名稱與花費
+                // ✦ 2. 貓飯料理名稱與說明（免費享用，下場生效）
                 var tgo = new GameObject("Tx", typeof(RectTransform));
                 tgo.transform.SetParent(go.transform, false);
                 tgo.AddComponent<LayoutElement>().flexibleWidth = 1f;
                 var nt = tgo.AddComponent<Text>();
-                var cost = row.花費;
-                var z = cost != null ? cost.金幣 : 0;
-                SetSharpText(nt, $"{row.名稱}　　花費 <color=#F2C94C>{z} z</color>", 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                SetSharpText(nt, $"{row.名稱}　　<color=#27AE60>【免費享用，下場生效】</color>", 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
                 
                 var textShad = tgo.AddComponent<Shadow>();
                 textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
                 textShad.effectDistance = new Vector2(1.2f, -1.2f);
 
-                // ✦ 3. 購買按鈕 (解決按鈕被壓扁擠歪的排版問題)
+                // ✦ 3. 享用按鈕 (免費享用，綠色奢華設計)
                 var btnGo = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
                 btnGo.transform.SetParent(go.transform, false);
                 
                 var btnLe = btnGo.GetComponent<LayoutElement>();
-                btnLe.preferredWidth = 160f; // 強制固定購買按鈕寬度
+                btnLe.preferredWidth = 160f; // 強制固定按鈕寬度
                 btnLe.preferredHeight = 56f;
                 btnGo.GetComponent<RectTransform>().sizeDelta = new Vector2(160f, 56f);
                 
                 var btnImg = btnGo.GetComponent<Image>();
-                btnImg.color = new Color(0.12f, 0.48f, 0.85f, 0.95f); // 奢華寶藍底色
+                btnImg.color = new Color(0.15f, 0.68f, 0.37f, 0.95f); // 奢華翠綠享用底色
                 
                 var btnOutl = btnGo.AddComponent<Outline>();
-                btnOutl.effectColor = new Color(0.5f, 0.78f, 1f, 0.8f); // 亮藍霓虹外邊框
+                btnOutl.effectColor = new Color(0.46f, 0.84f, 0.57f, 0.8f); // 亮綠外框
                 btnOutl.effectDistance = new Vector2(1.5f, -1.5f);
                 
                 var btnShad = btnGo.AddComponent<Shadow>();
@@ -981,58 +981,24 @@ namespace MonsterHunter.UI
                     if (flow != null)
                     {
                         flow.RefreshCanteenStatus();
-                        flow.RefreshAllZennyDisplays(); // ✦ 即時刷新金幣顯示！
+                        flow.RefreshAllZennyDisplays(); // 即時刷新金幣顯示！
                     }
                 });
                 var bt = new GameObject("L", typeof(RectTransform));
                 bt.transform.SetParent(btnGo.transform, false);
                 StretchFull(bt.GetComponent<RectTransform>());
                 var btx = bt.AddComponent<Text>();
-                SetSharpText(btx, "購買", 24, new Color(0.06f, 0.07f, 0.1f), TextAnchor.MiddleCenter, FontStyle.Bold);
+                SetSharpText(btx, "享用", 24, new Color(1f, 1f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
             }
 
             static bool TryBuyMeal(貓飯資料列 row, out string err)
             {
                 err = null;
                 var ledger = LocalHunterLedger.LoadOrCreate();
-                var cost = row?.花費;
-                if (cost == null)
+                if (row == null)
                 {
                     err = "資料錯誤";
                     return false;
-                }
-
-                if (ledger.Zenny < cost.金幣)
-                {
-                    err = "金幣不足";
-                    return false;
-                }
-
-                if (cost.需求素材 != null)
-                {
-                    foreach (var m in cost.需求素材)
-                    {
-                        if (m == null || string.IsNullOrEmpty(m.素材編號)) continue;
-                        var need = Mathf.Max(1, m.數量);
-                        if (ledger.GetWarehouseQuantity(m.素材編號) < need)
-                        {
-                            err = $"素材不足：{m.素材編號}";
-                            return false;
-                        }
-                    }
-                }
-
-                ledger.Zenny -= cost.金幣;
-                ledger.Warehouse ??= new Dictionary<string, int>(StringComparer.Ordinal);
-                if (cost.需求素材 != null)
-                {
-                    foreach (var m in cost.需求素材)
-                    {
-                        if (m == null || string.IsNullOrEmpty(m.素材編號)) continue;
-                        var id = m.素材編號;
-                        ledger.Warehouse[id] =
-                            Mathf.Max(0, ledger.GetWarehouseQuantity(id) - Mathf.Max(1, m.數量));
-                    }
                 }
 
                 ledger.PreviewCanteenFoodId = row.料理編號 ?? "";
@@ -1163,61 +1129,164 @@ namespace MonsterHunter.UI
 
             void OnEnable() => Rebuild();
 
-            void Rebuild()
+            public void Rebuild()
             {
                 if (Content == null) return;
                 for (var i = Content.childCount - 1; i >= 0; i--)
                     Destroy(Content.GetChild(i).gameObject);
 
                 var ledger = LocalHunterLedger.LoadOrCreate();
-                var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 var pets = OwnedPetBattleBuffs.LoadAllPets();
                 var chosen = (ledger.SelectedBattlePetId ?? "").Trim();
 
-                var rowNone = new GameObject("Pet_None", typeof(RectTransform), typeof(Image), typeof(Button));
+                // 1. 不指定（戰鬥隨機）列
+                var rowNone = new GameObject("Pet_None", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
                 rowNone.transform.SetParent(Content, false);
-                rowNone.GetComponent<Image>().color =
-                    string.IsNullOrEmpty(chosen) ? new Color(0.3f, 0.45f, 0.3f, 1f) : new Color(0.14f, 0.15f, 0.18f, 1f);
-                rowNone.AddComponent<LayoutElement>().minHeight = 72f;
-                rowNone.GetComponent<Button>().onClick.AddListener(() =>
+                rowNone.GetComponent<LayoutElement>().minHeight = 90f;
+                
+                var imgNone = rowNone.GetComponent<Image>();
+                imgNone.color = string.IsNullOrEmpty(chosen)
+                    ? new Color(0.08f, 0.28f, 0.52f, 0.95f) // selected blue
+                    : new Color(0.12f, 0.13f, 0.16f, 0.95f); // normal dark
+                
+                var hgNone = rowNone.GetComponent<HorizontalLayoutGroup>();
+                hgNone.padding = new RectOffset(16, 16, 8, 8);
+                hgNone.spacing = 16f;
+                hgNone.childAlignment = TextAnchor.MiddleLeft;
+                hgNone.childControlWidth = true;
+                hgNone.childControlHeight = true;
+                hgNone.childForceExpandWidth = false;
+                hgNone.childForceExpandHeight = false;
+
+                var iconNone = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                iconNone.transform.SetParent(rowNone.transform, false);
+                iconNone.GetComponent<RectTransform>().sizeDelta = new Vector2(64f, 64f);
+                var imgIco = iconNone.GetComponent<Image>();
+                imgIco.sprite = PlaceholderSpriteFactory.GetSharedPlaceholder();
+                imgIco.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+
+                AddRowLabel(rowNone.transform, "（不指定，戰鬥隨機）", 24, new Color(0.96f, 0.97f, 1f));
+
+                var isNoneSelected = string.IsNullOrEmpty(chosen);
+                CreatePetActionButton(rowNone.transform, isNoneSelected ? "已選定" : "選擇隨機", !isNoneSelected, () =>
                 {
                     ledger.SelectedBattlePetId = "";
                     ledger.Save();
-                    RefreshHolder(gameObject.transform.root.gameObject);
+                    Rebuild();
                 });
-                AddRowLabel(rowNone.transform, font, "（不指定，戰鬥隨機）");
 
+                // 2. 擁有之隨行寵物列
                 foreach (var p in pets)
                 {
                     if (p == null) continue;
                     if (ledger.GetWarehouseQuantity(p.寵物編號) <= 0) continue;
                     var pick = p.寵物編號;
-                    var row = new GameObject(pick, typeof(RectTransform), typeof(Image), typeof(Button));
+                    
+                    var row = new GameObject(pick, typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
                     row.transform.SetParent(Content, false);
-                    row.GetComponent<Image>().color = chosen == pick
-                        ? new Color(0.3f, 0.45f, 0.3f, 1f)
-                        : new Color(0.14f, 0.15f, 0.18f, 1f);
-                    row.AddComponent<LayoutElement>().minHeight = 72f;
-                    row.GetComponent<Button>().onClick.AddListener(() =>
+                    row.GetComponent<LayoutElement>().minHeight = 90f;
+                    
+                    var img = row.GetComponent<Image>();
+                    var isSelected = chosen == pick;
+                    img.color = isSelected
+                        ? new Color(0.08f, 0.28f, 0.52f, 0.95f) // selected blue
+                        : new Color(0.12f, 0.13f, 0.16f, 0.95f); // normal dark
+                    
+                    var hg = row.GetComponent<HorizontalLayoutGroup>();
+                    hg.padding = new RectOffset(16, 16, 8, 8);
+                    hg.spacing = 16f;
+                    hg.childAlignment = TextAnchor.MiddleLeft;
+                    hg.childControlWidth = true;
+                    hg.childControlHeight = true;
+                    hg.childForceExpandWidth = false;
+                    hg.childForceExpandHeight = false;
+
+                    // 加載寵物圖示
+                    var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                    iconGo.transform.SetParent(row.transform, false);
+                    iconGo.GetComponent<RectTransform>().sizeDelta = new Vector2(64f, 64f);
+                    var iconImg = iconGo.GetComponent<Image>();
+                    
+                    var path = !string.IsNullOrWhiteSpace(p.圖片路徑) 
+                        ? p.圖片路徑.Trim() 
+                        : $"Assets/Textures/Pets/{p.寵物編號}.png";
+                    
+                    var sp = SafeSpriteLoader.TryLoadSprite(path);
+                    iconImg.sprite = sp ?? PlaceholderSpriteFactory.GetSharedPlaceholder();
+                    iconImg.color = Color.white;
+                    iconImg.preserveAspect = true;
+
+                    AddRowLabel(row.transform, $"{p.名稱}（{pick}）", 24, new Color(0.96f, 0.97f, 1f));
+
+                    CreatePetActionButton(row.transform, isSelected ? "休息" : "出戰", true, () =>
                     {
-                        ledger.SelectedBattlePetId = pick;
+                        if (isSelected)
+                        {
+                            ledger.SelectedBattlePetId = "";
+                        }
+                        else
+                        {
+                            ledger.SelectedBattlePetId = pick;
+                        }
                         ledger.Save();
-                        RefreshHolder(gameObject.transform.root.gameObject);
+                        Rebuild();
                     });
-                    AddRowLabel(row.transform, font, $"{p.名稱}（{pick}）");
                 }
             }
 
-            static void AddRowLabel(Transform row, Font font, string msg)
+            static Text AddRowLabel(Transform parent, string msg, int size, Color c)
             {
-                var tgo = new GameObject("L", typeof(RectTransform));
-                tgo.transform.SetParent(row, false);
-                StretchFull(tgo.GetComponent<RectTransform>());
-                var t = tgo.AddComponent<Text>();
-                SetSharpText(t, msg, 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
-                var textShad = tgo.AddComponent<Shadow>();
-                textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
-                textShad.effectDistance = new Vector2(1.2f, -1.2f);
+                var go = new GameObject("Lbl", typeof(RectTransform), typeof(LayoutElement));
+                go.transform.SetParent(parent, false);
+                go.GetComponent<LayoutElement>().flexibleWidth = 1f;
+                var t = go.AddComponent<Text>();
+                SetSharpText(t, msg, size, c, TextAnchor.MiddleLeft, FontStyle.Bold);
+                t.verticalOverflow = VerticalWrapMode.Overflow;
+                return t;
+            }
+
+            static void CreatePetActionButton(Transform parent, string label, bool active, Action onClick)
+            {
+                var go = new GameObject("ActionBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+                go.transform.SetParent(parent, false);
+                
+                var rt = go.GetComponent<RectTransform>();
+                rt.sizeDelta = new Vector2(160f, 54f);
+                
+                var le = go.GetComponent<LayoutElement>();
+                le.preferredWidth = 160f;
+                le.preferredHeight = 54f;
+                
+                var img = go.GetComponent<Image>();
+                if (active)
+                {
+                    if (label == "休息")
+                    {
+                        img.color = new Color(0.75f, 0.22f, 0.17f, 0.95f); // red
+                    }
+                    else
+                    {
+                        img.color = new Color(0.18f, 0.54f, 0.34f, 0.95f); // green
+                    }
+                }
+                else
+                {
+                    img.color = new Color(0.25f, 0.28f, 0.32f, 0.8f); // gray
+                }
+
+                var btn = go.GetComponent<Button>();
+                btn.interactable = active;
+                if (active && onClick != null)
+                {
+                    btn.onClick.AddListener(() => onClick());
+                }
+
+                var txtGo = new GameObject("Txt", typeof(RectTransform));
+                txtGo.transform.SetParent(go.transform, false);
+                StretchFull(txtGo.GetComponent<RectTransform>());
+                var txt = txtGo.AddComponent<Text>();
+                SetSharpText(txt, label, 20, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+                txt.verticalOverflow = VerticalWrapMode.Overflow;
             }
         }
 

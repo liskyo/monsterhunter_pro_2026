@@ -106,8 +106,8 @@ namespace MonsterHunter.Combat
             _currentHp = Mathf.Max(0f, _currentHp - amount);
             DamageApplied?.Invoke(amount, isCrit);
 
-            // ✦ 受擊紅色閃爍回饋
-            TriggerDamageFlashRoutine();
+            // ✦ 受擊紅色閃爍回饋（配合要求：打中魔物不需要閃光，僅顯示大數據）
+            // TriggerDamageFlashRoutine();
 
             // ✦ 噴血粒子效果
             SpawnBloodSplatter(transform.position, isCrit);

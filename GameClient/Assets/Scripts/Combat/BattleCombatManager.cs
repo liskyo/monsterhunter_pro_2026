@@ -24,6 +24,8 @@ namespace MonsterHunter.Combat
         // ── 由 BattlePreviewBootstrap 設定 ──
         public GameObject HunterGo;
         public GameObject MonsterGo;
+        public GameObject PetGo { get; set; }
+        public 寵物資料列 PetDataRow { get; set; }
         public 魔物資料列 MonsterDataRow;
         public Canvas HudCanvas;
 
@@ -425,6 +427,17 @@ namespace MonsterHunter.Combat
             _monsterAi.OnDefeated       += OnMonsterDefeated;
             _playerCtrl.OnDamageReceived += OnPlayerDamaged;
             _playerCtrl.OnDefeated       += OnPlayerDefeated;
+
+            // ✦ 設置隨行寵物 AI
+            if (PetGo != null && PetDataRow != null)
+            {
+                var petCtrl = PetGo.GetComponent<CompanionPetController>();
+                if (petCtrl != null)
+                {
+                    petCtrl.Setup(HunterGo.transform, MonsterGo.transform, _monsterAi, _playerCtrl, PetDataRow);
+                    Debug.Log($"[BattleCombatManager] 成功初始化隨行寵物 AI：{PetDataRow.名稱}");
+                }
+            }
         }
 
         // ────────────────────────────────────────────────────
@@ -727,15 +740,15 @@ namespace MonsterHunter.Combat
 
             var txt = go.AddComponent<Text>();
             txt.font = font;
-            txt.fontSize = crit ? 58 : 42; // ✦ 暴打魔物字體加大
+            txt.fontSize = crit ? 98 : 72; // ✦ 大幅加粗大字體，使數據文字極為清楚！
             txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter;
             txt.supportRichText = true;
             
-            // 暴擊使用高飽和亮橘紅，普通使用亮黃色
+            // ✦ 暴擊與普通攻擊的超美特大數據格式
             txt.text = crit 
-                ? $"<color=#FF4500><b>暴！{dmg:F0}</b></color>" 
-                : $"<color=#FFD700><b>{dmg:F0}</b></color>";
+                ? $"<color=#FF3B30><b>💥 CRIT {dmg:F0}</b></color>" 
+                : $"<color=#FFCC00><b>{dmg:F0}</b></color>";
 
             // 加上高對比黑陰影（Shadow）元件，讓數字在多變的戰鬥背景下依然極度耀眼清晰
             var shadow = go.AddComponent<Shadow>();

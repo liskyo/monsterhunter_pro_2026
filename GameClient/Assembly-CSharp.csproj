@@ -106,6 +106,7 @@
     <Compile Include="Assets\Scripts\Combat\HuntSettlementService.cs" />
     <Compile Include="Assets\Scripts\UI\IntroFlowAdvanceInvoker.cs" />
     <Compile Include="Assets\Scripts\Combat\Hurtbox.cs" />
+    <Compile Include="Assets\Scripts\Combat\CompanionPetController.cs" />
     <Compile Include="Assets\Scripts\Combat\IHurtbox.cs" />
     <Compile Include="Assets\Scripts\UI\VillageBackgroundUiDisplay.cs" />
     <Compile Include="Assets\Scripts\Controllers\MonsterAiController.cs" />
