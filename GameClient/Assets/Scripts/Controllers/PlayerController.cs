@@ -57,6 +57,7 @@ namespace MonsterHunter.Controllers
         WeaponMovesetRuntime.ParsedMoveset _moves;
 
         float _playerOutgoingDamageMul = 1f;
+        float _playerIncomingDamageMul = 1f;
         float _playerMoveSpeedMul = 1f;
         float _comboResetTimer;
         int _comboIndex;
@@ -147,6 +148,9 @@ namespace MonsterHunter.Controllers
         public void SetOutgoingDamageMultiplier(float m) =>
             _playerOutgoingDamageMul = Mathf.Clamp(m, 0.2f, 5f);
 
+        public void SetIncomingDamageMultiplier(float m) =>
+            _playerIncomingDamageMul = Mathf.Clamp(m, 0.05f, 2.0f);
+
         public void SetDirectTarget(MonsterAiController monster) => _directTarget = monster;
 
         public void Heal(float amount)
@@ -183,6 +187,11 @@ namespace MonsterHunter.Controllers
                 _rb.freezeRotation = true;
             }
             if (_attackHitbox != null) _attackHitbox.SetEnabled(false);
+        }
+
+        void Start()
+        {
+            AddSelfGlowAura(transform, 0.72f);
         }
 
         void Update()
@@ -598,7 +607,7 @@ namespace MonsterHunter.Controllers
 
             // ✦ 配合使用者要求，大幅提高魔物打擊傷害，保證玩家受擊時至少扣除 2/3 的最大生命值（67%），極致拉滿生死一線的緊張感與閃避成就感！
             float minDmg = MaxHp * 0.67f;
-            float finalDmg = Mathf.Max(amount, minDmg);
+            float finalDmg = Mathf.Max(amount, minDmg) * _playerIncomingDamageMul;
 
             CurrentHp = Mathf.Max(0f, CurrentHp - finalDmg);
             OnDamageReceived?.Invoke(finalDmg, isCrit);
@@ -958,6 +967,79 @@ namespace MonsterHunter.Controllers
             if (sr != null) sr.color = originalColor;
             _dodgeTimer = 0f; // 結束無敵
             _isExecutingSpSkill = false;
+        }
+
+        private void AddSelfGlowAura(Transform parent, float scale)
+        {
+            var glowGo = new GameObject("PlayerGlowAura", typeof(SpriteRenderer));
+            glowGo.transform.SetParent(parent, false);
+            glowGo.transform.localPosition = new Vector3(0f, -0.65f, 0.05f); // 位於腳底偏後
+            glowGo.transform.localScale = new Vector3(scale * 1.6f, scale * 0.5f, 1f); // 橢圓形光圈
+
+            var sr = glowGo.GetComponent<SpriteRenderer>();
+            sr.sprite = CreateSoftGlowSprite();
+            sr.drawMode = SpriteDrawMode.Simple;
+            sr.color = new Color(1f, 1f, 1f, 0.6f); // 亮白透明度 0.6
+
+            var parentSr = parent.GetComponent<SpriteRenderer>();
+            if (parentSr == null) parentSr = parent.GetComponentInChildren<SpriteRenderer>();
+            if (parentSr != null) sr.sortingOrder = parentSr.sortingOrder - 1;
+
+            glowGo.AddComponent<GlowBreather>();
+        }
+
+        private Sprite CreateSoftGlowSprite()
+        {
+            int size = 128;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float center = size * 0.5f;
+            float maxDist = size * 0.5f;
+            
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center;
+                    float dy = y - center;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float t = Mathf.Clamp01(dist / maxDist);
+                    
+                    float alpha = Mathf.Clamp01(1f - t);
+                    alpha = Mathf.Pow(alpha, 1.8f);
+                    
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        }
+    }
+
+    public sealed class GlowBreather : MonoBehaviour
+    {
+        private float _t;
+        private SpriteRenderer _sr;
+        private Vector3 _baseScale;
+
+        void Start()
+        {
+            _sr = GetComponent<SpriteRenderer>();
+            _baseScale = transform.localScale;
+        }
+
+        void Update()
+        {
+            _t += Time.deltaTime * 2.8f;
+            // 微微呼吸起伏
+            float s = 1.0f + Mathf.Sin(_t) * 0.12f;
+            transform.localScale = _baseScale * s;
+
+            if (_sr != null)
+            {
+                Color c = _sr.color;
+                c.a = 0.5f + Mathf.Sin(_t) * 0.12f;
+                _sr.color = c;
+            }
         }
     }
 }

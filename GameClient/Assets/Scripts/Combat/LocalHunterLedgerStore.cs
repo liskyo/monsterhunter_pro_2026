@@ -56,6 +56,9 @@ namespace MonsterHunter.Combat
         /// <summary>寵物小屋：隨行出戰寵物（須在倉庫擁有）。留空則戰鬥端改為隨機已擁有寵物。</summary>
         public string SelectedBattlePetId = "";
 
+        /// <summary>✦ 出戰攜帶道具（最多3個，存儲道具編號如 ITM_001 等）</summary>
+        public List<string> SelectedBattleItemIds = new List<string>();
+
         public static string FilePath =>
             Path.Combine(Application.persistentDataPath, "mh_local_hunter_ledger.json");
 
@@ -83,6 +86,7 @@ namespace MonsterHunter.Combat
 
             dto.Warehouse ??= new Dictionary<string, int>(StringComparer.Ordinal);
             dto.EquipmentLevels ??= new Dictionary<string, int>(StringComparer.Ordinal);
+            dto.SelectedBattleItemIds ??= new List<string>();
             
             // ✦ 測試環境：保證金幣至少為 99999，讓玩家永遠免於金幣不足
             if (dto.Zenny < 99999)

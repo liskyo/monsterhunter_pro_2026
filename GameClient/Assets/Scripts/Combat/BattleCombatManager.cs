@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using MonsterHunter.Controllers;
 using MonsterHunter.Data;
 using MonsterHunter.DataModels;
@@ -55,6 +57,18 @@ namespace MonsterHunter.Combat
         private Image _spGaugeFill;
         private Text _spBtnText;
         bool _battleOver;
+
+        // ✦ 寵物與自選攜帶道具系統
+        private CompanionPetController _petCtrl;
+        private Image _petHpFill;
+        private Text _petHpText;
+
+        public List<string> SelectedBattleItemIds { get; set; } = new List<string>();
+        private Dictionary<string, int> _battleItemQuantities = new Dictionary<string, int>();
+        private Dictionary<string, float> _battleItemCooldowns = new Dictionary<string, float>();
+        private Dictionary<string, float> _battleItemActiveDurations = new Dictionary<string, float>();
+        private List<Text> _itemCooldownTexts = new List<Text>();
+        private List<Image> _itemCooldownCovers = new List<Image>();
         private bool _inEntranceCountdown = true;
 
         Camera _backdropCamera;
@@ -447,6 +461,7 @@ namespace MonsterHunter.Combat
                 {
                     petCtrl.Setup(HunterGo.transform, MonsterGo.transform, _monsterAi, _playerCtrl, PetDataRow);
                     Debug.Log($"[BattleCombatManager] 成功初始化隨行寵物 AI：{PetDataRow.名稱}");
+                    _petCtrl = petCtrl; // ✦ 保存隨行寵物控制器引用！
                 }
             }
         }
@@ -516,6 +531,17 @@ namespace MonsterHunter.Combat
 
             // ✦ MH NOW SP大招能值按鈕
             BuildSpButton(HudCanvas.transform, font);
+
+            // ✦ 隨行寵物血條（位於獵人血條下方，高 44px，Y: -104f 到 -60f）
+            if (PetGo != null)
+            {
+                _petHpFill = BuildTopBarWithOffset(HudCanvas.transform, font,
+                    new Color(0.1f, 0.6f, 0.8f), new Vector2(0f, 1f), new Vector2(0.48f, 1f),
+                    out _petHpText, "寵物", -104f, -60f);
+            }
+
+            // ✦ 攜帶道具按鈕（位於左下角）
+            BuildBattleItemButtons(HudCanvas.transform, font);
 
             // 即時傷害浮字
             var fltGo = new GameObject("FloatDmg", typeof(RectTransform));
@@ -626,6 +652,402 @@ namespace MonsterHunter.Combat
             return fi;
         }
 
+        static Image BuildTopBarWithOffset(Transform parent, Font font, Color fillColor,
+            Vector2 anchorMin, Vector2 anchorMax, out Text label, string tag, float offsetMinY, float offsetMaxY)
+        {
+            var root = new GameObject("CombatBar_" + tag, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            var rr = root.GetComponent<RectTransform>();
+            rr.anchorMin = anchorMin + new Vector2(0.01f, 0f);
+            rr.anchorMax = anchorMax + new Vector2(-0.01f, 0f);
+            rr.offsetMin = new Vector2(0f, offsetMinY);
+            rr.offsetMax = new Vector2(0f, offsetMaxY);
+
+            var track = new GameObject("Track", typeof(RectTransform));
+            track.transform.SetParent(root.transform, false);
+            var trk = track.GetComponent<RectTransform>();
+            trk.anchorMin = new Vector2(0f, 0f);
+            trk.anchorMax = new Vector2(1f, 1f);
+            trk.offsetMin = Vector2.zero;
+            trk.offsetMax = Vector2.zero;
+            var trackImg = track.AddComponent<Image>();
+            trackImg.color = new Color(0.12f, 0.13f, 0.16f, 0.95f);
+            trackImg.raycastTarget = false;
+
+            var outl = track.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 1f, 1f, 0.25f);
+            outl.effectDistance = new Vector2(1f, -1f);
+            
+            var shad = track.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
+            var fill = new GameObject("Fill", typeof(RectTransform));
+            fill.transform.SetParent(track.transform, false);
+            var fr = fill.GetComponent<RectTransform>();
+            fr.anchorMin = Vector2.zero;
+            fr.anchorMax = Vector2.one;
+            fr.offsetMin = new Vector2(1.5f, 1.5f);
+            fr.offsetMax = new Vector2(-1.5f, -1.5f);
+            var fi = fill.AddComponent<Image>();
+            fi.color = fillColor;
+            fi.raycastTarget = false;
+
+            var capGo = new GameObject("Label", typeof(RectTransform));
+            capGo.transform.SetParent(track.transform, false);
+            var crt = capGo.GetComponent<RectTransform>();
+            crt.anchorMin = Vector2.zero;
+            crt.anchorMax = Vector2.one;
+            crt.offsetMin = Vector2.zero;
+            crt.offsetMax = Vector2.zero;
+            
+            label = capGo.AddComponent<Text>();
+            label.font = font;
+            label.fontSize = 20;
+            label.fontStyle = FontStyle.Bold;
+            label.color = Color.white;
+            label.alignment = TextAnchor.MiddleCenter;
+            label.supportRichText = true;
+            label.text = tag;
+
+            var shadow = capGo.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            shadow.effectDistance = new Vector2(1.5f, -1.5f);
+
+            return fi;
+        }
+
+        private void BuildBattleItemButtons(Transform parent, Font font)
+        {
+            _itemCooldownTexts.Clear();
+            _itemCooldownCovers.Clear();
+            _battleItemCooldowns.Clear();
+            _battleItemActiveDurations.Clear();
+            _battleItemQuantities.Clear();
+
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            var allItems = VillageGameFlow.LoadAllItems();
+
+            // 如果 SelectedBattleItemIds 沒有項目，為防禦性起見，我們自動加載 3 個預設道具（回復藥、回復藥【大】、鬼人藥）
+            if (SelectedBattleItemIds == null || SelectedBattleItemIds.Count == 0)
+            {
+                SelectedBattleItemIds = new List<string> { "ITM_001", "ITM_002", "ITM_017" };
+            }
+
+            for (int i = 0; i < SelectedBattleItemIds.Count; i++)
+            {
+                var itemId = SelectedBattleItemIds[i];
+                if (string.IsNullOrEmpty(itemId)) continue;
+
+                var itemRow = allItems.FirstOrDefault(x => x.素材編號 == itemId);
+                if (itemRow == null) continue;
+
+                int qty = ledger.GetWarehouseQuantity(itemId);
+                _battleItemQuantities[itemId] = qty;
+                _battleItemCooldowns[itemId] = 0f;
+                _battleItemActiveDurations[itemId] = 0f;
+
+                int currentIdx = i;
+                string currentId = itemId;
+
+                // 建立按鈕主物件
+                var btnGo = new GameObject($"ItemButton_{i}", typeof(RectTransform));
+                btnGo.transform.SetParent(parent, false);
+                var rt = btnGo.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0f, 0f);
+                rt.anchorMax = new Vector2(0f, 0f);
+                rt.pivot = new Vector2(0f, 0f);
+                
+                // 置於左下角，依序排列：X: 25, 115, 205 (每個按鈕寬 76f，間隔 14f)
+                rt.anchoredPosition = new Vector2(25f + i * 90f, 25f);
+                rt.sizeDelta = new Vector2(76f, 76f);
+
+                // 背景圓形
+                var bgGo = new GameObject("Bg", typeof(RectTransform));
+                bgGo.transform.SetParent(btnGo.transform, false);
+                var bgr = bgGo.GetComponent<RectTransform>();
+                bgr.anchorMin = Vector2.zero; bgr.anchorMax = Vector2.one;
+                bgr.offsetMin = Vector2.zero; bgr.offsetMax = Vector2.zero;
+                var bgImg = bgGo.AddComponent<Image>();
+                bgImg.sprite = CreateCircleSprite(new Color(0.08f, 0.1f, 0.14f, 0.95f));
+                
+                var bgOutl = bgGo.AddComponent<Outline>();
+                bgOutl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.6f);
+                bgOutl.effectDistance = new Vector2(1f, -1f);
+
+                // 道具圖示 (Image)
+                var iconGo = new GameObject("Icon", typeof(RectTransform));
+                iconGo.transform.SetParent(btnGo.transform, false);
+                var icr = iconGo.GetComponent<RectTransform>();
+                icr.anchorMin = new Vector2(0.12f, 0.12f);
+                icr.anchorMax = new Vector2(0.88f, 0.88f);
+                icr.offsetMin = Vector2.zero; icr.offsetMax = Vector2.zero;
+                var iconImg = iconGo.AddComponent<Image>();
+                iconImg.preserveAspect = true;
+                
+                var iconSprite = SafeSpriteLoader.TryLoadSprite(itemRow.圖片路徑);
+                if (iconSprite != null)
+                {
+                    iconImg.sprite = iconSprite;
+                    iconImg.color = Color.white;
+                }
+                else
+                {
+                    if (itemRow.分類 == "消耗品")
+                        iconImg.color = new Color(0.1f, 0.65f, 0.25f, 0.7f);
+                    else
+                        iconImg.color = new Color(0.85f, 0.5f, 0.05f, 0.7f);
+                }
+
+                // 道具數量標記 (Text)
+                var qtyGo = new GameObject("Qty", typeof(RectTransform));
+                qtyGo.transform.SetParent(btnGo.transform, false);
+                var qr = qtyGo.GetComponent<RectTransform>();
+                qr.anchorMin = new Vector2(0f, 0f);
+                qr.anchorMax = new Vector2(1f, 0.35f);
+                qr.offsetMin = Vector2.zero; qr.offsetMax = Vector2.zero;
+                var qtyTxt = qtyGo.AddComponent<Text>();
+                qtyTxt.font = font;
+                qtyTxt.fontSize = 15;
+                qtyTxt.fontStyle = FontStyle.Bold;
+                qtyTxt.alignment = TextAnchor.MiddleCenter;
+                qtyTxt.color = Color.yellow;
+                qtyTxt.text = $"x{qty}";
+                
+                var qtyShad = qtyGo.AddComponent<Shadow>();
+                qtyShad.effectColor = Color.black;
+                qtyShad.effectDistance = new Vector2(1f, -1f);
+
+                // CD 遮罩 (Cooldown Cover)
+                var cdGo = new GameObject("CdCover", typeof(RectTransform));
+                cdGo.transform.SetParent(btnGo.transform, false);
+                var cdr = cdGo.GetComponent<RectTransform>();
+                cdr.anchorMin = Vector2.zero; cdr.anchorMax = Vector2.one;
+                cdr.offsetMin = new Vector2(2f, 2f); cdr.offsetMax = new Vector2(-2f, -2f);
+                var cdImg = cdGo.AddComponent<Image>();
+                cdImg.sprite = CreateCircleSprite(new Color(0f, 0f, 0f, 0.75f));
+                cdImg.type = Image.Type.Filled;
+                cdImg.fillMethod = Image.FillMethod.Radial360;
+                cdImg.fillOrigin = (int)Image.Origin360.Top;
+                cdImg.fillClockwise = true;
+                cdImg.fillAmount = 0f;
+                _itemCooldownCovers.Add(cdImg);
+
+                // CD 剩餘秒數文字
+                var cdTxtGo = new GameObject("CdText", typeof(RectTransform));
+                cdTxtGo.transform.SetParent(btnGo.transform, false);
+                var cdtr = cdTxtGo.GetComponent<RectTransform>();
+                cdtr.anchorMin = Vector2.zero; cdtr.anchorMax = Vector2.one;
+                cdtr.offsetMin = Vector2.zero; cdtr.offsetMax = Vector2.zero;
+                var cdTxt = cdTxtGo.AddComponent<Text>();
+                cdTxt.font = font;
+                cdTxt.fontSize = 20;
+                cdTxt.fontStyle = FontStyle.Bold;
+                cdTxt.alignment = TextAnchor.MiddleCenter;
+                cdTxt.color = Color.white;
+                cdTxt.text = "";
+                _itemCooldownTexts.Add(cdTxt);
+                
+                var cdTxtShad = cdTxtGo.AddComponent<Shadow>();
+                cdTxtShad.effectColor = Color.black;
+                cdTxtShad.effectDistance = new Vector2(1f, -1f);
+
+                // 按鈕點擊監聽
+                var btn = btnGo.AddComponent<Button>();
+                btn.onClick.AddListener(() =>
+                {
+                    UseBattleItem(currentId, currentIdx, qtyTxt);
+                });
+            }
+        }
+
+        private void UseBattleItem(string itemId, int index, Text qtyText)
+        {
+            if (_battleOver) return;
+
+            // 1. 檢查是否在冷卻中
+            if (_battleItemCooldowns.TryGetValue(itemId, out var cd) && cd > 0f)
+            {
+                return;
+            }
+
+            // 2. 檢查數量
+            if (!_battleItemQuantities.TryGetValue(itemId, out var qty) || qty <= 0)
+            {
+                ShowPetFloatingText("❌ 道具數量不足！", Color.red);
+                return;
+            }
+
+            // 3. 觸發道具效果
+            bool usedSuccess = false;
+            float cdDuration = 10f; // 預設 CD
+
+            switch (itemId)
+            {
+                case "ITM_001": // 回復藥
+                    if (_playerCtrl != null)
+                    {
+                        float heal = _playerCtrl.MaxHp * 0.25f;
+                        _playerCtrl.Heal(heal);
+                        ShowPetFloatingText($"💚 使用回復藥！回復 {Mathf.CeilToInt(heal)} HP", new Color(0.12f, 0.95f, 0.2f));
+                        usedSuccess = true;
+                        cdDuration = 10f;
+                    }
+                    break;
+
+                case "ITM_002": // 回復藥【大】
+                    if (_playerCtrl != null)
+                    {
+                        float heal = _playerCtrl.MaxHp * 0.5f;
+                        _playerCtrl.Heal(heal);
+                        ShowPetFloatingText($"💚 使用回復藥【大】！回復 {Mathf.CeilToInt(heal)} HP", new Color(0.12f, 0.95f, 0.2f));
+                        usedSuccess = true;
+                        cdDuration = 15f;
+                    }
+                    break;
+
+                case "ITM_017": // 鬼人藥
+                    if (_playerCtrl != null)
+                    {
+                        _playerCtrl.SetOutgoingDamageMultiplier(1.20f);
+                        _battleItemActiveDurations[itemId] = 15f;
+                        ShowPetFloatingText("🔥 使用鬼人藥！15秒內物理攻擊提升 20%！", new Color(1f, 0.85f, 0f));
+                        usedSuccess = true;
+                        cdDuration = 20f;
+                    }
+                    break;
+
+                case "ITM_018": // 硬化藥
+                    if (_playerCtrl != null)
+                    {
+                        _playerCtrl.SetIncomingDamageMultiplier(0.80f); // 減少 20% 受傷
+                        _battleItemActiveDurations[itemId] = 15f;
+                        ShowPetFloatingText("🛡️ 使用硬化藥！15秒內承受傷害減少 20%！", new Color(0.2f, 0.6f, 1f));
+                        usedSuccess = true;
+                        cdDuration = 20f;
+                    }
+                    break;
+
+                case "ITM_026": // 閃光彈
+                    if (_monsterAi != null && _monsterAi.CurrentHp > 0f)
+                    {
+                        _monsterAi.SetOverrideTarget(null, 3f); // 眩暈斷仇恨 3s
+                        ShowPetFloatingText("💫 投擲閃光彈！魔物眩暈 3 秒！", new Color(1f, 0.95f, 0.4f));
+                        usedSuccess = true;
+                        cdDuration = 25f;
+                    }
+                    break;
+
+                case "ITM_030": // 小爆彈桶
+                    if (_monsterAi != null && _monsterAi.CurrentHp > 0f)
+                    {
+                        _monsterAi.ApplyDamage(120f, false);
+                        ShowPetFloatingText("💥 引爆小爆彈桶！造成 120 點爆破傷害！", new Color(1f, 0.35f, 0f));
+                        usedSuccess = true;
+                        cdDuration = 15f;
+                    }
+                    break;
+
+                case "ITM_031": // 大爆彈桶
+                    if (_monsterAi != null && _monsterAi.CurrentHp > 0f)
+                    {
+                        _monsterAi.ApplyDamage(380f, false);
+                        ShowPetFloatingText("💥 引爆大爆彈桶！造成 380 點巨大爆破傷害！", new Color(1f, 0.2f, 0f));
+                        usedSuccess = true;
+                        cdDuration = 30f;
+                    }
+                    break;
+
+                default: // 預設道具效果（回復 20% HP）
+                    if (_playerCtrl != null)
+                    {
+                        float heal = _playerCtrl.MaxHp * 0.20f;
+                        _playerCtrl.Heal(heal);
+                        ShowPetFloatingText($"💚 使用道具！回復 {Mathf.CeilToInt(heal)} HP", new Color(0.12f, 0.95f, 0.2f));
+                        usedSuccess = true;
+                        cdDuration = 10f;
+                    }
+                    break;
+            }
+
+            if (usedSuccess)
+            {
+                // 4. 減扣本戰數量
+                qty--;
+                _battleItemQuantities[itemId] = qty;
+                if (qtyText != null)
+                {
+                    qtyText.text = $"x{qty}";
+                }
+
+                // 5. 扣除磁碟存檔中的道具數量並存檔
+                var led = LocalHunterLedger.LoadOrCreate();
+                if (led.Warehouse != null && led.Warehouse.ContainsKey(itemId))
+                {
+                    led.Warehouse[itemId] = Mathf.Max(0, led.Warehouse[itemId] - 1);
+                    led.Save();
+                }
+
+                // 6. 設定冷卻計時器
+                _battleItemCooldowns[itemId] = cdDuration;
+            }
+        }
+
+        private void ShowPetFloatingText(string text, Color color)
+        {
+            if (HudCanvas == null) return;
+            
+            var go = new GameObject("ItemUsePop", typeof(RectTransform));
+            go.transform.SetParent(HudCanvas.transform, false);
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(0.5f, 0.45f);
+            rt.anchorMax = new Vector2(0.5f, 0.45f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = new Vector2(0f, 0f);
+            rt.sizeDelta = new Vector2(800f, 60f);
+
+            var font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Segoe UI", "Arial" }, 22)
+                        ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var txt = go.AddComponent<Text>();
+            txt.font = font;
+            txt.fontSize = 28;
+            txt.fontStyle = FontStyle.Bold;
+            txt.alignment = TextAnchor.MiddleCenter;
+            txt.color = color;
+            txt.text = text;
+
+            var shadow = go.AddComponent<Shadow>();
+            shadow.effectColor = Color.black;
+            shadow.effectDistance = new Vector2(1.5f, -1.5f);
+
+            StartCoroutine(FloatAndFadeItemText(go, rt, txt));
+        }
+
+        private System.Collections.IEnumerator FloatAndFadeItemText(GameObject go, RectTransform rt, Text txt)
+        {
+            float elapsed = 0f;
+            float duration = 1.6f;
+            Vector2 startPos = rt.anchoredPosition;
+
+            while (elapsed < duration)
+            {
+                if (go == null || rt == null || txt == null) yield break;
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+
+                float lift = Mathf.Sin(t * Mathf.PI * 0.5f) * 140f;
+                rt.anchoredPosition = startPos + new Vector2(0f, lift);
+
+                var c = txt.color;
+                c.a = Mathf.Clamp01(1f - t);
+                txt.color = c;
+
+                yield return null;
+            }
+            if (go != null) Destroy(go);
+        }
+
         // ────────────────────────────────────────────────────
         //  每幀更新
         // ────────────────────────────────────────────────────
@@ -720,6 +1142,95 @@ namespace MonsterHunter.Combat
                 _monsterAi != null ? _monsterAi.CurrentHp : 0f,
                 _monsterAi != null ? Mathf.Max(1f, _monsterAi.MaxHp) : 1f,
                 "魔物");
+
+            // ✦ 隨行寵物血條與力竭休息計時更新
+            if (_petCtrl != null)
+            {
+                if (_petCtrl.IsResting)
+                {
+                    UpdateHpBar(_petHpFill, _petHpText,
+                        0f,
+                        _petCtrl.MaxHp,
+                        $"🐾 {PetDataRow.名稱} [休息中]",
+                        $"<color=#FF3B30><b>({Mathf.Max(0f, _petCtrl.RestTimer):F1}s)</b></color>");
+                    
+                    if (_petHpFill != null)
+                    {
+                        _petHpFill.color = new Color(0.8f, 0.2f, 0.2f);
+                    }
+                }
+                else
+                {
+                    UpdateHpBar(_petHpFill, _petHpText,
+                        _petCtrl.CurrentHp,
+                        _petCtrl.MaxHp,
+                        $"🐾 {PetDataRow.名稱}");
+
+                    if (_petHpFill != null)
+                    {
+                        _petHpFill.color = new Color(0.1f, 0.6f, 0.8f);
+                    }
+                }
+            }
+
+            // ✦ 戰鬥自選攜帶道具冷卻與效果持續時間計時更新
+            for (int i = 0; i < SelectedBattleItemIds.Count; i++)
+            {
+                var itemId = SelectedBattleItemIds[i];
+                if (string.IsNullOrEmpty(itemId)) continue;
+
+                // 1. Cooldown
+                if (_battleItemCooldowns.TryGetValue(itemId, out var cd) && cd > 0f)
+                {
+                    cd = Mathf.Max(0f, cd - Time.deltaTime);
+                    _battleItemCooldowns[itemId] = cd;
+
+                    if (i < _itemCooldownTexts.Count && _itemCooldownTexts[i] != null)
+                    {
+                        _itemCooldownTexts[i].text = cd > 0f ? $"{cd:F1}s" : "";
+                    }
+
+                    if (i < _itemCooldownCovers.Count && _itemCooldownCovers[i] != null)
+                    {
+                        float maxCd = 10f;
+                        if (itemId == "ITM_002") maxCd = 15f;
+                        else if (itemId == "ITM_017" || itemId == "ITM_018") maxCd = 20f;
+                        else if (itemId == "ITM_026") maxCd = 25f;
+                        else if (itemId == "ITM_030") maxCd = 15f;
+                        else if (itemId == "ITM_031") maxCd = 30f;
+
+                        _itemCooldownCovers[i].fillAmount = Mathf.Clamp01(cd / maxCd);
+                    }
+                }
+                else
+                {
+                    if (i < _itemCooldownTexts.Count && _itemCooldownTexts[i] != null)
+                        _itemCooldownTexts[i].text = "";
+                    if (i < _itemCooldownCovers.Count && _itemCooldownCovers[i] != null)
+                        _itemCooldownCovers[i].fillAmount = 0f;
+                }
+
+                // 2. Active Buff Duration
+                if (_battleItemActiveDurations.TryGetValue(itemId, out var dur) && dur > 0f)
+                {
+                    dur = Mathf.Max(0f, dur - Time.deltaTime);
+                    _battleItemActiveDurations[itemId] = dur;
+
+                    if (dur <= 0f)
+                    {
+                        if (itemId == "ITM_017" && _playerCtrl != null)
+                        {
+                            _playerCtrl.SetOutgoingDamageMultiplier(1.0f);
+                            ShowPetFloatingText("🔥 鬼人藥效果結束！", Color.gray);
+                        }
+                        else if (itemId == "ITM_018" && _playerCtrl != null)
+                        {
+                            _playerCtrl.SetIncomingDamageMultiplier(1.0f);
+                            ShowPetFloatingText("🛡️ 硬化藥效果結束！", Color.gray);
+                        }
+                    }
+                }
+            }
 
             // 邊界鉗制（防止角色跑出鏡頭）
             if (_playerCtrl != null) ClampToCamera(HunterGo);
@@ -1274,12 +1785,23 @@ namespace MonsterHunter.Combat
             brt.anchoredPosition = new Vector2(0f, 150f); // 螢幕下方
 
             var btnImg = btnGo.AddComponent<Image>();
-            btnImg.color = new Color(0.15f, 0.45f, 0.2f, 0.95f); // 沉穩森林綠
+            // 勝利顯示璀璨黃金返回色，失敗顯示熱血警戒紅重試色
+            btnImg.color = won 
+                ? new Color(0.85f, 0.65f, 0.15f, 0.95f) // 璀璨金黃
+                : new Color(0.68f, 0.15f, 0.12f, 0.95f);  // 警戒猩紅
 
             var btn = btnGo.AddComponent<Button>();
             btn.onClick.AddListener(() => {
-                // 重新載入當前場景
-                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                if (won)
+                {
+                    // ✦ 贏了取得素材，返回主入口村莊場景
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Bootstrap");
+                }
+                else
+                {
+                    // ✦ 輸了，重新載入當前戰鬥場景以重複進行戰鬥挑戰
+                    UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                }
             });
 
             var btnTxtGo = new GameObject("Text", typeof(RectTransform));
@@ -1294,7 +1816,7 @@ namespace MonsterHunter.Combat
             btnTxt.fontStyle = FontStyle.Bold;
             btnTxt.alignment = TextAnchor.MiddleCenter;
             btnTxt.color = Color.white;
-            btnTxt.text = "繼續狩獵 (Restart)";
+            btnTxt.text = won ? "返回村莊" : "重新挑戰 (Retry)";
 
             var btnShadow = btnTxtGo.AddComponent<Shadow>();
             btnShadow.effectColor = new Color(0f, 0f, 0f, 0.8f);

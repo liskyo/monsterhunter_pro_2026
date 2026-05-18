@@ -127,6 +127,12 @@ namespace MonsterHunter.Controllers
 
         void Awake()
         {
+            // ✦ 新增：為魔物附加 3D 立體恐怖特效與雙層光影效果，使其極具立體感與壓迫感
+            if (gameObject.GetComponent<Monster3DEffectController>() == null)
+            {
+                gameObject.AddComponent<Monster3DEffectController>();
+            }
+
             _rb = GetComponent<Rigidbody2D>();
             if ((object)_rb == null || _rb.Equals(null))
             {
@@ -476,7 +482,15 @@ namespace MonsterHunter.Controllers
                     }
                     else
                     {
-                        Debug.Log($"[Monster] 攻擊擊中了隨行寵物！");
+                        var receiver = activeTarget.GetComponent<IDamageReceiver>();
+                        if (receiver != null)
+                        {
+                            receiver.ApplyDamage(attack.plannedDirectDamageFlat, false);
+                        }
+                        else
+                        {
+                            Debug.Log($"[Monster] 攻擊擊中了隨行寵物，但寵物沒有 IDamageReceiver！");
+                        }
                     }
                 }
             }
@@ -852,6 +866,131 @@ namespace MonsterHunter.Controllers
             }
 
             gameObject.SetActive(false);
+        }
+    }
+
+    public sealed class Monster3DEffectController : MonoBehaviour
+    {
+        private SpriteRenderer _mainSr;
+        private SpriteRenderer _rimGlowSr;
+        private SpriteRenderer _dropShadowSr;
+        private float _t;
+        private Vector3 _baseScale = Vector3.one;
+
+        void Start()
+        {
+            _mainSr = GetComponent<SpriteRenderer>();
+            if (_mainSr == null) _mainSr = GetComponentInChildren<SpriteRenderer>();
+
+            if (_mainSr != null)
+            {
+                _baseScale = _mainSr.transform.localScale;
+            }
+
+            // ✦ 1. 建立惡魔紅色邊緣背光高光 (Rim Glow / Backlight)，增添立體感與恐懼感
+            if (_mainSr != null)
+            {
+                var glowGo = new GameObject("MonsterRimGlow", typeof(SpriteRenderer));
+                glowGo.transform.SetParent(_mainSr.transform, false);
+                glowGo.transform.localPosition = new Vector3(0.015f, 0.015f, 0.05f); // 略微往後與偏移
+                glowGo.transform.localScale = new Vector3(1.05f, 1.05f, 1f); // 稍微放大
+
+                _rimGlowSr = glowGo.GetComponent<SpriteRenderer>();
+                _rimGlowSr.sprite = _mainSr.sprite;
+                _rimGlowSr.color = new Color(0.9f, 0.15f, 0.05f, 0.35f); // 鮮紅色惡魔背光
+                _rimGlowSr.sortingOrder = _mainSr.sortingOrder - 1; // 剛好在魔物背後
+            }
+
+            // ✦ 2. 建立立體感十足的軟黑地面投影陰影 (Drop Shadow)
+            var shadowGo = new GameObject("MonsterDropShadow", typeof(SpriteRenderer));
+            shadowGo.transform.SetParent(transform, false);
+            // 投影在魔物腳下
+            shadowGo.transform.localPosition = new Vector3(0f, -0.92f, 0.1f);
+            shadowGo.transform.localScale = new Vector3(1.8f, 0.42f, 1f);
+
+            _dropShadowSr = shadowGo.GetComponent<SpriteRenderer>();
+            _dropShadowSr.sprite = CreateSoftShadowSprite();
+            _dropShadowSr.color = new Color(0f, 0f, 0f, 0.65f); // 透黑
+            
+            // 確保陰影在最底層
+            _dropShadowSr.sortingOrder = _mainSr != null ? _mainSr.sortingOrder - 2 : -10;
+        }
+
+        void Update()
+        {
+            if (_mainSr == null) return;
+
+            // 同步邊緣光精靈與朝向，防止魔物換圖或翻轉時錯位
+            if (_rimGlowSr != null)
+            {
+                _rimGlowSr.sprite = _mainSr.sprite;
+                _rimGlowSr.flipX = _mainSr.flipX;
+                _rimGlowSr.flipY = _mainSr.flipY;
+            }
+
+            _t += Time.deltaTime;
+
+            // ✦ 3. 仿 3D 呼吸與輕微透視旋轉 (Parallax / Breathing)
+            // 微微扭動 Y 軸與 Z 軸，模擬在 3D 空間中立體呼吸的立體深度！
+            float breatheY = 1.0f + Mathf.Sin(_t * 1.8f) * 0.035f;
+            float breatheX = 1.0f + Mathf.Cos(_t * 1.4f) * 0.02f;
+            _mainSr.transform.localScale = new Vector3(_baseScale.x * breatheX, _baseScale.y * breatheY, _baseScale.z);
+
+            // 微微傾斜 Y 軸（3D 歐拉角傾斜），在 Unity 2D 中精緻模擬魔物面對我們時的 3D 立體側身感與厚重感！
+            float rotY = Mathf.Sin(_t * 1.5f) * 7.5f;  // Y軸左右立體偏擺
+            float rotZ = Mathf.Cos(_t * 2.1f) * 2.8f;  // Z軸微微歪斜
+            _mainSr.transform.localRotation = Quaternion.Euler(0f, rotY, rotZ);
+
+            // ✦ 4. 惡魔紅色邊緣背光呼吸脈動，營造恐怖壓迫氛圍
+            if (_rimGlowSr != null)
+            {
+                float pulse = 0.35f + Mathf.Sin(_t * 3.5f) * 0.15f;
+                // 根據魔物是否正在前搖/出招(閃紅光)來加強壓迫感
+                var ai = GetComponent<MonsterAiController>();
+                if (ai != null && ai.IsTelegraphing)
+                {
+                    pulse = 0.65f + Mathf.Sin(_t * 8f) * 0.25f; // 快閃紅光！
+                    _rimGlowSr.color = new Color(1f, 0.05f, 0f, pulse);
+                }
+                else
+                {
+                    _rimGlowSr.color = new Color(0.9f, 0.15f, 0.05f, pulse);
+                }
+            }
+
+            // ✦ 5. 地面陰影隨呼吸微微收縮
+            if (_dropShadowSr != null)
+            {
+                float shadowPulse = 1.0f + Mathf.Sin(_t * 1.8f) * 0.08f;
+                _dropShadowSr.transform.localScale = new Vector3(1.8f * shadowPulse, 0.42f, 1f);
+            }
+        }
+
+        private Sprite CreateSoftShadowSprite()
+        {
+            int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float center = size * 0.5f;
+            float maxDist = size * 0.5f;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center;
+                    float dy = y - center;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float t = Mathf.Clamp01(dist / maxDist);
+
+                    // 軟質放射狀漸變衰減
+                    float alpha = Mathf.Clamp01(1f - t);
+                    alpha = Mathf.Pow(alpha, 2f) * 0.75f;
+
+                    tex.SetPixel(x, y, new Color(0f, 0f, 0f, alpha));
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
         }
     }
 }

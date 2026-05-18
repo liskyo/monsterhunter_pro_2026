@@ -385,13 +385,55 @@ namespace MonsterHunter.UI
             textShad.effectDistance = new Vector2(1.2f, -1.2f);
 
             CreateSectionLabel(body.transform, "持有染色球（點選）", new Vector2(0.04f, 0.58f), new Vector2(0.48f, 0.63f));
-            var scrollPaint = CreateScrollAreaAnchored(body.transform, new Vector2(0.04f, 0.12f), new Vector2(0.48f, 0.56f));
+            var scrollPaint = CreateScrollAreaAnchored(body.transform, new Vector2(0.04f, 0.28f), new Vector2(0.48f, 0.56f));
 
             CreateSectionLabel(body.transform, "持有魔物痕跡（點選）", new Vector2(0.52f, 0.58f), new Vector2(0.96f, 0.63f));
-            var scrollTrace = CreateScrollAreaAnchored(body.transform, new Vector2(0.52f, 0.12f), new Vector2(0.96f, 0.56f));
+            var scrollTrace = CreateScrollAreaAnchored(body.transform, new Vector2(0.52f, 0.28f), new Vector2(0.96f, 0.56f));
 
             scrollPaint.content.gameObject.AddComponent<PaintPickHolder>().Holder = this;
             scrollTrace.content.gameObject.AddComponent<TracePickHolder>().Holder = this;
+
+            // ✦ 攜帶道具選取區 Y: 0.12 ~ 0.26
+            var itemSection = new GameObject("PrepItemsSection", typeof(RectTransform), typeof(Image));
+            itemSection.transform.SetParent(body.transform, false);
+            var isRt = itemSection.GetComponent<RectTransform>();
+            isRt.anchorMin = new Vector2(0.04f, 0.12f);
+            isRt.anchorMax = new Vector2(0.96f, 0.26f);
+            isRt.offsetMin = isRt.offsetMax = Vector2.zero;
+            itemSection.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.16f, 0.9f);
+            
+            var isOutl = itemSection.AddComponent<Outline>();
+            isOutl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.45f);
+            isOutl.effectDistance = new Vector2(1.2f, -1.2f);
+
+            var itemLabelGo = new GameObject("Label", typeof(RectTransform));
+            itemLabelGo.transform.SetParent(itemSection.transform, false);
+            var ilRt = itemLabelGo.GetComponent<RectTransform>();
+            ilRt.anchorMin = new Vector2(0f, 0.72f);
+            ilRt.anchorMax = new Vector2(1f, 1f);
+            ilRt.offsetMin = ilRt.offsetMax = Vector2.zero;
+            var ilTxt = itemLabelGo.AddComponent<Text>();
+            ilTxt.font = _font;
+            ilTxt.fontSize = 16;
+            ilTxt.fontStyle = FontStyle.Bold;
+            ilTxt.alignment = TextAnchor.MiddleCenter;
+            ilTxt.color = new Color(0.85f, 0.65f, 0.2f);
+            ilTxt.text = "✦ 出戰攜帶道具 (最多3項，點擊選格) ✦";
+
+            var gridGo = new GameObject("ItemGrid", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            gridGo.transform.SetParent(itemSection.transform, false);
+            var gRt = gridGo.GetComponent<RectTransform>();
+            gRt.anchorMin = new Vector2(0.05f, 0.05f);
+            gRt.anchorMax = new Vector2(0.95f, 0.7f);
+            gRt.offsetMin = gRt.offsetMax = Vector2.zero;
+            
+            var hgGrid = gridGo.GetComponent<HorizontalLayoutGroup>();
+            hgGrid.spacing = 20f;
+            hgGrid.childAlignment = TextAnchor.MiddleCenter;
+            hgGrid.childForceExpandWidth = true;
+            hgGrid.childForceExpandHeight = true;
+            
+            gridGo.AddComponent<BattleItemPickHolder>().Holder = this;
 
             var foot = new GameObject("PrepFoot", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             foot.transform.SetParent(body.transform, false);
@@ -494,6 +536,7 @@ namespace MonsterHunter.UI
 
             PaintPickHolder.Refresh(_goBattlePrep);
             TracePickHolder.Refresh(_goBattlePrep);
+            BattleItemPickHolder.Refresh(_goBattlePrep);
         }
 
         internal void SetPrepPaint(string id)
@@ -1725,6 +1768,20 @@ namespace MonsterHunter.UI
             t.transform.localScale = new Vector3(0.3333f, 0.3333f, 1f); // 縮放回 1/3，完美抗鋸齒
         }
 
+        public static List<素材資料列> LoadAllItems()
+        {
+            var list = new List<素材資料列>();
+            if (DesignDataReader.TryLoadDesignDataText(out var mj, "04_Items", "materials.json"))
+            {
+                var arr = DesignDataJsonArrayUtility.Parse素材資料(mj);
+                if (arr != null)
+                {
+                    list.AddRange(arr);
+                }
+            }
+            return list;
+        }
+
         // ✦ 新增的背景呼吸特效控制器 (增強生命感與臨場感)
         sealed class BgBreather : MonoBehaviour
         {
@@ -1735,6 +1792,269 @@ namespace MonsterHunter.UI
                 // 產生 1.0 到 1.06 的平滑縮放 (大約 6% 的放大縮小)
                 float scale = 1.03f + Mathf.Sin(_t) * 0.03f;
                 transform.localScale = new Vector3(scale, scale, 1f);
+            }
+        }
+
+        private void OpenItemSelectPopup(int slotIndex)
+        {
+            var pop = new GameObject("ItemSelectPopup", typeof(RectTransform), typeof(Image));
+            pop.transform.SetParent(_goBattlePrep.transform, false);
+            var prt = pop.GetComponent<RectTransform>();
+            prt.anchorMin = new Vector2(0.1f, 0.15f);
+            prt.anchorMax = new Vector2(0.9f, 0.85f);
+            prt.offsetMin = prt.offsetMax = Vector2.zero;
+
+            var popImg = pop.GetComponent<Image>();
+            popImg.color = new Color(0.06f, 0.08f, 0.12f, 0.98f);
+
+            var popOutl = pop.AddComponent<Outline>();
+            popOutl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.8f);
+            popOutl.effectDistance = new Vector2(1.5f, -1.5f);
+
+            // 標題
+            var titleGo = new GameObject("Title", typeof(RectTransform));
+            titleGo.transform.SetParent(pop.transform, false);
+            var trt = titleGo.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0f, 0.9f);
+            trt.anchorMax = new Vector2(1f, 1f);
+            trt.offsetMin = trt.offsetMax = Vector2.zero;
+            var titleTxt = titleGo.AddComponent<Text>();
+            titleTxt.font = _font;
+            titleTxt.fontSize = 20;
+            titleTxt.fontStyle = FontStyle.Bold;
+            titleTxt.alignment = TextAnchor.MiddleCenter;
+            titleTxt.color = Color.yellow;
+            titleTxt.text = $"選擇欄位 {slotIndex + 1} 的道具";
+
+            // 滑動內容區
+            var scroll = CreateScrollAreaAnchored(pop.transform, new Vector2(0.05f, 0.15f), new Vector2(0.95f, 0.88f));
+            
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            var allItems = LoadAllItems();
+
+            // 只列出消耗品與特定可用道具
+            var validItems = allItems.Where(x => x.分類 == "消耗品" || x.素材編號 == "ITM_001" || x.素材編號 == "ITM_002" || x.素材編號 == "ITM_017" || x.素材編號 == "ITM_018" || x.素材編號 == "ITM_026" || x.素材編號 == "ITM_030" || x.素材編號 == "ITM_031").ToList();
+
+            // 增加一個「清除選擇」按鈕
+            {
+                var rowGo = new GameObject("ClearItem", typeof(RectTransform), typeof(Image), typeof(Button));
+                rowGo.transform.SetParent(scroll.content, false);
+                var rowRt = rowGo.GetComponent<RectTransform>();
+                rowRt.sizeDelta = new Vector2(500f, 54f);
+                rowGo.GetComponent<Image>().color = new Color(0.2f, 0.1f, 0.1f, 0.8f);
+
+                var txtGo = new GameObject("Txt", typeof(RectTransform));
+                txtGo.transform.SetParent(rowGo.transform, false);
+                var tRt = txtGo.GetComponent<RectTransform>();
+                tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.one;
+                tRt.offsetMin = tRt.offsetMax = Vector2.zero;
+                var txt = txtGo.AddComponent<Text>();
+                txt.font = _font;
+                txt.fontSize = 16;
+                txt.fontStyle = FontStyle.Bold;
+                txt.alignment = TextAnchor.MiddleCenter;
+                txt.color = Color.red;
+                txt.text = "❌ 卸下當前道具";
+
+                rowGo.GetComponent<Button>().onClick.AddListener(() =>
+                {
+                    var led = LocalHunterLedger.LoadOrCreate();
+                    if (led.SelectedBattleItemIds == null) led.SelectedBattleItemIds = new List<string> { "", "", "" };
+                    while (led.SelectedBattleItemIds.Count < 3) led.SelectedBattleItemIds.Add("");
+                    led.SelectedBattleItemIds[slotIndex] = "";
+                    led.Save();
+
+                    Destroy(pop);
+                    RefreshBattlePrepUi();
+                });
+            }
+
+            foreach (var r in validItems)
+            {
+                int qty = ledger.GetWarehouseQuantity(r.素材編號);
+                if (qty <= 0) continue; // 只有倉庫擁有的道具才可攜帶
+
+                var rowGo = new GameObject(r.素材編號, typeof(RectTransform), typeof(Image), typeof(Button));
+                rowGo.transform.SetParent(scroll.content, false);
+                var rowRt = rowGo.GetComponent<RectTransform>();
+                rowRt.sizeDelta = new Vector2(500f, 54f);
+                rowGo.GetComponent<Image>().color = new Color(0.12f, 0.15f, 0.2f, 0.85f);
+
+                // 道具詳情文字
+                var txtGo = new GameObject("Txt", typeof(RectTransform));
+                txtGo.transform.SetParent(rowGo.transform, false);
+                var tRt = txtGo.GetComponent<RectTransform>();
+                tRt.anchorMin = Vector2.zero; tRt.anchorMax = Vector2.one;
+                tRt.offsetMin = tRt.offsetMax = Vector2.zero;
+                var txt = txtGo.AddComponent<Text>();
+                txt.font = _font;
+                txt.fontSize = 15;
+                txt.alignment = TextAnchor.MiddleCenter;
+                txt.color = Color.white;
+                txt.text = $"{r.名稱} (持有: {qty} 個) - {r.描述}";
+
+                string targetId = r.素材編號;
+                rowGo.GetComponent<Button>().onClick.AddListener(() =>
+                {
+                    var led = LocalHunterLedger.LoadOrCreate();
+                    if (led.SelectedBattleItemIds == null) led.SelectedBattleItemIds = new List<string> { "", "", "" };
+                    while (led.SelectedBattleItemIds.Count < 3) led.SelectedBattleItemIds.Add("");
+
+                    // 檢查是否重複攜帶
+                    if (led.SelectedBattleItemIds.Contains(targetId))
+                    {
+                        int oldIdx = led.SelectedBattleItemIds.IndexOf(targetId);
+                        led.SelectedBattleItemIds[oldIdx] = "";
+                    }
+
+                    led.SelectedBattleItemIds[slotIndex] = targetId;
+                    led.Save();
+
+                    Destroy(pop);
+                    RefreshBattlePrepUi();
+                });
+            }
+
+            // 關閉按鈕
+            var closeGo = new GameObject("Close", typeof(RectTransform), typeof(Image), typeof(Button));
+            closeGo.transform.SetParent(pop.transform, false);
+            var crt = closeGo.GetComponent<RectTransform>();
+            crt.anchorMin = new Vector2(0.35f, 0.03f);
+            crt.anchorMax = new Vector2(0.65f, 0.11f);
+            crt.offsetMin = crt.offsetMax = Vector2.zero;
+            closeGo.GetComponent<Image>().color = new Color(0.3f, 0.3f, 0.3f, 0.8f);
+
+            var closeTxtGo = new GameObject("Txt", typeof(RectTransform));
+            closeTxtGo.transform.SetParent(closeGo.transform, false);
+            var ctRt = closeTxtGo.GetComponent<RectTransform>();
+            ctRt.anchorMin = Vector2.zero; ctRt.anchorMax = Vector2.one;
+            ctRt.offsetMin = ctRt.offsetMax = Vector2.zero;
+            var closeTxt = closeTxtGo.AddComponent<Text>();
+            closeTxt.font = _font;
+            closeTxt.fontSize = 15;
+            closeTxt.alignment = TextAnchor.MiddleCenter;
+            closeTxt.color = Color.white;
+            closeTxt.text = "取消關閉";
+
+            closeGo.GetComponent<Button>().onClick.AddListener(() =>
+            {
+                Destroy(pop);
+            });
+        }
+
+        sealed class BattleItemPickHolder : MonoBehaviour
+        {
+            public VillageGameFlow Holder;
+
+            public static void Refresh(GameObject battleRoot)
+            {
+                battleRoot?.GetComponentInChildren<BattleItemPickHolder>(true)?.Rebuild();
+            }
+
+            void OnEnable() => Rebuild();
+
+            public void Rebuild()
+            {
+                if (Holder == null) return;
+                var content = transform as RectTransform;
+                if (content == null) return;
+                
+                for (var i = content.childCount - 1; i >= 0; i--)
+                    Destroy(content.GetChild(i).gameObject);
+
+                var ledger = LocalHunterLedger.LoadOrCreate();
+                var items = ledger.SelectedBattleItemIds ?? new List<string>();
+                
+                while (items.Count < 3) items.Add("");
+
+                var allItems = VillageGameFlow.LoadAllItems();
+
+                for (int slotIdx = 0; slotIdx < 3; slotIdx++)
+                {
+                    int currentSlot = slotIdx;
+                    var itemId = items[slotIdx];
+                    var itemRow = allItems.FirstOrDefault(x => x.素材編號 == itemId);
+
+                    // 槽按鈕
+                    var slotGo = new GameObject($"Slot_{slotIdx}", typeof(RectTransform), typeof(Image), typeof(Button));
+                    slotGo.transform.SetParent(content, false);
+                    var sRt = slotGo.GetComponent<RectTransform>();
+                    sRt.sizeDelta = new Vector2(80f, 80f);
+
+                    var slotImg = slotGo.GetComponent<Image>();
+                    slotImg.color = new Color(0.08f, 0.1f, 0.14f, 0.95f);
+                    
+                    var slotOutl = slotGo.AddComponent<Outline>();
+                    slotOutl.effectColor = new Color(0.85f, 0.65f, 0.2f, 0.5f);
+                    slotOutl.effectDistance = new Vector2(1f, -1f);
+
+                    var container = new GameObject("Container", typeof(RectTransform));
+                    container.transform.SetParent(slotGo.transform, false);
+                    var cRt = container.GetComponent<RectTransform>();
+                    cRt.anchorMin = Vector2.zero; cRt.anchorMax = Vector2.one;
+                    cRt.offsetMin = Vector2.zero; cRt.offsetMax = Vector2.zero;
+
+                    if (itemRow != null)
+                    {
+                        var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+                        iconGo.transform.SetParent(container.transform, false);
+                        var iRt = iconGo.GetComponent<RectTransform>();
+                        iRt.anchorMin = new Vector2(0.15f, 0.35f);
+                        iRt.anchorMax = new Vector2(0.85f, 0.9f);
+                        iRt.offsetMin = iRt.offsetMax = Vector2.zero;
+                        
+                        var iImg = iconGo.GetComponent<Image>();
+                        iImg.preserveAspect = true;
+                        var sp = SafeSpriteLoader.TryLoadSprite(itemRow.圖片路徑);
+                        if (sp != null)
+                        {
+                            iImg.sprite = sp;
+                            iImg.color = Color.white;
+                        }
+                        else
+                        {
+                            iImg.color = itemRow.分類 == "消耗品" ? new Color(0.1f, 0.65f, 0.25f, 0.7f) : new Color(0.85f, 0.5f, 0.05f, 0.7f);
+                        }
+
+                        var nameGo = new GameObject("Text", typeof(RectTransform));
+                        nameGo.transform.SetParent(container.transform, false);
+                        var nRt = nameGo.GetComponent<RectTransform>();
+                        nRt.anchorMin = new Vector2(0f, 0f);
+                        nRt.anchorMax = new Vector2(1f, 0.3f);
+                        nRt.offsetMin = nRt.offsetMax = Vector2.zero;
+                        
+                        var txt = nameGo.AddComponent<Text>();
+                        txt.font = Holder._font;
+                        txt.fontSize = 11;
+                        txt.fontStyle = FontStyle.Bold;
+                        txt.alignment = TextAnchor.MiddleCenter;
+                        txt.color = Color.white;
+
+                        int qty = ledger.GetWarehouseQuantity(itemId);
+                        txt.text = $"{itemRow.名稱.Substring(0, Mathf.Min(itemRow.名稱.Length, 4))} (x{qty})";
+                    }
+                    else
+                    {
+                        var emptyGo = new GameObject("Text", typeof(RectTransform));
+                        emptyGo.transform.SetParent(container.transform, false);
+                        var eRt = emptyGo.GetComponent<RectTransform>();
+                        eRt.anchorMin = Vector2.zero; eRt.anchorMax = Vector2.one;
+                        eRt.offsetMin = eRt.offsetMax = Vector2.zero;
+
+                        var txt = emptyGo.AddComponent<Text>();
+                        txt.font = Holder._font;
+                        txt.fontSize = 13;
+                        txt.alignment = TextAnchor.MiddleCenter;
+                        txt.color = new Color(0.7f, 0.7f, 0.7f, 0.6f);
+                        txt.text = "【未選擇】";
+                    }
+
+                    var btn = slotGo.GetComponent<Button>();
+                    btn.onClick.AddListener(() =>
+                    {
+                        Holder.OpenItemSelectPopup(currentSlot);
+                    });
+                }
             }
         }
     }

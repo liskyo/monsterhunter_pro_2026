@@ -15,7 +15,7 @@ namespace MonsterHunter.Combat
     ///      - 輔助獵人（體力回復加血、或是加攻擊力 Buff）
     ///      - 吸引魔物（挑釁怒吼、短暫強制重寫魔物的 AI 追擊目標至寵物身上，為獵人創造背後輸出機會）
     /// </summary>
-    public sealed class CompanionPetController : MonoBehaviour
+    public sealed class CompanionPetController : MonoBehaviour, IDamageReceiver
     {
         private Transform _hunter;
         private Transform _monster;
@@ -29,6 +29,15 @@ namespace MonsterHunter.Combat
 
         private bool _isPerformingAction;
 
+        // ✦ 寵物血量與休息機制
+        public float MaxHp { get; private set; } = 100f;
+        public float CurrentHp { get; private set; } = 100f;
+        private bool _isResting = false;
+        private float _restTimer = 0f;
+
+        public bool IsResting => _isResting;
+        public float RestTimer => _restTimer;
+
         public void Setup(Transform hunter, Transform monster, MonsterAiController monsterAi, PlayerController playerCtrl, 寵物資料列 petData)
         {
             _hunter = hunter;
@@ -38,18 +47,84 @@ namespace MonsterHunter.Combat
             _petData = petData;
 
             // 根據寵物屬性微調行動速度與間隔，屬性越好動作越頻繁
-            var star = petData != null ? Mathf.Clamp(petData.基礎數值?.體力 ?? 1, 1, 100) : 5;
-            _actionInterval = Mathf.Clamp(4.8f - (star * 0.05f), 2.8f, 5.5f);
+            var stamina = petData != null ? Mathf.Clamp(petData.基礎數值?.體力 ?? 1, 1, 100) : 5;
+            _actionInterval = Mathf.Clamp(4.8f - (stamina * 0.05f), 2.8f, 5.5f);
+
+            // ✦ 動態依耐力計算最大血量：MaxHp = Mathf.Max(50f, Stamina * 10f)
+            MaxHp = Mathf.Max(50f, stamina * 10f);
+            CurrentHp = MaxHp;
+            _isResting = false;
+            _restTimer = 0f;
+
+            AddSelfGlowAura(transform, 0.48f);
+        }
+
+        public void ApplyDamage(float amount, bool isCrit)
+        {
+            if (_isResting) return;
+
+            CurrentHp = Mathf.Max(0f, CurrentHp - amount);
+            
+            // 飄字顯示寵物受傷
+            SpawnFloatingText($"🐾 寵物受傷！ -{Mathf.CeilToInt(amount)} HP", new Color(1f, 0.3f, 0.3f));
+
+            if (CurrentHp <= 0f)
+            {
+                _isResting = true;
+                _restTimer = 20f;
+                _isPerformingAction = false;
+                
+                // 停止可能正在執行的行動協程
+                StopAllCoroutines();
+                
+                // 設置半透明度 0.35f 提示昏迷
+                var sr = GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.color = new Color(1f, 1f, 1f, 0.35f);
+                }
+
+                SpawnFloatingText("🐾 寵物力竭！休息 20 秒...", new Color(1f, 0.1f, 0.1f));
+            }
         }
 
         private void Update()
         {
             if (BattleCombatManager.IsBattleConcluded || _hunter == null) return;
 
-            // ✦ 當前沒有執行突進動作時，平滑跟隨在獵人身旁
+            // ✦ 如果正在休眠，倒計時並以 0.35f 半透明度跟隨玩家
+            if (_isResting)
+            {
+                _restTimer -= Time.deltaTime;
+                
+                var sr = GetComponent<SpriteRenderer>();
+                if (sr != null)
+                {
+                    sr.color = new Color(1f, 1f, 1f, 0.35f);
+                }
+
+                Vector3 targetPos = _hunter.position + _offsetFromHunter;
+                transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * 3.8f);
+
+                if (_restTimer <= 0f)
+                {
+                    _isResting = false;
+                    CurrentHp = MaxHp;
+                    
+                    if (sr != null)
+                    {
+                        sr.color = Color.white;
+                    }
+                    
+                    SpawnFloatingText("🐾 寵物休息結束！重回戰場！", new Color(0.2f, 0.8f, 1f));
+                }
+                return; // 休眠中不執行任何特殊行動計時！
+            }
+
+            // ✦ 當前沒有執行突進動作時，平滑跟隨在目標跟隨點
             if (!_isPerformingAction)
             {
-                Vector3 targetPos = _hunter.position + _offsetFromHunter;
+                Vector3 targetPos = GetStandTargetPosition();
                 transform.position = Vector3.Lerp(transform.position, targetPos, Time.deltaTime * 3.8f);
                 
                 // 朝向怪物方向
@@ -136,7 +211,7 @@ namespace MonsterHunter.Combat
             {
                 if (_hunter == null) break;
                 elapsed += Time.deltaTime;
-                transform.position = Vector3.Lerp(retreatStart, _hunter.position + _offsetFromHunter, elapsed / duration);
+                transform.position = Vector3.Lerp(retreatStart, GetStandTargetPosition(), elapsed / duration);
                 yield return null;
             }
 
@@ -236,7 +311,7 @@ namespace MonsterHunter.Combat
             {
                 if (_hunter == null) break;
                 elapsed += Time.deltaTime;
-                transform.position = Vector3.Lerp(retreatStart, _hunter.position + _offsetFromHunter, elapsed / duration);
+                transform.position = Vector3.Lerp(retreatStart, GetStandTargetPosition(), elapsed / duration);
                 yield return null;
             }
 
@@ -351,6 +426,67 @@ namespace MonsterHunter.Combat
                 yield return null;
             }
             if (go != null) Destroy(go);
+        }
+
+        private Vector3 GetStandTargetPosition()
+        {
+            if (_hunter == null) return transform.position;
+            string role = (_petData != null && _petData.定位 != null ? _petData.定位.Trim() : "支援");
+            if ((role.Contains("戰鬥") || role.Contains("攻擊")) && _monster != null)
+            {
+                // ✦ 攻擊型寵物包抄夾擊：位於魔物相對於獵人的另一端
+                Vector3 hunterToMonster = _monster.position - _hunter.position;
+                hunterToMonster.z = 0f;
+                Vector3 dir = hunterToMonster.normalized;
+                if (dir.sqrMagnitude < 0.01f) dir = Vector3.right;
+                return _monster.position + dir * 1.05f + new Vector3(0f, -0.15f, 0f);
+            }
+            return _hunter.position + _offsetFromHunter;
+        }
+
+        private void AddSelfGlowAura(Transform parent, float scale)
+        {
+            var glowGo = new GameObject("PetGlowAura", typeof(SpriteRenderer));
+            glowGo.transform.SetParent(parent, false);
+            glowGo.transform.localPosition = new Vector3(0f, -0.4f, 0.05f); // 位於寵物腳底偏後
+            glowGo.transform.localScale = new Vector3(scale * 1.6f, scale * 0.5f, 1f); // 橢圓白光
+
+            var sr = glowGo.GetComponent<SpriteRenderer>();
+            sr.sprite = CreateSoftGlowSprite();
+            sr.drawMode = SpriteDrawMode.Simple;
+            sr.color = new Color(1f, 1f, 1f, 0.65f); // 亮白
+
+            var parentSr = parent.GetComponent<SpriteRenderer>();
+            if (parentSr == null) parentSr = parent.GetComponentInChildren<SpriteRenderer>();
+            if (parentSr != null) sr.sortingOrder = parentSr.sortingOrder - 1;
+
+            glowGo.AddComponent<GlowBreather>();
+        }
+
+        private Sprite CreateSoftGlowSprite()
+        {
+            int size = 128;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float center = size * 0.5f;
+            float maxDist = size * 0.5f;
+            
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = x - center;
+                    float dy = y - center;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float t = Mathf.Clamp01(dist / maxDist);
+                    
+                    float alpha = Mathf.Clamp01(1f - t);
+                    alpha = Mathf.Pow(alpha, 1.8f);
+                    
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
         }
     }
 }

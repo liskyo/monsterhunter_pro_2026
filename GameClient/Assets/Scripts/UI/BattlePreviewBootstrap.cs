@@ -181,6 +181,10 @@ namespace MonsterHunter.UI
             mgr.DemoWeaponType = string.IsNullOrWhiteSpace(_demoWeaponType) ? "大劍" : _demoWeaponType.Trim();
             mgr.DemoWeaponBasePhysical = _demoWeaponBasePhysical > 0f ? _demoWeaponBasePhysical : 230f;
             mgr.SessionModifiers       = _combatModifiers.Clamp();
+            
+            var ledger = LocalHunterLedger.LoadOrCreate();
+            mgr.SelectedBattleItemIds = ledger.SelectedBattleItemIds ?? new System.Collections.Generic.List<string>();
+
             mgr.ApplyStrongPanoramaBackdropFeel();
         }
 
