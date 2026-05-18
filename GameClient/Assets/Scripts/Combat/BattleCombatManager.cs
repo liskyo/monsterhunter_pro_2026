@@ -508,16 +508,25 @@ namespace MonsterHunter.Combat
             trk.offsetMin = Vector2.zero; // 置中填滿，不需留左側空間
             trk.offsetMax = Vector2.zero;
             var trackImg = track.AddComponent<Image>();
-            trackImg.color = new Color(0.08f, 0.08f, 0.08f, 0.9f);
+            trackImg.color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // MHN 現代極簡深灰卡片底色
             trackImg.raycastTarget = false;
+
+            var outl = track.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 1f, 1f, 0.25f); // 細緻白銀外框
+            outl.effectDistance = new Vector2(1f, -1f);
+            
+            var shad = track.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
 
             var fill = new GameObject("Fill", typeof(RectTransform));
             fill.transform.SetParent(track.transform, false);
             var fr = fill.GetComponent<RectTransform>();
             fr.anchorMin = Vector2.zero;
             fr.anchorMax = Vector2.one;
-            fr.offsetMin = Vector2.zero;
-            fr.offsetMax = Vector2.zero;
+            // 讓血條稍微內縮一點點，露出外框的精緻感
+            fr.offsetMin = new Vector2(1.5f, 1.5f);
+            fr.offsetMax = new Vector2(-1.5f, -1.5f);
             var fi = fill.AddComponent<Image>();
             fi.color = fillColor;
             fi.raycastTarget = false;

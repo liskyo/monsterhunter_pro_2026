@@ -110,15 +110,21 @@ namespace MonsterHunter.UI
         {
             _goTitle = CreateFullScreenPanel("Flow_Title", PathTitle, out _);
 
+            // ✦ 背景呼吸放大縮小效果 (增加臨場感與生命力)
+            var bgT = _goTitle.transform.Find("Bg");
+            if (bgT != null) bgT.gameObject.AddComponent<BgBreather>();
+
             var chrome = new GameObject("Chrome", typeof(RectTransform));
             chrome.transform.SetParent(_goTitle.transform, false);
             StretchFull(chrome.GetComponent<RectTransform>());
 
-            AddOutlinedTitle(chrome.transform, "MONSTER HUNTER", 52, new Vector2(0f, -160f));
-            AddOutlinedTitle(chrome.transform, "試玩村莊", 36, new Color(1f, 0.88f, 0.38f), new Vector2(0f, -240f));
+            // ✦ 字體極大化並套用 3x 超取樣高清外掛
+            AddOutlinedTitle(chrome.transform, "MONSTER HUNTER", 86, new Vector2(0f, -220f));
+            AddOutlinedTitle(chrome.transform, "試玩村莊", 52, new Color(1f, 0.88f, 0.38f), new Vector2(0f, -320f));
 
-            CreateMhPrimaryButton(_goTitle.transform, "進入村莊", new Vector2(0f, 280f), new Vector2(520f, 112f),
-                () => HideAllExcept(_goHub));
+            // ✦ 改為「前往討伐」科技感大按鈕
+            CreateMhPrimaryButton(_goTitle.transform, "前往討伐", new Vector2(0f, 320f), new Vector2(600f, 140f),
+                () => HideAllExcept(_goHub), false, false, true, 46);
         }
 
         void BuildHub()
@@ -126,40 +132,64 @@ namespace MonsterHunter.UI
             _goHub = CreateFullScreenPanel("Flow_Hub", PathHub, out var contentParent);
             AddHubHeader(contentParent.transform, "集會區域", ShowHub);
 
-            var gridGo = new GameObject("Grid", typeof(RectTransform), typeof(GridLayoutGroup));
-            gridGo.transform.SetParent(contentParent.transform, false);
-            var gr = gridGo.GetComponent<RectTransform>();
-            gr.anchorMin = new Vector2(0.06f, 0.12f);
-            gr.anchorMax = new Vector2(0.94f, 0.78f);
-            gr.offsetMin = gr.offsetMax = Vector2.zero;
-            var grid = gridGo.GetComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(300f, 100f);
-            grid.spacing = new Vector2(16f, 14f);
-            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            grid.constraintCount = 2;
-            grid.childAlignment = TextAnchor.MiddleCenter;
-            grid.padding = new RectOffset(8, 8, 8, 8);
+            // ✦ 移除佔據畫面的黑色舊式 Grid 區塊，改為極具科技感的透明懸浮 HUD 排版
+            // 底部正中央 - 常用主功能 (任務板、出戰整備)
+            var centerBottom = new GameObject("CenterBottom", typeof(RectTransform));
+            centerBottom.transform.SetParent(contentParent.transform, false);
+            var cbRt = centerBottom.GetComponent<RectTransform>();
+            cbRt.anchorMin = new Vector2(0.1f, 0.04f);
+            cbRt.anchorMax = new Vector2(0.9f, 0.28f);
+            cbRt.offsetMin = cbRt.offsetMax = Vector2.zero;
+            var cbGroup = centerBottom.AddComponent<VerticalLayoutGroup>();
+            cbGroup.spacing = 16f;
+            cbGroup.childAlignment = TextAnchor.LowerCenter;
+            cbGroup.childForceExpandHeight = false;
+            cbGroup.childForceExpandWidth = false;
 
-            void AddNav(string label, Action open)
+            // 兩側容器 - 輔助選單功能
+            var leftSide = new GameObject("LeftSide", typeof(RectTransform));
+            leftSide.transform.SetParent(contentParent.transform, false);
+            var lsRt = leftSide.GetComponent<RectTransform>();
+            lsRt.anchorMin = new Vector2(0.04f, 0.32f);
+            lsRt.anchorMax = new Vector2(0.35f, 0.78f);
+            lsRt.offsetMin = lsRt.offsetMax = Vector2.zero;
+            var lsGroup = leftSide.AddComponent<VerticalLayoutGroup>();
+            lsGroup.spacing = 20f;
+            lsGroup.childAlignment = TextAnchor.LowerCenter;
+            lsGroup.childForceExpandHeight = false;
+            lsGroup.childForceExpandWidth = false;
+            
+            var rightSide = new GameObject("RightSide", typeof(RectTransform));
+            rightSide.transform.SetParent(contentParent.transform, false);
+            var rsRt = rightSide.GetComponent<RectTransform>();
+            rsRt.anchorMin = new Vector2(0.65f, 0.32f);
+            rsRt.anchorMax = new Vector2(0.96f, 0.78f);
+            rsRt.offsetMin = rsRt.offsetMax = Vector2.zero;
+            var rsGroup = rightSide.AddComponent<VerticalLayoutGroup>();
+            rsGroup.spacing = 20f;
+            rsGroup.childAlignment = TextAnchor.LowerCenter;
+            rsGroup.childForceExpandHeight = false;
+            rsGroup.childForceExpandWidth = false;
+
+            GameObject CreateSideBtn(Transform p, string label, Action act)
             {
-                CreateMhPrimaryButton(gridGo.transform, label, Vector2.zero, Vector2.zero, open, fillCell: true);
+                var btn = CreateMhPrimaryButton(p, label, Vector2.zero, new Vector2(180f, 96f), act, false, false, false, 32);
+                var img = btn.GetComponent<Image>();
+                img.color = new Color(0.06f, 0.08f, 0.12f, 0.85f); // 科技感透黑底色
+                return btn;
             }
 
-            AddNav("商店", () =>
-            {
-                EnsureShopPanel();
-                HideAllExcept(_goShop);
-            });
-            AddNav("任務板", () => HideAllExcept(_goQuest));
-            AddNav("加工屋", () =>
-            {
-                EnsureWorkshopPanel();
-                HideAllExcept(_goWorkshop);
-            });
-            AddNav("貓飯食堂", () => HideAllExcept(_goCanteen));
-            AddNav("獵人倉庫", () => HideAllExcept(_goWarehouse));
-            AddNav("寵物小屋", () => HideAllExcept(_goPet));
-            AddNav("出戰整備", OpenBattlePrep);
+            // ✦ 擺放常用與不常用功能
+            CreateSideBtn(leftSide.transform, "商店", () => { EnsureShopPanel(); HideAllExcept(_goShop); });
+            CreateSideBtn(leftSide.transform, "貓飯食堂", () => HideAllExcept(_goCanteen));
+            
+            CreateSideBtn(rightSide.transform, "加工屋", () => { EnsureWorkshopPanel(); HideAllExcept(_goWorkshop); });
+            CreateSideBtn(rightSide.transform, "獵人倉庫", () => HideAllExcept(_goWarehouse));
+            CreateSideBtn(rightSide.transform, "寵物小屋", () => HideAllExcept(_goPet));
+
+            // 正下方主按鈕 (現代科技感亮黃高光按鈕)
+            CreateMhPrimaryButton(centerBottom.transform, "任務板", Vector2.zero, new Vector2(400f, 96f), () => HideAllExcept(_goQuest), false, false, false, 36);
+            CreateMhPrimaryButton(centerBottom.transform, "出戰整備", Vector2.zero, new Vector2(500f, 116f), OpenBattlePrep, false, false, true, 46);
         }
 
         void EnsureShopPanel()
@@ -424,7 +454,7 @@ namespace MonsterHunter.UI
             br.pivot = new Vector2(0.5f, 1f);
             br.offsetMin = new Vector2(0f, -110f);
             br.offsetMax = new Vector2(0f, 0f);
-            bar.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.45f);
+            bar.AddComponent<Image>().color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // MHN 招牌深灰色頂部
 
             var titleGo = new GameObject("Title", typeof(RectTransform));
             titleGo.transform.SetParent(bar.transform, false);
@@ -432,12 +462,7 @@ namespace MonsterHunter.UI
             trt.anchorMin = trt.anchorMax = new Vector2(0.5f, 0.5f);
             trt.sizeDelta = new Vector2(800f, 64f);
             var tt = titleGo.AddComponent<Text>();
-            tt.font = _font;
-            tt.fontSize = 38;
-            tt.fontStyle = FontStyle.Bold;
-            tt.alignment = TextAnchor.MiddleCenter;
-            tt.color = new Color(1f, 0.92f, 0.55f);
-            tt.text = title;
+            SetSharpText(tt, title, 48, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold); // 48 超級高清！
 
             CreateMhSecondaryButton(bar.transform, "← 村莊", () => onBack?.Invoke(),
                 anchored: new Vector2(-430f, 0f), size: new Vector2(200f, 56f));
@@ -452,12 +477,7 @@ namespace MonsterHunter.UI
             rt.anchorMax = anchorMax;
             rt.offsetMin = rt.offsetMax = Vector2.zero;
             var t = go.AddComponent<Text>();
-            t.font = _font;
-            t.fontSize = 24;
-            t.fontStyle = FontStyle.Bold;
-            t.color = new Color(1f, 0.96f, 0.82f);
-            t.alignment = TextAnchor.MiddleLeft;
-            t.text = msg;
+            SetSharpText(t, msg, 24, new Color(1f, 0.96f, 0.82f), TextAnchor.MiddleLeft, FontStyle.Bold);
         }
 
         (RectTransform viewport, RectTransform content) CreateScrollAreaMargins(Transform parent, Vector2 offsetMin,
@@ -552,19 +572,14 @@ namespace MonsterHunter.UI
             rt.anchoredPosition = yPos;
             rt.sizeDelta = new Vector2(1000f, size + 24f);
             var txt = go.AddComponent<Text>();
-            txt.text = line;
-            txt.font = _font;
-            txt.fontSize = size;
-            txt.fontStyle = FontStyle.Bold;
-            txt.color = fill;
-            txt.alignment = TextAnchor.MiddleCenter;
+            SetSharpText(txt, line, size, fill, TextAnchor.MiddleCenter, FontStyle.Bold);
             var sh = go.AddComponent<Shadow>();
             sh.effectColor = new Color(0f, 0f, 0f, 0.85f);
             sh.effectDistance = new Vector2(4f, -4f);
         }
 
-        void CreateMhPrimaryButton(Transform parent, string label, Vector2 anchored, Vector2 size, Action onClick,
-            bool fillCell = false, bool fillLayout = false)
+        GameObject CreateMhPrimaryButton(Transform parent, string label, Vector2 anchored, Vector2 size, Action onClick,
+            bool fillCell = false, bool fillLayout = false, bool isHighlight = false, int overrideFontSize = 0)
         {
             var go = new GameObject("Btn_" + label, typeof(RectTransform), typeof(Image), typeof(Button),
                 typeof(LayoutElement));
@@ -583,23 +598,63 @@ namespace MonsterHunter.UI
             var le = go.GetComponent<LayoutElement>();
             if (fillLayout) le.flexibleWidth = 1f;
             if (fillCell) le.minHeight = 96f;
+            
+            if (!fillCell && !fillLayout)
+            {
+                le.preferredWidth = size.x;
+                le.preferredHeight = size.y;
+            }
 
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.62f, 0.38f, 0.12f, 1f);
-            go.GetComponent<Button>().onClick.AddListener(() => onClick?.Invoke());
+            if (isHighlight)
+            {
+                img.color = new Color(0.95f, 0.79f, 0.18f, 1f); // MHN 招牌亮黃色
+                var outl = go.AddComponent<Outline>();
+                outl.effectColor = new Color(1f, 0.88f, 0.35f, 0.8f);
+                outl.effectDistance = new Vector2(1f, -1f);
+            }
+            else
+            {
+                img.color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // 現代極簡深灰卡片底色
+                var outl = go.AddComponent<Outline>();
+                outl.effectColor = new Color(1f, 1f, 1f, 0.15f); // 細緻白銀外框
+                outl.effectDistance = new Vector2(1.2f, -1.2f);
+            }
+            
+            var shad = go.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
+            var btn = go.GetComponent<Button>();
+            btn.onClick.AddListener(() => onClick?.Invoke());
+            
+            btn.transition = Selectable.Transition.ColorTint;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+            btn.colors = colors;
+
             var tg = new GameObject("T", typeof(RectTransform));
             tg.transform.SetParent(go.transform, false);
             StretchFull(tg.GetComponent<RectTransform>());
+            
             var t = tg.AddComponent<Text>();
-            t.font = _font;
-            t.text = label;
-            t.fontSize = fillCell ? 26 : 30;
-            t.fontStyle = FontStyle.Bold;
-            t.color = new Color(1f, 0.96f, 0.88f);
-            t.alignment = TextAnchor.MiddleCenter;
+            int finalSize = overrideFontSize > 0 ? overrideFontSize : (fillCell ? 28 : 34);
+            SetSharpText(t, label, finalSize, isHighlight ? new Color(0.06f, 0.07f, 0.1f) : new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            
+            if (!isHighlight)
+            {
+                var textShad = tg.AddComponent<Shadow>();
+                textShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+                textShad.effectDistance = new Vector2(1.2f, -1.2f);
+            }
+
+            return go;
         }
 
-        void CreateMhSecondaryButton(Transform parent, string label, Action onClick, Vector2 anchored,
+        GameObject CreateMhSecondaryButton(Transform parent, string label, Action onClick, Vector2 anchored,
             Vector2 size, bool flexible = false)
         {
             var go = new GameObject("Btn2_" + label, typeof(RectTransform), typeof(Image), typeof(Button),
@@ -610,19 +665,40 @@ namespace MonsterHunter.UI
             rt.sizeDelta = size;
             rt.anchoredPosition = anchored;
             if (flexible) go.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.25f, 0.28f, 0.34f, 1f);
-            go.GetComponent<Button>().onClick.AddListener(() => onClick?.Invoke());
+            img.color = new Color(0.12f, 0.13f, 0.16f, 0.95f);
+            
+            var outl = go.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 1f, 1f, 0.15f);
+            outl.effectDistance = new Vector2(1.2f, -1.2f);
+            
+            var shad = go.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
+            var btn = go.GetComponent<Button>();
+            btn.onClick.AddListener(() => onClick?.Invoke());
+            
+            btn.transition = Selectable.Transition.ColorTint;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            btn.colors = colors;
+
             var tg = new GameObject("T", typeof(RectTransform));
             tg.transform.SetParent(go.transform, false);
             StretchFull(tg.GetComponent<RectTransform>());
+            
             var t = tg.AddComponent<Text>();
-            t.font = _font;
-            t.text = label;
-            t.fontSize = 22;
-            t.fontStyle = FontStyle.Bold;
-            t.color = Color.white;
-            t.alignment = TextAnchor.MiddleCenter;
+            SetSharpText(t, label, 28, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            
+            var textShad = tg.AddComponent<Shadow>();
+            textShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            textShad.effectDistance = new Vector2(1.2f, -1.2f);
+
+            return go;
         }
 
         static void StretchFull(RectTransform rt)
@@ -702,13 +778,13 @@ namespace MonsterHunter.UI
                 tgo.transform.SetParent(go.transform, false);
                 tgo.AddComponent<LayoutElement>().flexibleWidth = 1f;
                 var nt = tgo.AddComponent<Text>();
-                nt.font = font;
-                nt.fontSize = 22;
-                nt.color = Color.white;
-                nt.alignment = TextAnchor.MiddleLeft;
                 var cost = row.花費;
                 var z = cost != null ? cost.金幣 : 0;
-                nt.text = $"{row.名稱}　　花費 {z} z";
+                SetSharpText(nt, $"{row.名稱}　　花費 <color=#F2C94C>{z} z</color>", 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                
+                var textShad = tgo.AddComponent<Shadow>();
+                textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
+                textShad.effectDistance = new Vector2(1.2f, -1.2f);
 
                 var btnGo = new GameObject("Buy", typeof(RectTransform), typeof(Image), typeof(Button));
                 btnGo.transform.SetParent(go.transform, false);
@@ -730,11 +806,7 @@ namespace MonsterHunter.UI
                 bt.transform.SetParent(btnGo.transform, false);
                 StretchFull(bt.GetComponent<RectTransform>());
                 var btx = bt.AddComponent<Text>();
-                btx.font = font;
-                btx.text = "購買";
-                btx.fontSize = 22;
-                btx.alignment = TextAnchor.MiddleCenter;
-                btx.color = Color.white;
+                SetSharpText(btx, "購買", 24, new Color(0.06f, 0.07f, 0.1f), TextAnchor.MiddleCenter, FontStyle.Bold);
             }
 
             static bool TryBuyMeal(貓飯資料列 row, out string err)
@@ -809,25 +881,49 @@ namespace MonsterHunter.UI
                 var ledger = LocalHunterLedger.LoadOrCreate();
                 if (ledger.Warehouse == null) return;
 
-                var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
                 var names = ResolveNameLookup();
                 var keys = ledger.Warehouse.Where(kv => kv.Value > 0).Select(kv => kv.Key).OrderBy(s => s).ToList();
                 foreach (var id in keys)
                 {
                     var qty = ledger.Warehouse[id];
-                    var go = new GameObject(id, typeof(RectTransform), typeof(Image));
+                    var go = new GameObject(id, typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup));
                     go.transform.SetParent(Content, false);
-                    go.GetComponent<Image>().color = new Color(0.12f, 0.13f, 0.16f, 0.92f);
+                    
+                    var img = go.GetComponent<Image>();
+                    img.color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // MHN 深灰底
+                    
+                    var outl = go.AddComponent<Outline>();
+                    outl.effectColor = new Color(1f, 1f, 1f, 0.15f); // 白銀外框
+                    outl.effectDistance = new Vector2(1.2f, -1.2f);
+                    
+                    var shad = go.AddComponent<Shadow>();
+                    shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+                    shad.effectDistance = new Vector2(2f, -2f);
+
+                    var hg = go.GetComponent<HorizontalLayoutGroup>();
+                    hg.padding = new RectOffset(16, 16, 0, 0);
+
                     go.AddComponent<LayoutElement>().minHeight = 64f;
+                    
                     var txt = new GameObject("T", typeof(RectTransform));
                     txt.transform.SetParent(go.transform, false);
                     StretchFull(txt.GetComponent<RectTransform>());
                     var t = txt.AddComponent<Text>();
-                    t.font = font;
-                    t.fontSize = 22;
-                    t.color = Color.white;
-                    t.alignment = TextAnchor.MiddleLeft;
-                    t.text = $"{(names.TryGetValue(id, out var nm) ? nm : id)}　×{qty}";
+                    SetSharpText(t, $"{(names.TryGetValue(id, out var nm) ? nm : id)}", 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                    
+                    var textShad = txt.AddComponent<Shadow>();
+                    textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
+                    textShad.effectDistance = new Vector2(1.2f, -1.2f);
+ 
+                    var countTxt = new GameObject("C", typeof(RectTransform));
+                    countTxt.transform.SetParent(go.transform, false);
+                    StretchFull(countTxt.GetComponent<RectTransform>());
+                    var ct = countTxt.AddComponent<Text>();
+                    SetSharpText(ct, $"× {qty}", 24, new Color(0.95f, 0.79f, 0.18f), TextAnchor.MiddleRight, FontStyle.Bold);
+                    
+                    var ctShad = countTxt.AddComponent<Shadow>();
+                    ctShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
+                    ctShad.effectDistance = new Vector2(1.2f, -1.2f);
                 }
             }
 
@@ -936,11 +1032,10 @@ namespace MonsterHunter.UI
                 tgo.transform.SetParent(row, false);
                 StretchFull(tgo.GetComponent<RectTransform>());
                 var t = tgo.AddComponent<Text>();
-                t.font = font;
-                t.fontSize = 24;
-                t.color = Color.white;
-                t.alignment = TextAnchor.MiddleLeft;
-                t.text = msg;
+                SetSharpText(t, msg, 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                var textShad = tgo.AddComponent<Shadow>();
+                textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
+                textShad.effectDistance = new Vector2(1.2f, -1.2f);
             }
         }
 
@@ -1004,11 +1099,10 @@ namespace MonsterHunter.UI
                 t.transform.SetParent(p, false);
                 StretchFull(t.GetComponent<RectTransform>());
                 var tx = t.AddComponent<Text>();
-                tx.font = font;
-                tx.fontSize = 20;
-                tx.color = Color.white;
-                tx.alignment = TextAnchor.MiddleLeft;
-                tx.text = s;
+                SetSharpText(tx, s, 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                var textShad = t.AddComponent<Shadow>();
+                textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
+                textShad.effectDistance = new Vector2(1.2f, -1.2f);
             }
         }
 
@@ -1070,11 +1164,10 @@ namespace MonsterHunter.UI
                 t.transform.SetParent(p, false);
                 StretchFull(t.GetComponent<RectTransform>());
                 var tx = t.AddComponent<Text>();
-                tx.font = font;
-                tx.fontSize = 20;
-                tx.color = Color.white;
-                tx.alignment = TextAnchor.MiddleLeft;
-                tx.text = s;
+                SetSharpText(tx, s, 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                var textShad = t.AddComponent<Shadow>();
+                textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
+                textShad.effectDistance = new Vector2(1.2f, -1.2f);
             }
         }
 
@@ -1118,17 +1211,7 @@ namespace MonsterHunter.UI
                 bt.transform.SetParent(banner.transform, false);
                 StretchFull(bt.GetComponent<RectTransform>());
                 var btx = bt.AddComponent<Text>();
-                btx.font = font;
-                btx.fontSize = 24;
-                btx.color = new Color(1f, 0.9f, 0.55f);
-                btx.alignment = TextAnchor.MiddleCenter;
-                if (string.IsNullOrEmpty(active))
-                    btx.text = "目前無進行中任務";
-                else
-                {
-                    var q0 = rows.FirstOrDefault(r => r != null && r.任務編號 == active);
-                    btx.text = q0 != null ? $"進行中：{q0.標題}（{active}）" : $"進行中：{active}";
-                }
+                SetSharpText(btx, string.IsNullOrEmpty(active) ? "目前無進行中任務" : (rows.FirstOrDefault(r => r != null && r.任務編號 == active) != null ? $"進行中：{rows.FirstOrDefault(r => r != null && r.任務編號 == active).標題}（{active}）" : $"進行中：{active}"), 26, new Color(1f, 0.9f, 0.55f), TextAnchor.MiddleCenter, FontStyle.Bold);
 
                 foreach (var q in rows)
                 {
@@ -1145,14 +1228,10 @@ namespace MonsterHunter.UI
                     txtGo.transform.SetParent(row.transform, false);
                     txtGo.AddComponent<LayoutElement>().flexibleWidth = 1f;
                     var tx = txtGo.AddComponent<Text>();
-                    tx.font = font;
-                    tx.fontSize = 22;
-                    tx.color = Color.white;
-                    tx.alignment = TextAnchor.MiddleLeft;
                     var tgt = q.目標魔物 != null && q.目標魔物.Length > 0
                         ? string.Join("、", q.目標魔物.Select(t => t?.魔物名稱 ?? t?.魔物編號))
                         : "—";
-                    tx.text = $"{q.標題}\n{tgt}　★{q.星級}";
+                    SetSharpText(tx, $"{q.標題}\n{tgt}　★{q.星級}", 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
 
                     var used = ledger.QuestIdsUsedToday != null && ledger.QuestIdsUsedToday.Contains(q.任務編號);
                     var isActive = active == q.任務編號;
@@ -1191,11 +1270,7 @@ namespace MonsterHunter.UI
                         tx2.transform.SetParent(row.transform, false);
                         tx2.AddComponent<LayoutElement>().preferredWidth = 120f;
                         var lt = tx2.AddComponent<Text>();
-                        lt.font = font;
-                        lt.fontSize = 20;
-                        lt.color = new Color(0.7f, 0.7f, 0.75f);
-                        lt.alignment = TextAnchor.MiddleCenter;
-                        lt.text = used ? "今日已接" : "已有任務";
+                        SetSharpText(lt, used ? "今日已接" : "已有任務", 20, new Color(0.7f, 0.7f, 0.75f), TextAnchor.MiddleCenter, FontStyle.Bold);
                     }
                 }
             }
@@ -1206,11 +1281,34 @@ namespace MonsterHunter.UI
                 g.transform.SetParent(p, false);
                 StretchFull(g.GetComponent<RectTransform>());
                 var t = g.AddComponent<Text>();
-                t.font = font;
-                t.fontSize = 22;
-                t.color = Color.white;
-                t.alignment = TextAnchor.MiddleCenter;
-                t.text = s;
+                SetSharpText(t, s, 22, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+            }
+        }
+        // ✦ 3x 超取樣高清文字外掛 (Super-Sampling sharp text helper)
+        public static void SetSharpText(Text t, string text, int fontSize, Color color, TextAnchor align = TextAnchor.MiddleCenter, FontStyle style = FontStyle.Normal)
+        {
+            var flow = FindAnyObjectByType<VillageGameFlow>();
+            t.font = flow != null ? flow._font : Font.CreateDynamicFontFromOSFont(new[] { "Microsoft JhengHei", "Arial" }, fontSize * 3);
+            t.text = text;
+            t.fontSize = fontSize * 3; // 渲染解析度放大 3 倍
+            t.fontStyle = style;
+            t.color = color;
+            t.alignment = align;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.transform.localScale = new Vector3(0.3333f, 0.3333f, 1f); // 縮放回 1/3，完美抗鋸齒
+        }
+
+        // ✦ 新增的背景呼吸特效控制器 (增強生命感與臨場感)
+        sealed class BgBreather : MonoBehaviour
+        {
+            float _t = 0f;
+            void Update()
+            {
+                _t += Time.deltaTime * 0.4f;
+                // 產生 1.0 到 1.06 的平滑縮放 (大約 6% 的放大縮小)
+                float scale = 1.03f + Mathf.Sin(_t) * 0.03f;
+                transform.localScale = new Vector3(scale, scale, 1f);
             }
         }
     }

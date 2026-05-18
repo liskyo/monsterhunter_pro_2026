@@ -268,20 +268,33 @@ namespace MonsterHunter.UI
             le.flexibleWidth = 1f;
             le.minWidth = 240f;
             le.preferredHeight = 72f;
+            
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.85f, 0.45f, 0.18f, 1f);
+            img.color = new Color(0.95f, 0.79f, 0.18f, 1f); // MHN 招牌極亮黃色
+            
+            var outl = go.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 0.88f, 0.35f, 0.8f); // 細微亮金外框
+            outl.effectDistance = new Vector2(1f, -1f);
+            
+            var shad = go.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
             var btn = go.GetComponent<Button>();
             btn.onClick.AddListener(() => onClick());
+            
+            btn.transition = Selectable.Transition.ColorTint;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            btn.colors = colors;
+
             var txtGo = new GameObject("Txt", typeof(RectTransform));
             txtGo.transform.SetParent(go.transform, false);
             StretchFull(txtGo.GetComponent<RectTransform>());
             var txt = txtGo.AddComponent<Text>();
-            txt.font = _font;
-            txt.text = label;
-            txt.fontSize = 28;
-            txt.fontStyle = FontStyle.Bold;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = Color.white;
+            VillageGameFlow.SetSharpText(txt, label, 28, new Color(0.06f, 0.07f, 0.1f), TextAnchor.MiddleCenter, FontStyle.Bold);
         }
 
         void SetTab(ShopTab t)
@@ -374,39 +387,85 @@ namespace MonsterHunter.UI
             var row = new GameObject("Row_" + id, typeof(RectTransform), typeof(Image),
                 typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             row.transform.SetParent(_listContent, false);
+            
+            // 奢華黑鋼卡片底色與黃金邊框、投影
             var img = row.GetComponent<Image>();
-            img.color = new Color(0.18f, 0.2f, 0.24f, 0.92f);
+            img.color = new Color(0.06f, 0.07f, 0.1f, 0.9f); // 奢華黑鋼色
+            
+            var outl = row.AddComponent<Outline>();
+            outl.effectColor = new Color(0.85f, 0.65f, 0.3f, 0.4f); // 典雅黃金邊框
+            outl.effectDistance = new Vector2(1.2f, -1.2f);
+            
+            var shad = row.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.5f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
             var h = row.GetComponent<HorizontalLayoutGroup>();
             h.padding = new RectOffset(16, 16, 12, 12);
-            h.spacing = 14f;
+            h.spacing = 16f;
             h.childAlignment = TextAnchor.MiddleLeft;
+            
+            // 關鍵排版屬性控制：防止子物件被任意拉伸變形，使其完美適配大小
+            h.childControlWidth = true;
+            h.childControlHeight = true;
+            h.childForceExpandWidth = false;
+            h.childForceExpandHeight = false;
+
             var le = row.GetComponent<LayoutElement>();
             le.minHeight = 100f;
             le.preferredHeight = 100f;
 
-            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            // 商品圖片容器：加入 LayoutElement 與 preserveAspect 防止壓扁變形
+            var iconGo = new GameObject("Icon", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             iconGo.transform.SetParent(row.transform, false);
+            
             var iconRt = iconGo.GetComponent<RectTransform>();
-            iconRt.sizeDelta = new Vector2(88f, 88f);
+            iconRt.sizeDelta = new Vector2(72f, 72f); // 更精緻的 1:1 正方形比例
+            
+            var iconLe = iconGo.GetComponent<LayoutElement>();
+            iconLe.preferredWidth = 72f;
+            iconLe.preferredHeight = 72f;
+            
             var icon = iconGo.GetComponent<Image>();
             var sp = SafeSpriteLoader.TryLoadSprite(imagePath);
             icon.sprite = sp ?? PlaceholderSpriteFactory.GetSharedPlaceholder();
             icon.color = Color.white;
+            icon.preserveAspect = true; // 關鍵！保持圖片原始長寬比，絕對不壓扁
 
+            // 為商品圖加上獨立的青銅細邊框以利突出
+            var iconOutl = iconGo.AddComponent<Outline>();
+            iconOutl.effectColor = new Color(0.85f, 0.65f, 0.3f, 0.5f);
+            iconOutl.effectDistance = new Vector2(1f, -1f);
+
+            // 商品名稱與價格文字欄
             var textCol = new GameObject("Texts", typeof(RectTransform), typeof(VerticalLayoutGroup));
             textCol.transform.SetParent(row.transform, false);
+            
             var textRt = textCol.GetComponent<RectTransform>();
             var ve = textCol.AddComponent<LayoutElement>();
-            ve.flexibleWidth = 1f;
+            ve.flexibleWidth = 1f; // 彈性擴展佔滿剩餘寬度
+            
             var vg = textCol.GetComponent<VerticalLayoutGroup>();
             vg.childAlignment = TextAnchor.MiddleLeft;
-            vg.spacing = 4f;
+            vg.spacing = 6f;
+            vg.childControlWidth = true;
+            vg.childControlHeight = true;
+            vg.childForceExpandWidth = true;
+            vg.childForceExpandHeight = false;
 
-            AddBareText(textCol.transform, displayName, 26, TextAnchor.MiddleLeft,
-                new Color(0.96f, 0.97f, 1f));
+            // 商品名稱
+            var nameLbl = AddBareText(textCol.transform, displayName, 26, TextAnchor.MiddleLeft, new Color(0.96f, 0.95f, 0.88f));
+            nameLbl.fontStyle = FontStyle.Bold;
+            var nameShad = nameLbl.gameObject.AddComponent<Shadow>();
+            nameShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            nameShad.effectDistance = new Vector2(1f, -1f);
+            
+            // 商品細節與價格
             var sub = string.IsNullOrEmpty(extra) ? $"{id} ｜ ${price}" : $"{id} ｜ ${price} ｜ {extra}";
-            AddBareText(textCol.transform, sub, 20, TextAnchor.MiddleLeft,
-                new Color(0.7f, 0.75f, 0.82f));
+            var subLbl = AddBareText(textCol.transform, sub, 20, TextAnchor.MiddleLeft, new Color(0.72f, 0.76f, 0.82f));
+            var subShad = subLbl.gameObject.AddComponent<Shadow>();
+            subShad.effectColor = new Color(0f, 0f, 0f, 0.8f);
+            subShad.effectDistance = new Vector2(1f, -1f);
 
             var btn = CreateRowButton(row.transform, canBuy ? "購買" : (IsOwned(id) && id.StartsWith("PET_", StringComparison.Ordinal) ? "已取得" : "上限"),
                 canBuy ? onBuy : null);
@@ -417,11 +476,7 @@ namespace MonsterHunter.UI
             var go = new GameObject("Lbl", typeof(RectTransform));
             go.transform.SetParent(parent, false);
             var t = go.AddComponent<Text>();
-            t.font = _font;
-            t.text = msg;
-            t.fontSize = size;
-            t.alignment = align;
-            t.color = c;
+            VillageGameFlow.SetSharpText(t, msg, size, c, align, FontStyle.Bold);
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
             t.verticalOverflow = VerticalWrapMode.Truncate;
             var le = go.AddComponent<LayoutElement>();
@@ -431,23 +486,56 @@ namespace MonsterHunter.UI
 
         Button CreateRowButton(Transform parent, string label, Action onClick)
         {
-            var go = new GameObject("BuyBtn", typeof(RectTransform), typeof(Image), typeof(Button));
+            var go = new GameObject("BuyBtn", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
+            
             var rt = go.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(160f, 64f);
+            
+            var le = go.GetComponent<LayoutElement>();
+            le.preferredWidth = 160f;
+            le.preferredHeight = 64f;
+            
             var img = go.GetComponent<Image>();
-            img.color = onClick != null ? new Color(0.25f, 0.55f, 0.95f, 0.95f) : new Color(0.35f, 0.36f, 0.4f, 0.7f);
+            
+            if (onClick != null)
+            {
+                img.color = new Color(0.12f, 0.48f, 0.85f, 0.95f); // 奢華寶藍色購買按鈕
+                
+                var outl = go.AddComponent<Outline>();
+                outl.effectColor = new Color(0.5f, 0.78f, 1f, 0.8f); // 亮藍霓虹邊框
+                outl.effectDistance = new Vector2(1.5f, -1.5f);
+            }
+            else
+            {
+                img.color = new Color(0.16f, 0.18f, 0.22f, 0.7f); // 禁用按鈕深鋼灰色
+                
+                var outl = go.AddComponent<Outline>();
+                outl.effectColor = new Color(0.35f, 0.38f, 0.45f, 0.5f);
+                outl.effectDistance = new Vector2(1.2f, -1.2f);
+            }
+            
+            var shad = go.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
             var btn = go.GetComponent<Button>();
             btn.interactable = onClick != null;
+            
+            btn.transition = Selectable.Transition.ColorTint;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            colors.disabledColor = new Color(0.6f, 0.6f, 0.6f, 0.6f);
+            btn.colors = colors;
+
             var txtGo = new GameObject("Txt", typeof(RectTransform));
             txtGo.transform.SetParent(go.transform, false);
             StretchFull(txtGo.GetComponent<RectTransform>());
             var txt = txtGo.AddComponent<Text>();
-            txt.font = _font;
-            txt.text = label;
-            txt.fontSize = 24;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = Color.white;
+            VillageGameFlow.SetSharpText(txt, label, 24, onClick != null ? new Color(0.96f, 0.98f, 1f) : new Color(0.7f, 0.72f, 0.76f), TextAnchor.MiddleCenter, FontStyle.Bold);
+
             if (onClick != null)
                 btn.onClick.AddListener(() => onClick());
             return btn;
@@ -659,11 +747,7 @@ namespace MonsterHunter.UI
             rt.anchoredPosition = anchoredPos;
             rt.sizeDelta = new Vector2(800f, 64f);
             var t = go.AddComponent<Text>();
-            t.font = _font;
-            t.text = msg;
-            t.fontSize = size;
-            t.alignment = align;
-            t.color = Color.white;
+            VillageGameFlow.SetSharpText(t, msg, size, Color.white, align, FontStyle.Bold);
             return t;
         }
 
@@ -673,21 +757,36 @@ namespace MonsterHunter.UI
             go.transform.SetParent(parent, false);
             var rt = go.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(200f, 64f);
+            
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.2f, 0.22f, 0.28f, 0.95f);
+            img.color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // 現代極簡深灰卡片底色
+            
+            var outl = go.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 1f, 1f, 0.15f); // 細緻白銀外框
+            outl.effectDistance = new Vector2(1.2f, -1.2f);
+            
+            var shad = go.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
             var btn = go.GetComponent<Button>();
             var le = go.AddComponent<LayoutElement>();
             le.minWidth = 200f;
             le.preferredWidth = 240f;
+            
+            btn.transition = Selectable.Transition.ColorTint;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.2f, 1.2f, 1.2f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            btn.colors = colors;
+
             var txtGo = new GameObject("Txt", typeof(RectTransform));
             txtGo.transform.SetParent(go.transform, false);
             StretchFull(txtGo.GetComponent<RectTransform>());
             var txt = txtGo.AddComponent<Text>();
-            txt.font = _font;
-            txt.text = label;
-            txt.fontSize = 26;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = Color.white;
+            VillageGameFlow.SetSharpText(txt, label, 26, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            
             btn.onClick.AddListener(() => onClick());
         }
     }

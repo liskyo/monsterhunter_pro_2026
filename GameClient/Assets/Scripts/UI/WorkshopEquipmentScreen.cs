@@ -77,12 +77,7 @@ namespace MonsterHunter.UI
             titleRt.anchoredPosition = new Vector2(0f, -28f);
             titleRt.sizeDelta = new Vector2(900f, 52f);
             var title = titleGo.AddComponent<Text>();
-            title.font = _font;
-            title.text = "裝備與技能";
-            title.fontSize = 36;
-            title.fontStyle = FontStyle.Bold;
-            title.alignment = TextAnchor.MiddleCenter;
-            title.color = Color.white;
+            VillageGameFlow.SetSharpText(title, "裝備與技能", 36, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
 
             var closeBtn = CreateHeaderButton(header.transform, "返回村莊",
                 new Vector2(0f, -90f), new Vector2(260f, 54f), () =>
@@ -212,7 +207,18 @@ namespace MonsterHunter.UI
             var row = new GameObject("Row_" + slotIndex, typeof(RectTransform), typeof(Image),
                 typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             row.transform.SetParent(_loadoutList, false);
-            row.GetComponent<Image>().color = new Color(0.12f, 0.14f, 0.2f, 0.9f);
+            
+            var img = row.GetComponent<Image>();
+            img.color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // MHN 現代極簡深灰卡片底色
+            
+            var outl = row.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 1f, 1f, 0.15f); // 細緻白銀外框
+            outl.effectDistance = new Vector2(1.2f, -1.2f);
+            
+            var shad = row.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
             var h = row.GetComponent<HorizontalLayoutGroup>();
             h.padding = new RectOffset(10, 10, 8, 8);
             h.spacing = 10f;
@@ -224,12 +230,11 @@ namespace MonsterHunter.UI
             var slotLe = slotTxtGo.AddComponent<LayoutElement>();
             slotLe.preferredWidth = 72f;
             var slotTxt = slotTxtGo.AddComponent<Text>();
-            slotTxt.font = _font;
-            slotTxt.fontSize = 22;
-            slotTxt.fontStyle = FontStyle.Bold;
-            slotTxt.color = new Color(0.85f, 0.88f, 0.95f);
-            slotTxt.alignment = TextAnchor.MiddleCenter;
-            slotTxt.text = SlotLabels[Mathf.Clamp(slotIndex, 0, 5)];
+            VillageGameFlow.SetSharpText(slotTxt, SlotLabels[Mathf.Clamp(slotIndex, 0, 5)], 22, new Color(0.95f, 0.79f, 0.18f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            
+            var slotShad = slotTxtGo.AddComponent<Shadow>();
+            slotShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            slotShad.effectDistance = new Vector2(1f, -1f);
 
             裝備資料列 rowData = null;
             if (!string.IsNullOrEmpty(equipId))
@@ -249,21 +254,21 @@ namespace MonsterHunter.UI
             var sp = !string.IsNullOrWhiteSpace(path) ? SafeSpriteLoader.TryLoadSprite(path.Trim()) : null;
             icon.sprite = sp ?? PlaceholderSpriteFactory.GetSharedPlaceholder();
             icon.color = Color.white;
+            icon.preserveAspect = true; // 鎖定比例，不壓扁
 
             var nameGo = new GameObject("Name", typeof(RectTransform));
             nameGo.transform.SetParent(row.transform, false);
             var nameLe = nameGo.AddComponent<LayoutElement>();
             nameLe.flexibleWidth = 1f;
             var name = nameGo.AddComponent<Text>();
-            name.font = _font;
-            name.fontSize = 24;
-            name.color = Color.white;
-            name.alignment = TextAnchor.MiddleLeft;
+            var equipName = rowData != null ? rowData.名稱 : (string.IsNullOrEmpty(equipId) ? "（未裝備）" : equipId + "（找不到資料）");
+            VillageGameFlow.SetSharpText(name, equipName, 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
             name.horizontalOverflow = HorizontalWrapMode.Wrap;
             name.verticalOverflow = VerticalWrapMode.Truncate;
-            name.text = rowData != null
-                ? rowData.名稱
-                : (string.IsNullOrEmpty(equipId) ? "（未裝備）" : equipId + "（找不到資料）");
+            
+            var nameShad = nameGo.AddComponent<Shadow>();
+            nameShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            nameShad.effectDistance = new Vector2(1.2f, -1.2f);
         }
 
         void CreateSkillCell(EquipmentSkillAggregator.技能顯示列 s)
@@ -271,15 +276,26 @@ namespace MonsterHunter.UI
             var cell = new GameObject("Sk_" + s.定義?.技能編號, typeof(RectTransform), typeof(Image),
                 typeof(LayoutElement));
             cell.transform.SetParent(_skillsContent, false);
-            cell.GetComponent<Image>().color = new Color(0.1f, 0.11f, 0.14f, 0.92f);
+            
+            var img = cell.GetComponent<Image>();
+            img.color = new Color(0.08f, 0.09f, 0.11f, 0.92f); // 現代極簡深灰卡片底色
+            
+            var outl = cell.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 1f, 1f, 0.12f); // 細緻銀灰色邊框
+            outl.effectDistance = new Vector2(1.2f, -1.2f);
+            
+            var shad = cell.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
             cell.GetComponent<LayoutElement>().minHeight = 150f;
 
             var pad = new GameObject("Pad", typeof(RectTransform), typeof(VerticalLayoutGroup));
             pad.transform.SetParent(cell.transform, false);
             var pRt = pad.GetComponent<RectTransform>();
             StretchFull(pRt);
-            pRt.offsetMin = new Vector2(10f, 8f);
-            pRt.offsetMax = new Vector2(-10f, -8f);
+            pRt.offsetMin = new Vector2(12f, 10f);
+            pRt.offsetMax = new Vector2(-12f, -10f);
             var v = pad.GetComponent<VerticalLayoutGroup>();
             v.spacing = 6f;
             v.childAlignment = TextAnchor.UpperLeft;
@@ -297,23 +313,21 @@ namespace MonsterHunter.UI
             var nmLe = nmGo.AddComponent<LayoutElement>();
             nmLe.flexibleWidth = 1f;
             var nm = nmGo.AddComponent<Text>();
-            nm.font = _font;
-            nm.fontSize = 24;
-            nm.fontStyle = FontStyle.Bold;
-            nm.color = Color.white;
-            nm.alignment = TextAnchor.MiddleLeft;
-            nm.text = s.定義?.名稱 ?? "";
+            VillageGameFlow.SetSharpText(nm, s.定義?.名稱 ?? "", 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+            
+            var nmShad = nmGo.AddComponent<Shadow>();
+            nmShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            nmShad.effectDistance = new Vector2(1.2f, -1.2f);
 
             var lvGo = new GameObject("Lv", typeof(RectTransform));
             lvGo.transform.SetParent(titleRow.transform, false);
             lvGo.AddComponent<LayoutElement>().preferredWidth = 48f;
             var lv = lvGo.AddComponent<Text>();
-            lv.font = _font;
-            lv.fontSize = 24;
-            lv.fontStyle = FontStyle.Bold;
-            lv.color = new Color(1f, 0.92f, 0.35f);
-            lv.alignment = TextAnchor.MiddleRight;
-            lv.text = s.顯示等級.ToString();
+            VillageGameFlow.SetSharpText(lv, "Lv " + s.顯示等級.ToString(), 24, new Color(0.95f, 0.79f, 0.18f), TextAnchor.MiddleRight, FontStyle.Bold);
+            
+            var lvShad = lvGo.AddComponent<Shadow>();
+            lvShad.effectColor = new Color(0f, 0f, 0f, 0.85f);
+            lvShad.effectDistance = new Vector2(1.2f, -1.2f);
 
             CreateLevelBar(pad.transform, s.顯示等級, s.定義?.最高等級 ?? 5);
 
@@ -322,13 +336,9 @@ namespace MonsterHunter.UI
             var dLe = descGo.AddComponent<LayoutElement>();
             dLe.preferredHeight = 56f;
             var desc = descGo.AddComponent<Text>();
-            desc.font = _font;
-            desc.fontSize = 18;
-            desc.color = new Color(0.72f, 0.75f, 0.8f);
-            desc.alignment = TextAnchor.UpperLeft;
+            VillageGameFlow.SetSharpText(desc, s.效果說明文字 ?? "", 18, new Color(0.78f, 0.82f, 0.88f), TextAnchor.UpperLeft, FontStyle.Normal);
             desc.horizontalOverflow = HorizontalWrapMode.Wrap;
             desc.verticalOverflow = VerticalWrapMode.Overflow;
-            desc.text = s.效果說明文字 ?? "";
         }
 
         void CreateLevelBar(Transform parent, int level, int maxLevel)
@@ -373,19 +383,39 @@ namespace MonsterHunter.UI
             rt.pivot = new Vector2(0.5f, 1f);
             rt.anchoredPosition = anchoredPos;
             rt.sizeDelta = sizeDelta;
+            
             var img = go.GetComponent<Image>();
-            img.color = new Color(0.3f, 0.35f, 0.42f, 1f);
+            img.color = new Color(0.12f, 0.13f, 0.16f, 0.95f); // 現代極簡深灰卡片底色
+            
+            var outl = go.AddComponent<Outline>();
+            outl.effectColor = new Color(1f, 1f, 1f, 0.15f); // 細緻白銀外框
+            outl.effectDistance = new Vector2(1.2f, -1.2f);
+            
+            var shad = go.AddComponent<Shadow>();
+            shad.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shad.effectDistance = new Vector2(2f, -2f);
+
             var btn = go.GetComponent<Button>();
             btn.onClick.AddListener(onClick);
+            
+            btn.transition = Selectable.Transition.ColorTint;
+            var colors = btn.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.1f, 1.1f, 1.1f, 1f);
+            colors.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            btn.colors = colors;
+
             var txtGo = new GameObject("Txt", typeof(RectTransform));
             txtGo.transform.SetParent(go.transform, false);
             StretchFull(txtGo.GetComponent<RectTransform>());
+            
             var txt = txtGo.AddComponent<Text>();
-            txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            txt.text = label;
-            txt.fontSize = 24;
-            txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = Color.white;
+            VillageGameFlow.SetSharpText(txt, label, 24, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleCenter, FontStyle.Bold);
+            
+            var textShad = txtGo.AddComponent<Shadow>();
+            textShad.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            textShad.effectDistance = new Vector2(1.2f, -1.2f);
+            
             return btn;
         }
 

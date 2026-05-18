@@ -226,60 +226,55 @@ namespace MonsterHunter.Controllers
         {
             var sr = GetComponentInChildren<SpriteRenderer>();
             var originalColor = sr != null ? sr.color : Color.white;
-            
-            // 讀取當前招式名稱，動態建立包含技能名稱的 Pill 提示框！
-            string skillName = _currentSkill != null ? _currentSkill.名稱 : "";
-            var warningGo = BuildWarningSign(skillName);
 
             var originalScale = transform.localScale;
 
             if (delay > 0f)
             {
                 var elapsed = 0f;
-                // ✦ 不同技能使用不同前搖警告混色與脈動頻率！
-                Color warnColor = new Color(1f, 0.42f, 0.32f, 1f); // 預設橙紅
-                float pulseFreq = 12f;
+                // MHN 經典紅色預警：極高對比的純粹猩紅色 (Monster Hunter Now Style)
+                Color mhnRed = new Color(1f, 0.12f, 0.12f, 1f);
 
-                if (skillName.Contains("飛撲") || skillName.Contains("重擊")) { warnColor = new Color(0.92f, 0.05f, 0.05f); pulseFreq = 18f; }
-                else if (skillName.Contains("橫掃") || skillName.Contains("熊掌")) { warnColor = new Color(1f, 0.45f, 0f); pulseFreq = 22f; }
-                else if (skillName.Contains("雷") || skillName.Contains("電")) { warnColor = new Color(0f, 0.85f, 1f); pulseFreq = 28f; }
-                else if (skillName.Contains("岩") || skillName.Contains("石")) { warnColor = new Color(0.6f, 0.4f, 0.2f); pulseFreq = 14f; }
-                else if (skillName.Contains("桃紅") || skillName.Contains("粉")) { warnColor = new Color(1f, 0.25f, 0.72f); pulseFreq = 16f; }
-
-                // ✦ 建立巨大且極度顯眼的「技能專屬顏色光環/光束」在魔物背後！絕對不可能看不到！
+                // 建立魔物背後的預警光暈 (Aura)
                 var auraGo = new GameObject("TelegraphAura");
                 auraGo.transform.SetParent(transform, false);
                 auraGo.transform.localPosition = new Vector3(0f, 0.6f, 0f);
                 var auraSr = auraGo.AddComponent<SpriteRenderer>();
                 auraSr.sprite = GetOrCreateAuraSprite();
-                auraSr.sortingOrder = -5; // 位於魔物本體背後的巨大背光
+                auraSr.sortingOrder = -5; // 位於魔物本體背後
                 
                 while (elapsed < delay)
                 {
                     float ratio = elapsed / delay;
+                    
                     if (sr != null)
                     {
-                        // ✦ 極度暴力的電玩風硬閃爍 (Strobe effect)！徹底解決看不清楚的問題！
-                        float t = Mathf.PingPong(elapsed * pulseFreq, 1f);
-                        // 當 t > 0.35 時，強制 100% 覆蓋為專屬高亮警戒色，否則為原本顏色
-                        sr.color = t > 0.35f ? warnColor : originalColor;
+                        // MHN 風格：優雅且具威脅性的紅色呼吸脈動 (Smooth Red Pulse)
+                        // 摒棄極端刺眼的硬閃爍與突兀的「！」標記，改為平滑漸變至純紅色
+                        // 越接近攻擊，紅色閃爍頻率越快，給予玩家極致的壓迫感！
+                        float pulseFreq = Mathf.Lerp(12f, 25f, ratio);
+                        float t = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f; 
+                        
+                        // 保持最少 25% 紅色覆蓋，最高 95% 純紅
+                        float redAmount = Mathf.Lerp(0.25f, 0.95f, t);
+                        sr.color = Color.Lerp(originalColor, mhnRed, redAmount); 
                     }
 
-                    // ✦ Aura 光環進行強烈的色彩與大小脈動！
                     if (auraSr != null)
                     {
-                        float auraT = Mathf.PingPong(elapsed * pulseFreq * 0.4f, 1f);
-                        auraSr.color = Color.Lerp(warnColor, new Color(1f, 1f, 1f, 0.85f), auraT); // 更明亮的漸變！
+                        // 光環同樣使用 MHN 的高對比血紅色
+                        float pulseFreq = Mathf.Lerp(8f, 20f, ratio);
+                        float auraT = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f;
+                        auraSr.color = new Color(1f, 0f, 0f, auraT * 0.5f + 0.15f); 
                         
-                        // ✦ 必殺大招展現更巨大的發光氣場！
-                        float baseScale = (skillName.Contains("雷") || skillName.Contains("電") || skillName.Contains("飛撲") || skillName.Contains("熊掌") || skillName.Contains("重擊") || skillName.Contains("橫掃")) ? 2.5f : 1.4f;
-                        float auraScale = baseScale + Mathf.Sin(elapsed * pulseFreq) * 0.5f;
-                        // 上下稍微拉長，營造出強烈的氣場或光束感
-                        auraGo.transform.localScale = new Vector3(auraScale, auraScale * 2.2f, 1f);
+                        // 氣場大小隨脈動變化，營造強大的蓄力感
+                        float auraScale = 1.6f + auraT * 0.6f;
+                        auraGo.transform.localScale = new Vector3(auraScale, auraScale * 1.5f, 1f);
                     }
 
-                    // 統一的簡單震動效果，不要做過多形變，以免擾亂視覺
-                    float shake = Mathf.Sin(elapsed * 24f) * 0.03f;
+                    // 越接近攻擊，震動越劇烈
+                    float shakeAmt = Mathf.Lerp(0.01f, 0.04f, ratio);
+                    float shake = Mathf.Sin(elapsed * 35f) * shakeAmt;
                     transform.localScale = new Vector3(originalScale.x + shake, originalScale.y, originalScale.z);
 
                     elapsed += Time.deltaTime;
@@ -349,7 +344,6 @@ namespace MonsterHunter.Controllers
                 }
             }
 
-            if (warningGo != null) UnityEngine.Object.Destroy(warningGo);
             _telegraphing = false;
 
             if (_player == null) yield break;
@@ -377,57 +371,7 @@ namespace MonsterHunter.Controllers
             PickNextMeleePlan();
         }
 
-        /// <summary>在魔物頭上建立包含技能名稱的 Pill 提示框物件。</summary>
-        GameObject BuildWarningSign(string skillName)
-        {
-            var go = new GameObject("AttackWarning");
-            go.transform.SetParent(transform, false);
-            go.transform.localPosition = new Vector3(0f, 1.45f, 0f);
 
-            var sr = go.AddComponent<SpriteRenderer>();
-            
-            bool isNormalAttack = string.IsNullOrEmpty(skillName);
-            // 根據不同技能決定背景方塊顏色，微透明更有質感
-            Color bgColor = new Color(1f, 0.9f, 0f, 0.8f); // 預設亮黃
-            if (!isNormalAttack)
-            {
-                if (skillName.Contains("飛撲") || skillName.Contains("重擊")) bgColor = new Color(0.85f, 0f, 0.05f, 0.85f); // 亮血紅
-                else if (skillName.Contains("橫掃") || skillName.Contains("熊掌")) bgColor = new Color(0.95f, 0.42f, 0f, 0.85f); // 亮橘色
-                else if (skillName.Contains("雷") || skillName.Contains("電")) bgColor = new Color(0f, 0.55f, 1f, 0.85f); // 閃電藍
-                else if (skillName.Contains("岩") || skillName.Contains("石")) bgColor = new Color(0.55f, 0.35f, 0.15f, 0.85f); // 黏土褐
-                else if (skillName.Contains("桃紅") || skillName.Contains("粉")) bgColor = new Color(0.95f, 0.15f, 0.65f, 0.85f); // 桃粉紅
-                else bgColor = new Color(0.85f, 0f, 0.05f, 0.85f); // 其他特殊招式預設為亮紅色重擊
-            }
-
-            sr.sprite = CreateSolidSprite(bgColor);
-            sr.sortingOrder = 3000;
-            
-            // 動態依據是否為普攻來決定背景寬度
-            float bgWidth = 0.35f; // 統一縮小為精緻的驚嘆號框
-            float bgHeight = 0.46f;
-            go.transform.localScale = new Vector3(bgWidth, bgHeight, 1f);
-
-            var txtGo = new GameObject("WarnText");
-            txtGo.transform.SetParent(go.transform, false);
-            txtGo.transform.localPosition = new Vector3(0f, 0.02f, 0f);
-            
-            // 抵消父物件的比例，維持文字不變形
-            txtGo.transform.localScale = new Vector3(1f / bgWidth * 0.35f, 1f / bgHeight * 0.35f, 1f);
-
-            var tm = txtGo.AddComponent<TextMesh>();
-            tm.text = "!"; // ✦ 取消突兀的招式文字，統一顯示為經典的「!」
-            tm.fontSize = 24;
-            tm.fontStyle = FontStyle.Bold;
-            tm.color = (bgColor.r < 0.4f || bgColor.g < 0.4f) ? Color.white : Color.black;
-            tm.anchor = TextAnchor.MiddleCenter;
-            tm.alignment = TextAlignment.Center;
-            
-            // ✦ 設定 TextMesh Renderer 的 SortingOrder 以保證在背景方塊之上！
-            var mr = txtGo.GetComponent<MeshRenderer>();
-            if (mr != null) mr.sortingOrder = 3001;
-
-            return go;
-        }
 
         static Sprite GetOrCreateAuraSprite()
         {
