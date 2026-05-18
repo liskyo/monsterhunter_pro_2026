@@ -17,6 +17,12 @@ namespace MonsterHunter.Combat
         /// <summary>本機試玩用金幣（未登入 Supabase 時與商店／結算共用）。</summary>
         public long Zenny = 99999;
 
+        /// <summary>✦ 獵人等級 (Hunter Rank, HR)。</summary>
+        public int HunterLevel = 1;
+
+        /// <summary>✦ 測試期間：是否豁免等級挑戰限制，可挑戰所有星等！默認為 true。</summary>
+        public bool BypassStarLevelRestriction = true;
+
         public string PreviewPaintballItemId = "";
         public string PreviewTraceId = "";
         public string PreviewCanteenFoodId = "";
@@ -289,9 +295,26 @@ namespace MonsterHunter.Combat
             Save();
         }
 
-        /// <summary>討伐完成結算後呼叫：清空進行中（當日仍不可再接同一任務）。</summary>
+        /// <summary>取得挑戰特定星級魔物所需的最低獵人等級 (HR)。</summary>
+        public static int GetRequiredHrForStar(int star)
+        {
+            if (star <= 2) return 1;
+            return star - 1;
+        }
+
+        /// <summary>檢查當前 HR 是否能挑戰該星級魔物（測試期間若開啟 Bypass 則恆常通過）。</summary>
+        public bool CanChallengeStar(int star, out int requiredHr)
+        {
+            requiredHr = GetRequiredHrForStar(star);
+            if (BypassStarLevelRestriction) return true;
+            return HunterLevel >= requiredHr;
+        }
+
+        /// <summary>討伐完成結算後呼叫：清空進行中，並提升獵人等級 HR 級數！</summary>
         public void ClearActiveQuestAfterComplete()
         {
+            // ✦ 成功討伐，獵人等級 HR +1，解鎖更高星等！
+            HunterLevel = Mathf.Clamp(HunterLevel + 1, 1, 999);
             ActiveQuestId = "";
             Save();
         }

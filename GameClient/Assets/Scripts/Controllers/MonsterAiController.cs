@@ -58,6 +58,19 @@ namespace MonsterHunter.Controllers
         /// <summary>若非 null，前搖結束後改發射投射物而非近身直傷。</summary>
         魔物招式攻擊項 _pendingProjectileMove;
 
+        private struct PendingAttackInfo
+        {
+            public float releaseTime;
+            public 魔物招式攻擊項 skill;
+            public 魔物招式攻擊項 pendingProjectileMove;
+            public int plannedDirectDamageFlat;
+            public float plannedHitRadius;
+            public bool isExecutingSpecialMove;
+        }
+
+        private System.Collections.Generic.List<PendingAttackInfo> _queuedAttacks = new System.Collections.Generic.List<PendingAttackInfo>();
+        private float _flashCooldownTimer = 0f;
+
         readonly System.Collections.Generic.Dictionary<int, float> _specialMoveCdUntil =
             new System.Collections.Generic.Dictionary<int, float>(8);
 
@@ -106,7 +119,8 @@ namespace MonsterHunter.Controllers
             if (data != null)
             {
                 var m = Mathf.Max(0.1f, monsterMaxHpMultiplier);
-                InitializeMonsterHealthFromData(Mathf.Max(1f, data.最大血量 * m));
+                // ✦ 配合使用者要求，增加魔物血量 1/3 (乘上 1.3333f)
+                InitializeMonsterHealthFromData(Mathf.Max(1f, data.最大血量 * m * 1.3333f));
                 PickNextMeleePlan(); // ✦ 初次遇敵直接心裡想好第一招
             }
         }
@@ -128,7 +142,8 @@ namespace MonsterHunter.Controllers
             if (!MonsterDataLookup.TryFind(_monstersJson, _魔物編號, out _data))
                 Debug.LogError($"[MonsterAi] 找不到魔物 {_魔物編號}");
             else
-                InitializeMonsterHealthFromData(_data.最大血量);
+                // ✦ 配合使用者要求，增加魔物血量 1/3 (乘上 1.3333f)
+                InitializeMonsterHealthFromData(_data.最大血量 * 1.3333f);
         }
 
         void Start()
@@ -140,6 +155,27 @@ namespace MonsterHunter.Controllers
         {
             var tuning = _tuningStore != null ? _tuningStore.Active : null;
             if (tuning == null || _data == null || _player == null) return;
+
+            // ✦ 扣除閃光冷卻時間
+            if (_flashCooldownTimer > 0f)
+            {
+                _flashCooldownTimer -= Time.deltaTime;
+            }
+
+            // ✦ 檢查是否有排定的延遲出招已到期，並執行出招釋放！
+            if (_queuedAttacks != null && _queuedAttacks.Count > 0)
+            {
+                for (int i = 0; i < _queuedAttacks.Count; i++)
+                {
+                    if (Time.time >= _queuedAttacks[i].releaseTime)
+                    {
+                        var attack = _queuedAttacks[i];
+                        _queuedAttacks.RemoveAt(i);
+                        i--;
+                        StartCoroutine(ReleaseAttackRoutine(attack));
+                    }
+                }
+            }
 
             if (_stun > 0f)
             {
@@ -166,6 +202,9 @@ namespace MonsterHunter.Controllers
             var detect = tuning.待機偵測半徑;
             var atkDist = BuildApproachMeleeDistance(out _);
             var abandon = detect * Mathf.Max(1f, tuning.追擊放棄倍率);
+
+            // ✦ 取得魔物星級，用於跨狀態速度與動作冷卻加速計算
+            int star = _data != null ? _data.星級 : 1;
 
             switch (_state)
             {
@@ -198,9 +237,12 @@ namespace MonsterHunter.Controllers
                     }
 
                     var dir = dist > 0.05f ? (pl - self).normalized : Vector2.zero;
-                    // ✦ 戰鬥時魔物追擊速度減半！提供極致拉扯與閃避空間
+                    
+                    // ✦ 配合使用者要求，星級越高的魔物速度越快，越難以拉開距離！
+                    float starSpeedMultiplier = 1f + (star - 1) * 0.12f;
+                    
                     var baseChase = tuning.玩家移動速度 *
-                                    Mathf.Max(0.1f, tuning.魔物追擊速度比例) * 0.5f;
+                                    Mathf.Max(0.1f, tuning.魔物追擊速度比例) * 0.5f * starSpeedMultiplier;
                     var chaseMag = baseChase;
                     if (tuning.魔物追擊低速底線 > 1e-3f)
                         chaseMag = Mathf.Max(tuning.魔物追擊低速底線 * 0.5f, baseChase);
@@ -219,127 +261,154 @@ namespace MonsterHunter.Controllers
                         break;
                     }
 
-                    if (!_telegraphing)
+                    if (!_telegraphing && _flashCooldownTimer <= 0f)
                     {
                         _telegraphing = true;
                         
-                        // ✦ 配合使用者要求，閃光後至少延遲 2.0s ~ 4.0s 才能發招，否則根本無法閃！
-                        float baseTelegraph = tuning.魔物攻擊前搖秒 > 0f ? tuning.魔物攻擊前搖秒 : 0.42f;
-                        float telegraph = baseTelegraph * 5.0f;
-                        if (_currentSkill != null)
-                        {
-                            float strength = _currentSkill.傷害對普攻倍率 > 0f ? _currentSkill.傷害對普攻倍率 : 1f;
-                            telegraph = (baseTelegraph * 5.0f) / strength;
-                        }
-                        telegraph = Mathf.Clamp(telegraph, 2.0f, 4.0f);
+                        // ✦ 配合使用者要求，每隻魔物的出招方式稍有不同，且星等越高、出招延遲越短、節奏越詭譎難測！
+                        int mHash = Mathf.Abs(_魔物編號.GetHashCode());
                         
-                        var postStun  = tuning.魔物招式後僵直秒 > 0f ? tuning.魔物招式後僵直秒 : 1.5f;
-                        // 前搖 + 後搖都透過 _stun 凍結移動
-                        _stun  = telegraph + postStun;
-                        StartCoroutine(TelegraphAndAttack(telegraph));
+                        // ❶ 根據星級，高星魔物打擊前搖延遲越短（1星：2.0s~4.0s；10星：1.1s~2.2s），反應視窗極具壓迫！
+                        float delayMin = Mathf.Clamp(2.0f - (star - 1) * 0.1f, 1.1f, 2.0f);
+                        float delayMax = Mathf.Clamp(4.0f - (star - 1) * 0.2f, 2.2f, 4.0f);
+                        
+                        // ❷ 加入每隻魔物專屬的出招時間特異性偏移（Uniqueness Offset），打破死板規律！
+                        float monsterOffset = ((mHash % 5) - 2) * 0.15f; 
+                        float releaseDelay = UnityEngine.Random.Range(delayMin, delayMax) + monsterOffset;
+                        releaseDelay = Mathf.Clamp(releaseDelay, 0.82f, 4.5f);
+                        
+                        // ✦ 閃光結束後，出招排入佇列在 releaseDelay 秒後正式引爆！
+                        StartCoroutine(TelegraphAndAttack(releaseDelay));
                         _state = AiState.追擊;
                     }
                     break;
             }
         }
 
-        IEnumerator TelegraphAndAttack(float delay)
+        IEnumerator TelegraphAndAttack(float releaseDelay)
         {
+            int star = _data != null ? _data.星級 : 1;
             var sr = GetComponentInChildren<SpriteRenderer>();
             var originalColor = sr != null ? sr.color : Color.white;
-
             var originalScale = transform.localScale;
 
-            if (delay > 0f)
+            // ✦ 配合使用者要求，星等越高的魔物，閃光警示時間越短、出手極速！
+            // 1 星怪閃光 0.5s，10 星怪縮短至 0.32s，留給玩家完美閃避的黃金反應時間極度縮窄，大幅增加刺激感！
+            float flashDuration = Mathf.Clamp(0.5f - (star - 1) * 0.02f, 0.32f, 0.5f);
+
+            // ✦ 配合使用者要求，以明亮度與對比極強的【紅、黃、紫、綠】四色大分流，完全區隔魔物招式類型！
+            Color mhnFlashColor = new Color(1f, 0.05f, 0.05f, 1f); // 預設致命猩紅
+            if (_currentSkill != null)
             {
-                var elapsed = 0f;
-                
-                // ✦ 根據不同招式類型，給予截然不同的炫麗警示光芒，區別招式！
-                Color mhnFlashColor = new Color(1f, 0.12f, 0.12f, 1f); // 預設猩紅
-                if (_currentSkill != null)
+                if (!string.IsNullOrEmpty(_currentSkill.投射物型別))
                 {
-                    if (!string.IsNullOrEmpty(_currentSkill.投射物型別))
-                    {
-                        mhnFlashColor = new Color(0.85f, 0.12f, 0.95f, 1f); // 遠程投射：霓虹幻魅紫
-                    }
-                    else if (_currentSkill.傷害對普攻倍率 >= 1.5f)
-                    {
-                        mhnFlashColor = new Color(1f, 0.05f, 0.05f, 1f); // 高額重擊：致命深猩紅
-                    }
-                    else
-                    {
-                        mhnFlashColor = new Color(1f, 0.82f, 0.0f, 1f); // 快速連段：璀璨金黃
-                    }
+                    mhnFlashColor = new Color(0.85f, 0.0f, 0.95f, 1f); // ❶ 遠程投射/咆哮：【霓虹魅幻紫】
+                }
+                else if (_currentSkill.傷害對普攻倍率 >= 1.2f)
+                {
+                    mhnFlashColor = new Color(1f, 0.0f, 0.0f, 1f);     // ❷ 蓄力重擊/捕食大招：【狂暴烈焰紅】（門檻下修至1.2倍，更容易看見！）
                 }
                 else
                 {
-                    mhnFlashColor = new Color(1f, 0.5f, 0f, 1f); // 普通攻擊：熔岩暖橘色
+                    mhnFlashColor = new Color(1f, 0.85f, 0.0f, 1f);    // ❸ 快速突進/連段招式：【璀璨金黃色】
                 }
-
-                // 建立魔物背後的預警光暈 (Aura)
-                var auraGo = new GameObject("TelegraphAura");
-                auraGo.transform.SetParent(transform, false);
-                auraGo.transform.localPosition = new Vector3(0f, 0.6f, 0f);
-                var auraSr = auraGo.AddComponent<SpriteRenderer>();
-                auraSr.sprite = GetOrCreateAuraSprite();
-                auraSr.sortingOrder = -5; // 位於魔物本體背後
-                
-                while (elapsed < delay)
-                {
-                    float ratio = elapsed / delay;
-                    
-                    if (sr != null)
-                    {
-                        // MHN 風格：優雅且具威脅性的紅色呼吸脈動 (Smooth Red Pulse)
-                        // 越接近攻擊，紅色閃爍頻率越快，給予玩家極致的壓迫感！
-                        float pulseFreq = Mathf.Lerp(12f, 25f, ratio);
-                        float t = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f; 
-                        
-                        // 保持最少 25% 覆蓋，最高 95%
-                        float redAmount = Mathf.Lerp(0.25f, 0.95f, t);
-                        sr.color = Color.Lerp(originalColor, mhnFlashColor, redAmount); 
-                    }
-
-                    if (auraSr != null)
-                    {
-                        float pulseFreq = Mathf.Lerp(8f, 20f, ratio);
-                        float auraT = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f;
-                        auraSr.color = new Color(mhnFlashColor.r, mhnFlashColor.g, mhnFlashColor.b, auraT * 0.5f + 0.15f); 
-                        
-                        // 氣場大小隨脈動變化，營造強大的蓄力感
-                        float auraScale = 1.6f + auraT * 0.6f;
-                        auraGo.transform.localScale = new Vector3(auraScale, auraScale * 1.5f, 1f);
-                    }
-
-                    // 越接近攻擊，震動越劇烈
-                    float shakeAmt = Mathf.Lerp(0.01f, 0.04f, ratio);
-                    float shake = Mathf.Sin(elapsed * 35f) * shakeAmt;
-                    transform.localScale = new Vector3(originalScale.x + shake, originalScale.y, originalScale.z);
-
-                    elapsed += Time.deltaTime;
-                    yield return null;
-                }
-
-                if (auraGo != null) UnityEngine.Object.Destroy(auraGo);
-                if (sr != null) sr.color = originalColor;
-                transform.localScale = originalScale;
+            }
+            else
+            {
+                mhnFlashColor = new Color(0.12f, 1f, 0.22f, 1f);       // ❹ 普通基礎揮擊：【翡翠流光綠】（代表低危險性普攻）
             }
 
-            // ✦ 確定本輪攻擊的主目標（支援挑釁覆蓋）
+            // 建立魔物背後的預警光暈 (Aura)
+            var auraGo = new GameObject("TelegraphAura");
+            auraGo.transform.SetParent(transform, false);
+            auraGo.transform.localPosition = new Vector3(0f, 0.6f, 0f);
+            var auraSr = auraGo.AddComponent<SpriteRenderer>();
+            auraSr.sprite = GetOrCreateAuraSprite();
+            auraSr.sortingOrder = -5; // 位於魔物本體背後
+
+            float elapsed = 0f;
+            while (elapsed < flashDuration)
+            {
+                float ratio = elapsed / flashDuration;
+                
+                if (sr != null)
+                {
+                    float pulseFreq = Mathf.Lerp(12f, 25f, ratio);
+                    float t = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f; 
+                    float redAmount = Mathf.Lerp(0.25f, 0.95f, t);
+                    sr.color = Color.Lerp(originalColor, mhnFlashColor, redAmount); 
+                }
+
+                if (auraSr != null)
+                {
+                    float pulseFreq = Mathf.Lerp(8f, 20f, ratio);
+                    float auraT = (Mathf.Sin(elapsed * pulseFreq) + 1f) * 0.5f;
+                    auraSr.color = new Color(mhnFlashColor.r, mhnFlashColor.g, mhnFlashColor.b, auraT * 0.5f + 0.15f); 
+                    float auraScale = 1.6f + auraT * 0.6f;
+                    auraGo.transform.localScale = new Vector3(auraScale, auraScale * 1.5f, 1f);
+                }
+
+                float shakeAmt = Mathf.Lerp(0.01f, 0.04f, ratio);
+                float shake = Mathf.Sin(elapsed * 35f) * shakeAmt;
+                transform.localScale = new Vector3(originalScale.x + shake, originalScale.y, originalScale.z);
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (auraGo != null) UnityEngine.Object.Destroy(auraGo);
+            if (sr != null) sr.color = originalColor;
+            transform.localScale = originalScale;
+
+            // ✦ 0.5秒閃光預警完成，此時正式將攻擊排入延遲釋放佇列 (Queued Attacks Pipeline)
+            var releaseTime = Time.time + releaseDelay;
+            var newAttack = new PendingAttackInfo
+            {
+                releaseTime = releaseTime,
+                skill = _currentSkill,
+                pendingProjectileMove = _pendingProjectileMove,
+                plannedDirectDamageFlat = _plannedDirectDamageFlat,
+                plannedHitRadius = _plannedHitRadius,
+                isExecutingSpecialMove = _isExecutingSpecialMove
+            };
+            _queuedAttacks.Add(newAttack);
+
+            Debug.Log($"[Monster] ✦ 招式 {_currentSkill?.名稱 ?? "普通攻擊"} 閃光結束！排定在 {releaseDelay} 秒後（實玩第 {releaseTime:F1} 秒）出招！");
+
+            // ✦ 閃光一結束，立刻重設 `_telegraphing = false` 並啟動閃光冷卻
+            _telegraphing = false;
+            
+            // ✦ 配合使用者要求，星等越高的魔物招式冷卻越短、預備閃光越快，發動雨後春筍般的連綿攻勢！
+            // 同時融入魔物特異節奏雜湊偏移，使出招節奏各具特色！
+            float baseCd = Mathf.Clamp(1.0f - (star - 1) * 0.072f, 0.36f, 1.0f);
+            int mHash2 = Mathf.Abs(_魔物編號.GetHashCode());
+            _flashCooldownTimer = Mathf.Clamp(baseCd + ((mHash2 % 3) - 1) * 0.08f, 0.25f, 1.25f);
+
+            // ✦ 心裡想好下一招，為下一招的決策做準備
+            PickNextMeleePlan();
+        }
+
+        IEnumerator ReleaseAttackRoutine(PendingAttackInfo attack)
+        {
             Transform activeTarget = _player;
             if (_overrideTarget != null && _overrideTargetTimer > 0f)
                 activeTarget = _overrideTarget;
 
             if (activeTarget == null) yield break;
 
-            // ✦ 招式發放瞬間物理動畫統一簡化
-            bool isProjectile = _pendingProjectileMove != null && !string.IsNullOrWhiteSpace(_pendingProjectileMove.投射物型別);
-            
+            var tuning = _tuningStore != null ? _tuningStore.Active : null;
+            var postStun = tuning != null && tuning.魔物招式後僵直秒 > 0f ? tuning.魔物招式後僵直秒 : 1.5f;
+
+            // ✦ 在釋放出招期間（出招動畫+後搖僵直），魔物動作被鎖定
+            bool isProjectile = attack.pendingProjectileMove != null && !string.IsNullOrWhiteSpace(attack.pendingProjectileMove.投射物型別);
+            float animDuration = isProjectile ? 0.2f : 0.32f;
+            _stun = animDuration + postStun;
+
             if (!BattleCombatManager.IsBattleConcluded)
             {
                 if (!isProjectile)
                 {
-                    // 近戰攻擊：統一的突進攻擊效果
+                    // 近戰攻擊：突進攻擊效果
                     Vector3 startPos = transform.position;
                     Vector3 dashPos = Vector3.Lerp(startPos, activeTarget.position, 0.35f);
                     
@@ -352,10 +421,8 @@ namespace MonsterHunter.Controllers
                         yield return null;
                     }
 
-                    // 停頓打擊感
                     yield return new WaitForSeconds(0.05f);
 
-                    // 收招撤回
                     float pullElapsed = 0f;
                     float pullDur = 0.15f;
                     while (pullElapsed < pullDur)
@@ -368,7 +435,7 @@ namespace MonsterHunter.Controllers
                 }
                 else
                 {
-                    // 遠程施法類：統一的簡單點頭施法姿勢
+                    // 遠程施法類：點頭施法姿勢
                     Vector3 startPos = transform.position;
                     Vector3 nodPos = startPos + (Vector3)(activeTarget.position - startPos).normalized * 0.25f;
 
@@ -390,40 +457,29 @@ namespace MonsterHunter.Controllers
                 }
             }
 
-            _telegraphing = false;
-
             if (activeTarget == null) yield break;
+            if (BattleCombatManager.IsBattleConcluded) yield break;
 
-            if (BattleCombatManager.IsBattleConcluded)
-                yield break;
-
-            if (_pendingProjectileMove != null &&
-                !string.IsNullOrWhiteSpace(_pendingProjectileMove.投射物型別))
+            if (isProjectile)
             {
-                MonsterProjectile2D.Fire(transform, activeTarget, _pendingProjectileMove,
-                    _plannedDirectDamageFlat);
-                _pendingProjectileMove = null;
-                yield break;
+                MonsterProjectile2D.Fire(transform, activeTarget, attack.pendingProjectileMove, attack.plannedDirectDamageFlat);
             }
-
-            var dist = Vector2.Distance(transform.position, activeTarget.position);
-            // ✦ 針對近戰與橫掃特別技給予合理的大範圍判定（例如 1.35 倍半徑），普通攻擊為 0.8 倍，使大招極難站樁硬吃
-            float checkMul = _isExecutingSpecialMove ? 1.35f : 0.8f;
-            if (dist <= _plannedHitRadius * checkMul)
+            else
             {
-                if (activeTarget == _player)
+                var dist = Vector2.Distance(transform.position, activeTarget.position);
+                float checkMul = attack.isExecutingSpecialMove ? 1.35f : 0.8f;
+                if (dist <= attack.plannedHitRadius * checkMul)
                 {
-                    PerformAttackOnPlayer();
-                }
-                else
-                {
-                    Debug.Log($"[Monster] 攻擊擊中了隨行寵物！");
+                    if (activeTarget == _player)
+                    {
+                        PerformAttackOnPlayer();
+                    }
+                    else
+                    {
+                        Debug.Log($"[Monster] 攻擊擊中了隨行寵物！");
+                    }
                 }
             }
-            _pendingProjectileMove = null;
-
-            // ✦ 當前攻擊結束，立刻「心裡想好下一招」！
-            PickNextMeleePlan();
         }
 
 
@@ -478,7 +534,10 @@ namespace MonsterHunter.Controllers
             var specs = _data.魔物攻擊內容.特殊招式;
             var normDmg = Mathf.Max(0, Mathf.RoundToInt(norm.傷害 * 0.7f)); // ✦ 傷害再下修 1/2（降為 0.7 倍），極致提高容錯！
 
-            float sum = 0f;
+            // ✦ 引入普通基礎攻擊（翡翠綠光）的判定權重，防止魔物 100% 瘋狂出特殊大招，提供合理的近戰連擊與完美防反空隙！
+            float normWeight = 32f; 
+            float sum = normWeight;
+
             if (specs != null && specs.Length > 0)
             {
                 var now = Time.time;
@@ -491,15 +550,19 @@ namespace MonsterHunter.Controllers
                 }
             }
 
-            if (sum <= 1e-3f || specs == null)
+            var pick = UnityEngine.Random.value * sum;
+            if (pick <= normWeight)
             {
+                // ✦ 普通基礎攻擊：清空當前技能綁定，使其正確發出【翡翠流光綠】警示光！
                 _plannedDirectDamageFlat = normDmg;
                 _isExecutingSpecialMove = false;
+                _currentSkill = null;
+                _pendingProjectileMove = null;
+                Debug.Log($"[MonsterAi] 選招「普通基礎攻擊」直傷={_plannedDirectDamageFlat}，發射綠色警示光！");
                 return;
             }
 
-            var pick = UnityEngine.Random.value * sum;
-            var acc = 0f;
+            var acc = normWeight;
             for (var i = 0; i < specs.Length; i++)
             {
                 var s = specs[i];
@@ -525,6 +588,7 @@ namespace MonsterHunter.Controllers
 
             _plannedDirectDamageFlat = normDmg;
             _isExecutingSpecialMove = false;
+            _currentSkill = null;
         }
 
         /// <summary>動態距離分界：如果已經選好大招（尤其是遠程），就以大招射程作為追擊終點！</summary>
@@ -590,10 +654,46 @@ namespace MonsterHunter.Controllers
         }
 
         /// <summary>部位破壞時呼叫，供掉落「破壞部位」條件。</summary>
-        public void NotifyPartBreak() => _breakState.MarkPartBreak();
+        public void NotifyPartBreak()
+        {
+            _breakState.MarkPartBreak();
+            TriggerPartBreakStagger("部位破壞！大倒地！");
+        }
 
         /// <summary>切尾成功時呼叫，供掉落「切斷尾巴」條件。</summary>
-        public void NotifyTailCut() => _breakState.MarkTailCut();
+        public void NotifyTailCut()
+        {
+            _breakState.MarkTailCut();
+            TriggerPartBreakStagger("尾巴切斷！大倒地！");
+        }
+
+        private void TriggerPartBreakStagger(string message)
+        {
+            ClearQueuedAttacks(); // ✦ 打斷目前與蓄力招式
+            _stun = 4.5f;        // ✦ 倒地大僵直 4.5 秒
+            if (_rb != null) _rb.linearVelocity = Vector2.zero;
+            
+            StartCoroutine(MonsterStaggerVisualRoutine());
+            Debug.Log($"[Monster] ✦ {message}，魔物失衡大倒地 4.5 秒！");
+        }
+
+        IEnumerator MonsterStaggerVisualRoutine()
+        {
+            var sr = GetComponentInChildren<SpriteRenderer>();
+            if (sr == null) yield break;
+            
+            Color orig = sr.color;
+            float elapsed = 0f;
+            while (elapsed < 4.5f)
+            {
+                elapsed += Time.deltaTime;
+                // 脈動灰色與半透明度
+                float alpha = 0.5f + (Mathf.Sin(elapsed * 12f) + 1f) * 0.25f;
+                sr.color = new Color(0.6f, 0.6f, 0.6f, alpha);
+                yield return null;
+            }
+            if (sr != null) sr.color = orig;
+        }
 
         public void ApplyDamage(float amount, bool isCrit)
         {
@@ -702,10 +802,18 @@ namespace MonsterHunter.Controllers
             if (mesh != null) Destroy(mesh.gameObject);
         }
 
+        private void ClearQueuedAttacks()
+        {
+            if (_queuedAttacks != null) _queuedAttacks.Clear();
+            _telegraphing = false;
+            StopAllCoroutines();
+        }
+
         void OnHealthDepleted()
         {
             if (_defeatHandled) return;
             _defeatHandled = true;
+            ClearQueuedAttacks();
             OnDefeated?.Invoke();
             StartCoroutine(DefeatFlow());
         }

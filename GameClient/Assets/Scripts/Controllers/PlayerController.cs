@@ -28,6 +28,17 @@ namespace MonsterHunter.Controllers
         Vector2 _dodgeVelocity;
         readonly System.Random _rng = new System.Random();
 
+        // ✦ MH NOW 完美閃避與 SP 大招全域及實例欄位
+        public static bool NextHitIsPerfectCounter = false;
+        public static bool NextHitIsSP = false;
+        public static bool NextHitIsWeakness = false;
+
+        private float _spGauge = 0f;
+        public float SpGauge => _spGauge;
+        private bool _isExecutingSpSkill = false;
+        public bool IsExecutingSpSkill => _isExecutingSpSkill;
+        private bool _perfectDodgeBuffActive = false;
+
         public struct 獵人持續傷害狀態
         {
             public string 異常名稱;
@@ -76,7 +87,8 @@ namespace MonsterHunter.Controllers
             if (tuning == null) return;
             if (_dodgeCd > 0f) return;
 
-            var dodgeDist = tuning.閃避距離 > 0f ? tuning.閃避距離 : 4f;
+            // ✦ 下調閃避距離至原先的 58%，使翻滾動作更加緊湊緊貼魔物，方便進行近戰弱點輸出與完美反擊！
+            var dodgeDist = (tuning.閃避距離 > 0f ? tuning.閃避距離 : 4f) * 0.58f;
             var invincSec = tuning.閃避無敵秒 > 0f ? tuning.閃避無敵秒 : 0.4f;
             var cooldown  = tuning.閃避冷卻秒 > 0f ? tuning.閃避冷卻秒 : 1.2f;
 
@@ -175,6 +187,12 @@ namespace MonsterHunter.Controllers
 
         void Update()
         {
+            // ✦ MH NOW 按下 X 鍵釋放 SP 超能量大招
+            if (Input.GetKeyDown(KeyCode.X))
+            {
+                TriggerSpUltimate();
+            }
+
             var tuning = _tuningStore != null ? _tuningStore.Active : null;
             if (tuning == null) return;
 
@@ -473,7 +491,47 @@ namespace MonsterHunter.Controllers
             };
 
             var dmg = Mathf.Max(1f, DamageCalculator.ComputeFinalDamage(input, _rng, out var crit));
+
+            // ✦ MH NOW 弱點部位打擊判定（前後 45 度）
+            var monsterRb = tgt.GetComponent<Rigidbody2D>();
+            var monsterFace = monsterRb != null && monsterRb.linearVelocity.sqrMagnitude > 0.01f 
+                ? monsterRb.linearVelocity.normalized 
+                : (Vector2)(transform.position - tgt.transform.position).normalized;
+
+            var toPlayer = (Vector2)(transform.position - tgt.transform.position).normalized;
+            var dot = Vector2.Dot(monsterFace, toPlayer);
+            bool isWeakness = Mathf.Abs(dot) >= 0.707f;
+
+            if (isWeakness)
+            {
+                dmg *= 1.35f;
+            }
+
+            // ✦ MH NOW 完美閃避反擊加成
+            bool isPerfectCounter = _perfectDodgeBuffActive;
+            if (_perfectDodgeBuffActive)
+            {
+                _perfectDodgeBuffActive = false; // 消耗
+                dmg *= 2.5f;
+                crit = true; // 強制會心視覺
+            }
+
+            // ✦ SP 大招加成標籤
+            bool isSpHit = _isExecutingSpSkill;
+
+            // ✦ 通過全域靜態標記傳遞給 HUD
+            NextHitIsPerfectCounter = isPerfectCounter;
+            NextHitIsSP = isSpHit;
+            NextHitIsWeakness = isWeakness;
+
             tgt.ApplyDamage(dmg, crit);
+
+            // ✦ 填充 SP 能量 (在大招執行期間不累加)
+            if (!_isExecutingSpSkill)
+            {
+                float spCharge = _chargeHeldPrevFrame ? 6f : 2.5f;
+                _spGauge = Mathf.Min(100f, _spGauge + spCharge);
+            }
         }
 
         MonsterAiController FindNearestMonster(Vector2 from, float maxDist)
@@ -523,13 +581,28 @@ namespace MonsterHunter.Controllers
             if (CurrentHp <= 0f || amount <= 0f) return;
             if (respectDodgeInvuln && IsDodging)
             {
-                Debug.Log("[Player] 閃避成功！傷害無效");
+                var tuning = _tuningStore != null ? _tuningStore.Active : null;
+                float invincSec = tuning != null && tuning.閃避無敵秒 > 0f ? tuning.閃避無敵秒 : 0.4f;
+                float elapsedDodge = invincSec - _dodgeTimer;
+
+                // ✦ Perfect Dodge (完美閃避)：如果在翻滾開始後的 0.15 秒內受擊
+                if (elapsedDodge <= 0.15f)
+                {
+                    TriggerPerfectDodge();
+                    return;
+                }
+
+                Debug.Log("[Player] 避開了攻擊（普通無敵）");
                 return;
             }
 
-            CurrentHp = Mathf.Max(0f, CurrentHp - amount);
-            OnDamageReceived?.Invoke(amount, isCrit);
-            Debug.Log($"[Player] 受傷 {amount:F1} 會心={isCrit} → HP {CurrentHp:F0}/{MaxHp:F0}");
+            // ✦ 配合使用者要求，大幅提高魔物打擊傷害，保證玩家受擊時至少扣除 2/3 的最大生命值（67%），極致拉滿生死一線的緊張感與閃避成就感！
+            float minDmg = MaxHp * 0.67f;
+            float finalDmg = Mathf.Max(amount, minDmg);
+
+            CurrentHp = Mathf.Max(0f, CurrentHp - finalDmg);
+            OnDamageReceived?.Invoke(finalDmg, isCrit);
+            Debug.Log($"[Player] 受傷 {finalDmg:F1} (原始={amount:F1}) 會心={isCrit} → HP {CurrentHp:F0}/{MaxHp:F0}");
 
             // ✦ 觸發獵人受擊視覺紅光閃爍
             StartCoroutine(PlayerHitFlashRoutine());
@@ -747,6 +820,144 @@ namespace MonsterHunter.Controllers
 
             if (sr != null) sr.color = originalColor;
             transform.localScale = originalScale;
+        }
+
+        // ✦ MH NOW 完美閃避與 SP 大招實作
+        private void TriggerPerfectDodge()
+        {
+            _perfectDodgeBuffActive = true;
+            Debug.Log("[Player] ✦ 完美閃避 (Perfect Dodge) 成功！下一擊傷害 2.5 倍！");
+            
+            // 生成完美閃避飄字
+            SpawnPerfectDodgeFloatText();
+            
+            // 完美閃避黃金色幻影閃爍
+            StartCoroutine(PerfectDodgeVisualFlashRoutine());
+        }
+
+        private void SpawnPerfectDodgeFloatText()
+        {
+            var go = new GameObject("PerfectDodgeText");
+            go.transform.position = transform.position + new Vector3(0f, 1.2f, 0f);
+            var mesh = go.AddComponent<TextMesh>();
+            mesh.text = "⚡ 完美閃避 PERFECT DODGE! ⚡";
+            mesh.characterSize = 0.08f;
+            mesh.fontSize = 80;
+            mesh.color = new Color(1f, 0.85f, 0f); // 金黃色
+            mesh.anchor = TextAnchor.MiddleCenter;
+            mesh.alignment = TextAlignment.Center;
+            mesh.fontStyle = FontStyle.Bold;
+            
+            var mr = mesh.GetComponent<MeshRenderer>();
+            if (mr != null) mr.sortingOrder = 5600;
+            
+            StartCoroutine(FloatAndFadeBreakText(mesh));
+        }
+
+        IEnumerator FloatAndFadeBreakText(TextMesh mesh)
+        {
+            float elapsed = 0f;
+            float duration = 1.0f;
+            var orig = mesh.color;
+            Vector3 startPos = mesh.transform.position;
+
+            while (elapsed < duration)
+            {
+                if (mesh == null) yield break;
+                elapsed += Time.deltaTime;
+                float t = elapsed / duration;
+                
+                mesh.transform.position = startPos + new Vector3(0f, t * 0.8f, 0f);
+                var c = orig;
+                c.a = Mathf.Clamp01(1f - t * t);
+                mesh.color = c;
+                
+                yield return null;
+            }
+            if (mesh != null && mesh.gameObject != null) Destroy(mesh.gameObject);
+        }
+
+        IEnumerator PerfectDodgeVisualFlashRoutine()
+        {
+            var sr = GetComponentInChildren<SpriteRenderer>();
+            if (sr == null) yield break;
+            
+            var origColor = sr.color;
+            for (int i = 0; i < 4; i++)
+            {
+                sr.color = new Color(1f, 0.9f, 0f, 1f); // 亮黃色
+                yield return new WaitForSeconds(0.06f);
+                sr.color = origColor;
+                yield return new WaitForSeconds(0.06f);
+            }
+        }
+
+        public void TriggerSpUltimate()
+        {
+            if (_spGauge < 99.9f || _isExecutingSpSkill || CurrentHp <= 0f) return;
+            _spGauge = 0f;
+            StartCoroutine(ExecuteSpUltimateRoutine());
+        }
+
+        IEnumerator ExecuteSpUltimateRoutine()
+        {
+            _isExecutingSpSkill = true;
+            Debug.Log("[Player] ✦ 釋放 SP 超能量大招 SP ULTIMATE!!! ✦");
+
+            // 1. 全螢幕時空凍結 (0.3s 慢動作，營造電影感)
+            float originalTimeScale = Time.timeScale;
+            Time.timeScale = 0.35f;
+            
+            // 2. 獵人完全無敵
+            _dodgeTimer = 2.2f; // 無敵持續 2.2s
+
+            var sr = GetComponentInChildren<SpriteRenderer>();
+            var originalColor = sr != null ? sr.color : Color.white;
+
+            // 3. 播放發光特效
+            if (sr != null) sr.color = new Color(0f, 0.9f, 1f, 1f); // 耀眼青藍色
+
+            yield return new WaitForSecondsRealtime(0.45f);
+            Time.timeScale = originalTimeScale; // 恢復正常時空
+
+            // 4. 連環幻影斬擊 (6段斬擊)
+            var tuning = _tuningStore != null ? _tuningStore.Active : null;
+            float reach = tuning != null ? tuning.近戰預設攻擊距離 + 3f : 7f;
+            var target = FindNearestMonster(MeleeStrikeOrigin(), reach);
+
+            if (target != null && target.isActiveAndEnabled)
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    if (target == null || !target.isActiveAndEnabled) break;
+                    
+                    Vector3 startPos = transform.position;
+                    transform.position = Vector3.Lerp(startPos, target.transform.position, 0.4f);
+                    
+                    SpawnSkillVisualEffect(target.transform.position, 3.5f);
+                    ApplyOneDamageTick(target, tuning, FallbackTapMv(tuning) * 0.8f);
+
+                    yield return new WaitForSeconds(0.14f);
+                    transform.position = startPos;
+                    yield return new WaitForSeconds(0.04f);
+                }
+
+                if (target != null && target.isActiveAndEnabled)
+                {
+                    Vector3 startPos = transform.position;
+                    transform.position = Vector3.Lerp(startPos, target.transform.position, 0.75f);
+                    
+                    SpawnSkillVisualEffect(target.transform.position, 6.0f);
+                    ApplyOneDamageTick(target, tuning, FallbackTapMv(tuning) * 3.5f);
+                    
+                    yield return new WaitForSeconds(0.25f);
+                    transform.position = startPos;
+                }
+            }
+
+            if (sr != null) sr.color = originalColor;
+            _dodgeTimer = 0f; // 結束無敵
+            _isExecutingSpSkill = false;
         }
     }
 }

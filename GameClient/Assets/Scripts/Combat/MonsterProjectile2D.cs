@@ -32,6 +32,16 @@ namespace MonsterHunter.Combat
             if (caster == null || target == null || spec == null || damageFlat <= 0) return;
 
             var speed = spec.投射物速度 > 0.65f ? spec.投射物速度 : 7.2f;
+
+            // ✦ 根據施法魔物的星等，高階魔物的遠程彈道飛行速度越快，越難捉摸！
+            var monsterAi = caster.GetComponent<MonsterAiController>();
+            if (monsterAi != null && monsterAi.DataRow != null)
+            {
+                int star = monsterAi.DataRow.星級;
+                float starSpeedFactor = 1f + (star - 1) * 0.08f;
+                speed *= starSpeedFactor;
+            }
+
             var radius = spec.投射物半徑 > 0.06f ? spec.投射物半徑 : 0.28f;
 
             // ✦ 必殺大招「落雷角」與「岩塊投擲」投射物史詩級加強：速度與半徑大幅區分！

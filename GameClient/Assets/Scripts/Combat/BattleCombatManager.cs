@@ -48,7 +48,14 @@ namespace MonsterHunter.Combat
         Text _monsterHpText;
         Text _floatingDmgText;
         float _floatingDmgTimer;
+
+        // ✦ MH NOW 75秒時間倒數與 SP 大招能值按鈕參考
+        private float _battleTimer = 75f;
+        private Text _timerText;
+        private Image _spGaugeFill;
+        private Text _spBtnText;
         bool _battleOver;
+        private bool _inEntranceCountdown = true;
 
         Camera _backdropCamera;
         Vector3 _battleCameraSmoothVel;
@@ -75,6 +82,7 @@ namespace MonsterHunter.Combat
         void Start()
         {
             IsBattleConcluded = false;
+            _inEntranceCountdown = true;
 
             if (HunterGo == null || MonsterGo == null || MonsterDataRow == null)
             {
@@ -169,6 +177,8 @@ namespace MonsterHunter.Combat
 
             // 恢復正常時間
             Time.timeScale = 1f;
+
+            _inEntranceCountdown = false;
 
             // START!
             t.text = "<color=#FF2222>開始狩獵！</color>";
@@ -265,6 +275,7 @@ namespace MonsterHunter.Combat
 
         void SetupCombatComponents()
         {
+            _battleTimer = 75f;
             var tuningJson = LoadDesignDataJson("03_Combat", "combat_tuning.json");
             var weaponJson = LoadDesignDataJson("03_Combat", "weapon_movesets.json");
 
@@ -461,6 +472,51 @@ namespace MonsterHunter.Combat
                 new Color(0.15f, 0.75f, 0.25f), new Vector2(0f, 1f), new Vector2(0.48f, 1f),
                 out _playerHpText, "獵");
 
+            // ✦ MH NOW 75秒倒數計時器
+            var timerGo = new GameObject("CombatTimer", typeof(RectTransform));
+            timerGo.transform.SetParent(HudCanvas.transform, false);
+            var trt = timerGo.GetComponent<RectTransform>();
+            trt.anchorMin = new Vector2(0.5f, 1f);
+            trt.anchorMax = new Vector2(0.5f, 1f);
+            trt.pivot = new Vector2(0.5f, 1f);
+            trt.anchoredPosition = new Vector2(0f, -8f);
+            trt.sizeDelta = new Vector2(160f, 48f);
+
+            var bgImgGo = new GameObject("Bg", typeof(RectTransform));
+            bgImgGo.transform.SetParent(timerGo.transform, false);
+            var brt = bgImgGo.GetComponent<RectTransform>();
+            brt.anchorMin = Vector2.zero;
+            brt.anchorMax = Vector2.one;
+            brt.offsetMin = Vector2.zero;
+            brt.offsetMax = Vector2.zero;
+            var bgImg = bgImgGo.AddComponent<Image>();
+            bgImg.color = new Color(0.08f, 0.09f, 0.12f, 0.92f);
+            var timerOut = bgImgGo.AddComponent<Outline>();
+            timerOut.effectColor = new Color(1f, 1f, 1f, 0.35f);
+            timerOut.effectDistance = new Vector2(1f, -1f);
+
+            var txtGo = new GameObject("TimeText", typeof(RectTransform));
+            txtGo.transform.SetParent(timerGo.transform, false);
+            var txrt = txtGo.GetComponent<RectTransform>();
+            txrt.anchorMin = Vector2.zero;
+            txrt.anchorMax = Vector2.one;
+            txrt.offsetMin = Vector2.zero;
+            txrt.offsetMax = Vector2.zero;
+
+            _timerText = txtGo.AddComponent<Text>();
+            _timerText.font = font;
+            _timerText.fontSize = 24;
+            _timerText.fontStyle = FontStyle.Bold;
+            _timerText.alignment = TextAnchor.MiddleCenter;
+            _timerText.color = new Color(0.95f, 0.98f, 1f, 1f);
+            _timerText.text = "75.00s";
+            var timerShadow = txtGo.AddComponent<Shadow>();
+            timerShadow.effectColor = Color.black;
+            timerShadow.effectDistance = new Vector2(1.5f, -1.5f);
+
+            // ✦ MH NOW SP大招能值按鈕
+            BuildSpButton(HudCanvas.transform, font);
+
             // 即時傷害浮字
             var fltGo = new GameObject("FloatDmg", typeof(RectTransform));
             fltGo.transform.SetParent(HudCanvas.transform, false);
@@ -578,6 +634,54 @@ namespace MonsterHunter.Combat
         {
             if (_battleOver) return;
 
+            // ✦ 75秒倒數計時器更新
+            _battleTimer -= Time.deltaTime;
+            if (_timerText != null)
+            {
+                _timerText.text = Mathf.Max(0f, _battleTimer).ToString("F2") + "s";
+                if (_battleTimer <= 10f)
+                {
+                    _timerText.color = Color.Lerp(Color.white, Color.red, (Mathf.Sin(Time.time * 15f) + 1f) * 0.5f);
+                    float pulse = 1f + (Mathf.Sin(Time.time * 15f) + 1f) * 0.1f;
+                    _timerText.transform.localScale = new Vector3(pulse, pulse, 1f);
+                }
+                else
+                {
+                    _timerText.color = new Color(0.95f, 0.98f, 1f, 1f);
+                    _timerText.transform.localScale = Vector3.one;
+                }
+            }
+
+            if (_battleTimer <= 0f)
+            {
+                OnTimeUp();
+                return;
+            }
+
+            // ✦ SP大招能值更新
+            if (_playerCtrl != null)
+            {
+                float spPct = _playerCtrl.SpGauge;
+                if (_spGaugeFill != null)
+                {
+                    _spGaugeFill.fillAmount = spPct / 100f;
+                }
+                if (_spBtnText != null)
+                {
+                    if (spPct >= 99.9f)
+                    {
+                        _spBtnText.text = "<b><color=#00E5FF>SP\nREADY</color></b>";
+                        float pulse = 1f + (Mathf.Sin(Time.time * 8f) + 1f) * 0.05f;
+                        _spBtnText.transform.localScale = new Vector3(pulse, pulse, 1f);
+                    }
+                    else
+                    {
+                        _spBtnText.text = $"SP\n{Mathf.FloorToInt(spPct)}%";
+                        _spBtnText.transform.localScale = Vector3.one;
+                    }
+                }
+            }
+
             string ailmentSuffix = null;
             if (_playerCtrl != null)
             {
@@ -644,6 +748,35 @@ namespace MonsterHunter.Combat
         {
             var cam = Camera.main;
             if (cam == null) return;
+
+            if (_inEntranceCountdown && MonsterGo != null && HunterGo != null)
+            {
+                // ✦ 配合使用者要求，戰鬥倒數時魔物與獵人要完美呈現在同一個手機畫面上！
+                // 計算兩者中心點，並平滑拉遠鏡頭視野，使雙方角色在直屏下皆能全彩同屏展現！
+                var p1 = HunterGo.transform.position;
+                var p2 = MonsterGo.transform.position;
+                var center = Vector3.Lerp(p1, p2, 0.5f);
+
+                // 直屏下將 Size 平滑過渡放大至 1.48 倍
+                var targetSize = _halfH * 1.48f;
+                cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, targetSize, Time.unscaledDeltaTime * 4.5f);
+
+                var cur = cam.transform.position;
+                var tgt = new Vector3(center.x, center.y + 0.5f, cur.z);
+                cam.transform.position = Vector3.Lerp(cur, tgt, Time.unscaledDeltaTime * 6f);
+
+                if (_backdropCamera != null)
+                {
+                    var bc = _backdropCamera.transform.position;
+                    var bx = cam.transform.position.x * Mathf.Clamp01(_backdropParallaxX);
+                    var by = cam.transform.position.y * Mathf.Clamp01(_backdropParallaxY);
+                    _backdropCamera.transform.position = new Vector3(bx, by, bc.z);
+                }
+                return;
+            }
+
+            // 戰鬥開始後，鏡頭平滑拉近還原到標準戰鬥視野
+            cam.orthographicSize = Mathf.Lerp(cam.orthographicSize, _halfH, Time.deltaTime * 3.5f);
 
             var Ax = _halfW * Mathf.Max(1f, _arenaHalfWMultiplier);
             var Ay = _halfH * Mathf.Max(1f, _arenaHalfHMultiplier);
@@ -740,15 +873,38 @@ namespace MonsterHunter.Combat
 
             var txt = go.AddComponent<Text>();
             txt.font = font;
-            txt.fontSize = crit ? 98 : 72; // ✦ 大幅加粗大字體，使數據文字極為清楚！
             txt.fontStyle = FontStyle.Bold;
             txt.alignment = TextAnchor.MiddleCenter;
             txt.supportRichText = true;
             
-            // ✦ 暴擊與普通攻擊的超美特大數據格式
-            txt.text = crit 
-                ? $"<color=#FF3B30><b>💥 CRIT {dmg:F0}</b></color>" 
-                : $"<color=#FFCC00><b>{dmg:F0}</b></color>";
+            // ✦ MH NOW 風格各類傷害樣式與特大數據格式
+            if (PlayerController.NextHitIsPerfectCounter)
+            {
+                txt.text = $"<color=#FFD700><b>⚡ PERFECT {dmg:F0}</b></color>";
+                txt.fontSize = 110;
+            }
+            else if (PlayerController.NextHitIsSP)
+            {
+                txt.text = $"<color=#00E5FF><b>💥 SP ULTIMATE {dmg:F0}</b></color>";
+                txt.fontSize = 105;
+            }
+            else if (PlayerController.NextHitIsWeakness)
+            {
+                txt.text = $"<color=#FF8000><b>🎯 WEAKNESS {dmg:F0}</b></color>";
+                txt.fontSize = 88;
+            }
+            else
+            {
+                txt.text = crit 
+                    ? $"<color=#FF3B30><b>💥 CRIT {dmg:F0}</b></color>" 
+                    : $"<color=#FFCC00><b>{dmg:F0}</b></color>";
+                txt.fontSize = crit ? 98 : 72;
+            }
+
+            // 重設全域標記，防止污染後續傷害
+            PlayerController.NextHitIsPerfectCounter = false;
+            PlayerController.NextHitIsSP = false;
+            PlayerController.NextHitIsWeakness = false;
 
             // 加上高對比黑陰影（Shadow）元件，讓數字在多變的戰鬥背景下依然極度耀眼清晰
             var shadow = go.AddComponent<Shadow>();
@@ -1224,6 +1380,108 @@ namespace MonsterHunter.Combat
             {
                 Debug.LogWarning($"[BattleCombatManager] SetField {fieldName}: {e.Message}");
             }
+        }
+
+        // ✦ MH NOW 75秒限時超時判定、SP按鈕動態生成與點擊綁定
+        private void OnTimeUp()
+        {
+            if (_battleOver) return;
+            _battleOver = true;
+            IsBattleConcluded = true;
+            Debug.Log("[BattleCombatManager] 時間到！任務失敗！");
+            
+            // 任務失敗，不發放獎勵，直接顯示失敗畫面
+            ShowResult(won: false, rewards: null);
+        }
+
+        private void BuildSpButton(Transform parent, Font font)
+        {
+            var btnGo = new GameObject("SP_Button", typeof(RectTransform));
+            btnGo.transform.SetParent(parent, false);
+            var rt = btnGo.GetComponent<RectTransform>();
+            rt.anchorMin = new Vector2(1f, 0f);
+            rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(1f, 0f);
+            rt.anchoredPosition = new Vector2(-25f, 25f);
+            rt.sizeDelta = new Vector2(100f, 100f);
+
+            var bgGo = new GameObject("Bg", typeof(RectTransform));
+            bgGo.transform.SetParent(btnGo.transform, false);
+            var bgr = bgGo.GetComponent<RectTransform>();
+            bgr.anchorMin = Vector2.zero;
+            bgr.anchorMax = Vector2.one;
+            bgr.offsetMin = Vector2.zero;
+            bgr.offsetMax = Vector2.zero;
+            var bgImg = bgGo.AddComponent<Image>();
+            bgImg.sprite = CreateCircleSprite(new Color(0.08f, 0.1f, 0.14f, 0.95f));
+            bgImg.color = Color.white;
+
+            var fillGo = new GameObject("Fill", typeof(RectTransform));
+            fillGo.transform.SetParent(btnGo.transform, false);
+            var fr = fillGo.GetComponent<RectTransform>();
+            fr.anchorMin = Vector2.zero;
+            fr.anchorMax = Vector2.one;
+            fr.offsetMin = new Vector2(4f, 4f);
+            fr.offsetMax = new Vector2(-4f, -4f);
+            _spGaugeFill = fillGo.AddComponent<Image>();
+            _spGaugeFill.sprite = CreateCircleSprite(new Color(0f, 0.85f, 1f, 1f));
+            _spGaugeFill.type = Image.Type.Filled;
+            _spGaugeFill.fillMethod = Image.FillMethod.Radial360;
+            _spGaugeFill.fillOrigin = (int)Image.Origin360.Top;
+            _spGaugeFill.fillClockwise = true;
+            _spGaugeFill.fillAmount = 0f;
+
+            var txtGo = new GameObject("Text", typeof(RectTransform));
+            txtGo.transform.SetParent(btnGo.transform, false);
+            var tr = txtGo.GetComponent<RectTransform>();
+            tr.anchorMin = Vector2.zero;
+            tr.anchorMax = Vector2.one;
+            tr.offsetMin = Vector2.zero;
+            tr.offsetMax = Vector2.zero;
+            _spBtnText = txtGo.AddComponent<Text>();
+            _spBtnText.font = font;
+            _spBtnText.fontSize = 22;
+            _spBtnText.fontStyle = FontStyle.Bold;
+            _spBtnText.alignment = TextAnchor.MiddleCenter;
+            _spBtnText.color = new Color(0.92f, 0.96f, 1f, 0.85f);
+            _spBtnText.text = "SP\n0%";
+
+            var sh = txtGo.AddComponent<Shadow>();
+            sh.effectColor = Color.black;
+            sh.effectDistance = new Vector2(1.5f, -1.5f);
+
+            var btn = btnGo.AddComponent<Button>();
+            btn.onClick.AddListener(() =>
+            {
+                if (_playerCtrl != null)
+                {
+                    _playerCtrl.TriggerSpUltimate();
+                }
+            });
+        }
+
+        static Sprite CreateCircleSprite(Color c)
+        {
+            var tex = new Texture2D(64, 64);
+            for (int y = 0; y < 64; y++)
+            {
+                for (int x = 0; x < 64; x++)
+                {
+                    float dx = x - 31.5f;
+                    float dy = y - 31.5f;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist <= 31.5f)
+                    {
+                        tex.SetPixel(x, y, c);
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, 64, 64), new Vector2(0.5f, 0.5f), 12f);
         }
     }
 }

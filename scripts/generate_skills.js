@@ -1,5 +1,10 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Resolve directory name in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // 1. Define 20 Passive Ailments (被動屬性)
 const PASSIVE_NAMES = [
@@ -70,8 +75,6 @@ function generateMasterSkills() {
         const levels = {};
         
         for (let lv = 1; lv <= 4; lv++) {
-            // Half of the status effects have linked image paths, the other half have empty image paths
-            // to demonstrate: "未連結圖片時 先以文字替代 有圖片時 以圖片加文字"
             const hasImage = index < 10; 
             const imagePath = hasImage ? `Assets/Textures/Skills/${id}_LV${lv}.png` : "";
 
@@ -104,12 +107,13 @@ function generateMasterSkills() {
 
             // Random but deterministic characteristics based on skill name hash
             const nameHash = skillName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            // ✦ 無屬性技能預設為近戰肉搏招式，不給予投射物，迫使 AI 貼身攻擊
-            const isMelee = element === "無"; 
+            
+            // ✦ 允許無屬性（物理）招式也有 40% 的機率是投射物（如岩塊投擲、衝擊波、咆哮聲波等），保證物理怪也能放遠程！
+            const isMelee = element === "無" ? (nameHash % 10) >= 4 : false; 
             const visualType = isMelee ? "" : placeholderVisuals[nameHash % placeholderVisuals.length];
             const baseSpeed = 4.5 + (nameHash % 5) * 1.2;
             const baseRadius = 0.18 + (nameHash % 4) * 0.08;
-            const baseDist = isMelee ? 2.5 + (nameHash % 3) * 0.5 : 3.0 + (nameHash % 7) * 1.2; // 近戰距離縮短
+            const baseDist = isMelee ? 2.5 + (nameHash % 3) * 0.5 : 3.0 + (nameHash % 7) * 1.2;
 
             for (let lv = 1; lv <= 4; lv++) {
                 levels[`LV${lv}`] = {
@@ -141,122 +145,127 @@ function generateMasterSkills() {
 // Main logic to update monsters.json and output monster_skills.json
 function main() {
     const masterSkills = generateMasterSkills();
-    const skillsPath = 'C:/Users/liskyo/Desktop/MonsterHunter_2026/DesignData/01_Monsters/monster_skills.json';
+    
+    // Dynamic Relative Paths based on workspace directory structure!
+    const skillsPath = path.join(__dirname, '../DesignData/01_Monsters/monster_skills.json');
+    const monstersPath = path.join(__dirname, '../DesignData/01_Monsters/monsters.json');
+
     fs.writeFileSync(skillsPath, JSON.stringify(masterSkills, null, 2), 'utf8');
     console.log(`[Success] Master skills list generated at: ${skillsPath}`);
 
     // Load monsters.json
-    const monstersPath = 'C:/Users/liskyo/Desktop/MonsterHunter_2026/DesignData/01_Monsters/monsters.json';
     const monsters = JSON.parse(fs.readFileSync(monstersPath, 'utf8'));
 
     // Process each monster based on its Star Rating (星級)
     monsters.forEach((monster, mIndex) => {
         const star = monster.星級 || 1;
         const elements = monster.屬性 || ["無"];
-        // Pick primary element
         let primaryElement = elements[0];
         if (!ELEMENT_SKILLS[primaryElement]) {
-            // Cycle element deterministically if not standard
             const keys = Object.keys(ELEMENT_SKILLS);
             primaryElement = keys[mIndex % keys.length];
         }
 
-        // Get matching elements skills and passives
+        // Get matching element's skills and passives
         const matchActives = masterSkills.特殊招式列表.filter(s => s.屬性 === primaryElement);
         const allPassives = masterSkills.特殊被動屬性;
 
-        // Deterministic offset based on monster index
-        let actOffset = mIndex;
-        let pasOffset = mIndex;
+        // Determine level rating based on star rating difficulty
+        const targetLv = star <= 2 ? "LV1" : (star <= 4 ? "LV2" : (star <= 6 ? "LV3" : "LV4"));
+
+        // Group into strict warning flash color categories
+        const yellowSkills = [];
+        const redSkills = [];
+        const purpleSkills = [];
+
+        matchActives.forEach(s => {
+            const skillData = s.分級內容[targetLv];
+            if (skillData.投射物型別 && skillData.投射物型別 !== "") {
+                purpleSkills.push(skillData);
+            } else if (skillData.傷害對普攻倍率 >= 1.2) {
+                redSkills.push(skillData);
+            } else {
+                yellowSkills.push(skillData);
+            }
+        });
+
+        // Fallbacks in case any category list is empty
+        if (yellowSkills.length === 0) {
+            matchActives.forEach(s => yellowSkills.push(s.分級內容[targetLv]));
+        }
+        if (redSkills.length === 0) {
+            matchActives.forEach(s => redSkills.push(s.分級內容[targetLv]));
+        }
+        if (purpleSkills.length === 0) {
+            matchActives.forEach(s => purpleSkills.push(s.分級內容[targetLv]));
+        }
 
         let passivesToInject = [];
         let activesToInject = [];
 
-        if (star >= 1 && star <= 2) {
-            // 1-2星: 1 * Passive LV1 + 3 * Active LV1
-            const p1 = allPassives[pasOffset % allPassives.length].分級內容["LV1"];
-            passivesToInject.push(p1);
+        // ✦ 依據星級完全等量、保底分配所有閃光類型技能，不足的至少每種閃光 1 種！
+        let numYellow = 1;
+        let numRed = 1;
+        let numPurple = 1;
 
-            for (let i = 0; i < 3; i++) {
-                const s = matchActives[(actOffset + i) % matchActives.length].分級內容["LV1"];
-                activesToInject.push(s);
-            }
+        if (star >= 1 && star <= 2) {
+            // 1-2星: 每種閃光保底 1 個 (共 3 招)
+            numYellow = 1;
+            numRed = 1;
+            numPurple = 1;
         } 
         else if (star >= 3 && star <= 4) {
-            // 3-4星: 1 * Passive LV2 + 1 * Active LV1 + 2 * Active LV2
-            const p1 = allPassives[pasOffset % allPassives.length].分級內容["LV2"];
-            passivesToInject.push(p1);
-
-            const s1 = matchActives[actOffset % matchActives.length].分級內容["LV1"];
-            activesToInject.push(s1);
-
-            for (let i = 1; i <= 2; i++) {
-                const s2 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV2"];
-                activesToInject.push(s2);
-            }
+            // 3-4星: 黃色 1, 紅色 2, 紫色 1 (共 4 招)
+            numYellow = 1;
+            numRed = 2;
+            numPurple = 1;
         }
         else if (star >= 5 && star <= 6) {
-            // 5-6星: 1 * Passive LV3 + 2 * Active LV2 + 2 * Active LV3
-            const p1 = allPassives[pasOffset % allPassives.length].分級內容["LV3"];
-            passivesToInject.push(p1);
-
-            for (let i = 0; i < 2; i++) {
-                const s2 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV2"];
-                activesToInject.push(s2);
-            }
-            for (let i = 2; i < 4; i++) {
-                const s3 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV3"];
-                activesToInject.push(s3);
-            }
+            // 5-6星: 黃色 2, 紅色 2, 紫色 2 (共 6 招)
+            numYellow = 2;
+            numRed = 2;
+            numPurple = 2;
         }
         else if (star >= 7 && star <= 8) {
-            // 7-8星: 1 * Passive LV3 + 3 * Active LV3 + 2 * Active LV2
-            const p1 = allPassives[pasOffset % allPassives.length].分級內容["LV3"];
-            passivesToInject.push(p1);
-
-            for (let i = 0; i < 3; i++) {
-                const s3 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV3"];
-                activesToInject.push(s3);
-            }
-            for (let i = 3; i < 5; i++) {
-                const s2 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV2"];
-                activesToInject.push(s2);
-            }
+            // 7-8星: 黃色 2, 紅色 3, 紫色 3 (共 8 招)
+            numYellow = 2;
+            numRed = 3;
+            numPurple = 3;
         }
-        else if (star === 9) {
-            // 9星: 2 * Passive LV4 + 3 * Active LV4 + 2 * Active LV3
-            const p1 = allPassives[pasOffset % allPassives.length].分級內容["LV4"];
-            const p2 = allPassives[(pasOffset + 1) % allPassives.length].分級內容["LV4"];
-            passivesToInject.push(p1, p2);
-
-            for (let i = 0; i < 3; i++) {
-                const s4 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV4"];
-                activesToInject.push(s4);
-            }
-            for (let i = 3; i < 5; i++) {
-                const s3 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV3"];
-                activesToInject.push(s3);
-            }
-        }
-        else if (star >= 10) {
-            // 10星: 2 * Passive LV4 + 6 * Active LV4
-            const p1 = allPassives[pasOffset % allPassives.length].分級內容["LV4"];
-            const p2 = allPassives[(pasOffset + 1) % allPassives.length].分級內容["LV4"];
-            passivesToInject.push(p1, p2);
-
-            for (let i = 0; i < 6; i++) {
-                const s4 = matchActives[(actOffset + i) % matchActives.length].分級內容["LV4"];
-                activesToInject.push(s4);
-            }
+        else {
+            // 9星及以上: 黃色 3, 紅色 4, 紫色 3 (共 10 招)
+            numYellow = 3;
+            numRed = 4;
+            numPurple = 3;
         }
 
-        // Format mapping back to Game JSON structure
+        // Deterministically select skills from categories
+        for (let i = 0; i < numYellow; i++) {
+            activesToInject.push(yellowSkills[(mIndex + i) % yellowSkills.length]);
+        }
+        for (let i = 0; i < numRed; i++) {
+            activesToInject.push(redSkills[(mIndex + i) % redSkills.length]);
+        }
+        for (let i = 0; i < numPurple; i++) {
+            activesToInject.push(purpleSkills[(mIndex + i) % purpleSkills.length]);
+        }
+
+        // Process Passives
+        const passiveLv = star <= 2 ? "LV1" : (star <= 4 ? "LV2" : (star <= 6 ? "LV3" : "LV4"));
+        const p1 = allPassives[mIndex % allPassives.length].分級內容[passiveLv];
+        passivesToInject.push(p1);
+        if (star >= 9) {
+            const p2 = allPassives[(mIndex + 1) % allPassives.length].分級內容[passiveLv];
+            passivesToInject.push(p2);
+        }
+
+        // Write back structured JSON
         monster.魔物攻擊內容.特殊攻擊 = passivesToInject.map(p => ({
             "異常屬性": p.異常屬性,
             "每秒傷害": p.每秒傷害,
             "觸發機率": p.觸發機率,
             "持續時間秒": p.持續時間秒,
-            "圖片路徑": p.圖片路徑 // Supported in C# after schema update!
+            "圖片路徑": p.圖片路徑
         }));
 
         monster.魔物攻擊內容.特殊招式 = activesToInject.map(a => ({
@@ -272,7 +281,7 @@ function main() {
     });
 
     fs.writeFileSync(monstersPath, JSON.stringify(monsters, null, 2), 'utf8');
-    console.log(`[Success] Successfully updated all ${monsters.length} monsters in monsters.json with LV1-LV4 active and passive skills matching their star ratings!`);
+    console.log(`[Success] Successfully updated all ${monsters.length} monsters in monsters.json with LV1-LV4 active and passive skills matching their star ratings and guaranteeing ALL color flash types!`);
 }
 
 main();

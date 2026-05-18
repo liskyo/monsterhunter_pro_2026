@@ -1598,7 +1598,15 @@ namespace MonsterHunter.UI
                 bt.transform.SetParent(banner.transform, false);
                 StretchFull(bt.GetComponent<RectTransform>());
                 var btx = bt.AddComponent<Text>();
-                SetSharpText(btx, string.IsNullOrEmpty(active) ? "目前無進行中任務" : (rows.FirstOrDefault(r => r != null && r.任務編號 == active) != null ? $"進行中：{rows.FirstOrDefault(r => r != null && r.任務編號 == active).標題}（{active}）" : $"進行中：{active}"), 26, new Color(1f, 0.9f, 0.55f), TextAnchor.MiddleCenter, FontStyle.Bold);
+                // ✦ 頂部顯示獵人目前等級、測試越級狀態與任務進行狀態
+                string activeText = string.IsNullOrEmpty(active)
+                    ? "目前無進行中任務"
+                    : (rows.FirstOrDefault(r => r != null && r.任務編號 == active) != null
+                        ? $"進行中：{rows.FirstOrDefault(r => r != null && r.任務編號 == active).標題}（{active}）"
+                        : $"進行中：{active}");
+                string bypassLabel = ledger.BypassStarLevelRestriction ? " <color=#F2C94C>[測試越級免檢]</color>" : "";
+                string hrHeaderStr = $"<b><color=#56CCF2>獵人等級 (HR): {ledger.HunterLevel}</color></b>{bypassLabel}　｜　{activeText}";
+                SetSharpText(btx, hrHeaderStr, 24, new Color(1f, 0.96f, 0.9f), TextAnchor.MiddleCenter, FontStyle.Bold);
 
                 foreach (var q in rows)
                 {
@@ -1618,7 +1626,22 @@ namespace MonsterHunter.UI
                     var tgt = q.目標魔物 != null && q.目標魔物.Length > 0
                         ? string.Join("、", q.目標魔物.Select(t => t?.魔物名稱 ?? t?.魔物編號))
                         : "—";
-                    SetSharpText(tx, $"{q.標題}\n{tgt}　★{q.星級}", 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
+                    // ✦ 智慧顯示關卡星級所需的最低獵人等級
+                    int reqHr = LocalHunterLedger.GetRequiredHrForStar(q.星級);
+                    string hrStr = "";
+                    if (ledger.HunterLevel >= reqHr)
+                    {
+                        hrStr = $" <color=#27AE60>(HR {ledger.HunterLevel} 已解鎖)</color>";
+                    }
+                    else if (ledger.BypassStarLevelRestriction)
+                    {
+                        hrStr = $" <color=#F2C94C>(需 HR {reqHr}｜測試越級中)</color>";
+                    }
+                    else
+                    {
+                        hrStr = $" <color=#EB5757>(需 HR {reqHr}｜等級不足)</color>";
+                    }
+                    SetSharpText(tx, $"{q.標題}\n{tgt}　★{q.星級}{hrStr}", 22, new Color(0.96f, 0.97f, 1f), TextAnchor.MiddleLeft, FontStyle.Bold);
 
                     var used = ledger.QuestIdsUsedToday != null && ledger.QuestIdsUsedToday.Contains(q.任務編號);
                     var isActive = active == q.任務編號;
@@ -1638,18 +1661,34 @@ namespace MonsterHunter.UI
                     }
                     else if (string.IsNullOrEmpty(active) && !used)
                     {
+                        bool canAccept = ledger.CanChallengeStar(q.星級, out var reqHrTemp);
+                        
                         var ab = new GameObject("Accept", typeof(RectTransform), typeof(Image), typeof(Button));
                         ab.transform.SetParent(row.transform, false);
                         ab.GetComponent<RectTransform>().sizeDelta = new Vector2(140f, 56f);
-                        ab.GetComponent<Image>().color = new Color(0.25f, 0.4f, 0.28f, 1f);
-                        ab.GetComponent<Button>().onClick.AddListener(() =>
+                        
+                        var btnImg = ab.GetComponent<Image>();
+                        var btn = ab.GetComponent<Button>();
+                        
+                        if (canAccept)
                         {
-                            if (ledger.TryAcceptQuest(q.任務編號, out var err))
-                                Flow?.RefreshQuestUi();
-                            else
-                                Debug.LogWarning(err);
-                        });
-                        AddMiniBtnLabel(ab.transform, font, "承接");
+                            btnImg.color = new Color(0.25f, 0.4f, 0.28f, 1f); // 翡翠綠承接
+                            btn.interactable = true;
+                            btn.onClick.AddListener(() =>
+                            {
+                                if (ledger.TryAcceptQuest(q.任務編號, out var err))
+                                    Flow?.RefreshQuestUi();
+                                else
+                                    Debug.LogWarning(err);
+                            });
+                            AddMiniBtnLabel(ab.transform, font, "承接");
+                        }
+                        else
+                        {
+                            btnImg.color = new Color(0.25f, 0.28f, 0.32f, 0.8f); // 禁用灰
+                            btn.interactable = false;
+                            AddMiniBtnLabel(ab.transform, font, "等級不足");
+                        }
                     }
                     else
                     {
